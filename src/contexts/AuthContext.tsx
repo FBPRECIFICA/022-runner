@@ -20,7 +20,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Verifica sessão ativa
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         loadUserProfile(session.user.id);
@@ -29,7 +28,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Listener de mudança de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         loadUserProfile(session.user.id);
@@ -43,22 +41,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadUserProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (data) {
-      setUser({
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-        phone: data.phone,
-      });
+      if (data) {
+        setUser({ id: data.id, name: data.name, email: data.email, role: data.role, phone: data.phone });
+      } else {
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user) {
+          setUser({ id: authData.user.id, name: authData.user.email?.split('@')[0] || 'Usuário', email: authData.user.email || '', role: 'athlete' });
+        }
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setIsInitialized(true);
     }
-    setIsInitialized(true);
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -69,14 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string, role = 'athlete'): Promise<boolean> => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error || !data.user) return false;
-
-    const { error: profileError } = await supabase.from('users').insert({
-      id: data.user.id,
-      name,
-      email,
-      role,
-    });
-
+    const { error: profileError } = await supabase.from('users').insert({ id: data.user.id, name, email, role });
     return !profileError;
   };
 
@@ -96,7 +91,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
   };
 
-  if (!isInitialized) return null;
+  if (!isInitialized) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
+        <div style={{ textAlign: 'center' }}>
+          <img src="/images/logo-022runner.png" alt="022 RUNNER" style={{ height: 64, margin: '0 auto 16px' }} />
+          <p style={{ color: '#6b7280', fontSize: 14 }}>Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

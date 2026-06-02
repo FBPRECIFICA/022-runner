@@ -14,8 +14,6 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as any)?.from?.pathname || '/';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -24,9 +22,9 @@ export function LoginPage() {
     try {
       const success = await login(email, password);
       if (success) {
-        navigate(from, { replace: true });
+        navigate('/', { replace: true });
       } else {
-        setError('E-mail ou senha incorretos');
+        setError('E-mail ou senha incorretos. Verifique suas credenciais.');
       }
     } catch (err) {
       setError('Ocorreu um erro ao fazer login');
