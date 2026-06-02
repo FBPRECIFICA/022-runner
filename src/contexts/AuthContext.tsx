@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -8,45 +9,80 @@ interface AuthContextType {
   isOrganizer: boolean;
   isAthlete: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, role?: string) => Promise<boolean>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const mockUsers: { email: string; password: string; user: User }[] = [
-  { email: 'admin@022runner.com', password: 'admin123', user: { id: 'admin-001', name: 'Admin Master', email: 'admin@022runner.com', role: 'admin', phone: '(22) 97404-4125' } },
-  { email: 'marcos@email.com', password: 'marcos123', user: { id: 'ath-001', name: 'Marcos Aurélio', email: 'marcos@email.com', role: 'athlete' } },
-  { email: 'org@email.com', password: 'org123', user: { id: 'org-001', name: 'João Silva', email: 'org@corridadoslagos.com', role: 'organizer' } },
-];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('022runner_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {}
-    }
-    setIsInitialized(true);
+    // Verifica sessão ativa
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setIsInitialized(true);
+      }
+    });
+
+    // Listener de mudança de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setIsInitialized(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    await new Promise(r => setTimeout(r, 500));
-    const mockUser = mockUsers.find(u => u.email === email && u.password === password);
-    if (mockUser) {
-      setUser(mockUser.user);
-      localStorage.setItem('022runner_user', JSON.stringify(mockUser.user));
-      return true;
+  const loadUserProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (data) {
+      setUser({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        phone: data.phone,
+      });
     }
-    return false;
+    setIsInitialized(true);
   };
 
-  const logout = () => {
+  const login = async (email: string, password: string): Promise<boolean> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return !error;
+  };
+
+  const register = async (name: string, email: string, password: string, role = 'athlete'): Promise<boolean> => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error || !data.user) return false;
+
+    const { error: profileError } = await supabase.from('users').insert({
+      id: data.user.id,
+      name,
+      email,
+      role,
+    });
+
+    return !profileError;
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('022runner_user');
   };
 
   const value = {
@@ -56,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isOrganizer: user?.role === 'organizer',
     isAthlete: user?.role === 'athlete',
     login,
+    register,
     logout,
   };
 
