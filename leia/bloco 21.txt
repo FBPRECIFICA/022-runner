@@ -1,0 +1,26 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Redeploy da Edge Function
+npx supabase functions deploy ai-assistant --project-ref adorzqjhazsfvbttlfht
+
+## TAREFA 2 — Testar Edge Function
+Fazer uma chamada de teste para a Edge Function:
+curl -X POST https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/ai-assistant \
+  -H "Content-Type: application/json" \
+  -d '{"type":"post","eventData":{"title":"Corrida Cabo Frio","city":"Cabo Frio","date":"14/08/2027","distances":"5km, 10km, 21km","postType":"abertura_inscricoes"},"platform":"instagram"}'
+
+## TAREFA 3 — Verificar chatbot no site
+Confirmar que src/components/ChatBot.tsx está importado e renderizado no Layout.tsx
+Verificar que está chamando a URL correta da Edge Function
+Verificar que sugestões rápidas aparecem ao abrir o chat
+
+## TAREFA 4 — Build e push
+npm run build
+git add -A
+git commit -m "BLOCO21: redeploy Edge Function IA, chatbot verificado"
+git push origin main

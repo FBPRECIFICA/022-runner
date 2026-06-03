@@ -16,7 +16,8 @@
       "mcp__claude_ai_Supabase__execute_sql",
       "Bash(npx vitest *)",
       "mcp__claude_ai_Supabase__deploy_edge_function",
-      "Bash(npx supabase *)"
+      "Bash(npx supabase *)",
+      "Bash(curl *)"
     ]
   }
 }
