@@ -1,0 +1,8 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente.
+
+O Vercel está monitorando a branch main mas os commits estão indo para master.
+Faça o seguinte em ordem:
+1. git checkout main 2>/dev/null || git checkout -b main
+2. git merge master
+3. git push origin main
+4. Confirme que o push foi para a branch main
