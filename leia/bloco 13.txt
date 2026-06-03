@@ -1,0 +1,35 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+
+## TAREFA 1 — Logo ocupando 100% da largura
+No src/components/Header.tsx, a camada preta do topo deve ficar assim:
+
+<div style={{backgroundColor:'#000', width:'100%', padding:'0', margin:'0', overflow:'hidden'}}>
+  <img 
+    src="/images/logo-022runner.png" 
+    alt="022 RUNNERS"
+    style={{
+      width: '100%',
+      height: '90px',
+      objectFit: 'cover',
+      objectPosition: 'center',
+      display: 'block',
+      margin: '0',
+      padding: '0',
+    }}
+  />
+  <div style={{height:'3px', background:'linear-gradient(90deg, #C9A84C, #FFD700, #C9A84C)'}} />
+</div>
+
+Isso vai fazer a imagem se esticar de ponta a ponta em toda a largura da tela.
+Remova qualquer container, max-width, padding ou margin que esteja limitando a imagem.
+
+## TAREFA 2 — Build e push
+npm run build
+git add -A
+git commit -m "Header: logo 100% largura total sem limitação"
+git push origin main

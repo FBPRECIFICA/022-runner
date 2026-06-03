@@ -18,36 +18,33 @@ export function Header() {
 
   return (
     <div className="sticky top-0 z-50">
-      {/* CAMADA 1 — fundo preto com logo */}
-      <div
-        className="w-full flex items-center"
-        style={{ backgroundColor: '#000000', borderBottom: '2px solid #C9A84C', height: '90px', padding: 0 }}
-      >
-        <Link
-          to="/"
-          onClick={() => setMobileOpen(false)}
-          style={{ flex: 1, display: 'block', backgroundColor: '#000000', lineHeight: 0 }}
-        >
+      {/* CAMADA 1 — logo 100% largura */}
+      <div style={{ backgroundColor: '#000', width: '100%', padding: 0, margin: 0, overflow: 'hidden', position: 'relative' }}>
+        <Link to="/" onClick={() => setMobileOpen(false)} style={{ display: 'block', lineHeight: 0 }}>
           <img
             src="/images/logo-022runner.png"
-            alt="022 RUNNER"
+            alt="022 RUNNERS"
             style={{
               width: '100%',
-              maxWidth: '100%',
-              height: '80px',
-              objectFit: 'contain',
+              height: '90px',
+              objectFit: 'cover',
+              objectPosition: 'center',
               display: 'block',
-              padding: '5px 20px',
-              boxSizing: 'border-box',
-              background: '#000',
+              margin: 0,
+              padding: 0,
             }}
           />
         </Link>
+        <div style={{ height: '3px', background: 'linear-gradient(90deg, #C9A84C, #FFD700, #C9A84C)' }} />
 
-        {/* Hamburger — mobile only */}
+        {/* Hamburger — mobile only, posicionado sobre a logo */}
         <button
-          className="md:hidden p-3 rounded transition-colors duration-200 flex-shrink-0"
-          style={{ color: '#ffffff', backgroundColor: '#000000' }}
+          className="md:hidden"
+          style={{
+            position: 'absolute', top: '50%', right: '12px', transform: 'translateY(-50%)',
+            color: '#ffffff', background: 'rgba(0,0,0,0.5)', border: 'none',
+            borderRadius: '6px', padding: '6px', cursor: 'pointer',
+          }}
           onClick={() => setMobileOpen(prev => !prev)}
           aria-label="Menu"
         >
