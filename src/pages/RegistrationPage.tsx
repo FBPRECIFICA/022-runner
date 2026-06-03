@@ -1,30 +1,32 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronLeft, CheckCircle, Loader2 } from 'lucide-react';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 import { trackRegistrationStart, trackRegistrationComplete } from '../utils/analytics';
 import { validateCPF } from '../utils/validators';
+import { TermoResponsabilidade } from '../components/TermoResponsabilidade';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
+const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não sei'];
+const LS_KEY = 'reg_form_draft';
+
+type Step = 'form' | 'termo' | 'confirmação';
+const STEPS: Step[] = ['form', 'termo', 'confirmação'];
+const STEP_LABELS = ['1. Dados', '2. Termo', '3. Confirmação'];
 
 function formatCPF(v: string) {
   return v.replace(/\D/g, '').slice(0, 11)
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    .replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
 }
-
 function formatPhone(v: string) {
-  return v.replace(/\D/g, '').slice(0, 11)
-    .replace(/(\d{2})(\d)/, '($1) $2')
-    .replace(/(\d{5})(\d{4})$/, '$1-$2');
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  return d.length <= 10
+    ? d.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d{4})$/, '$1-$2')
+    : d.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d{4})$/, '$1-$2');
 }
-
 function generateRegistrationNumber() {
-  const year = new Date().getFullYear();
-  const rand = String(Math.floor(1000 + Math.random() * 9000));
-  return `022-${year}-${rand}`;
+  return `022-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
 export function RegistrationPage() {
@@ -35,27 +37,34 @@ export function RegistrationPage() {
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState<'form' | 'summary'>('form');
+  const [step, setStep] = useState<Step>('form');
   const [error, setError] = useState('');
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
-    name: user?.name || '',
-    cpf: '',
-    birthdate: '',
-    phone: '',
-    email: user?.email || '',
-    city: '',
-    gender: '',
-    shirt_size: '',
-    distance_index: 0,
+  const [form, setForm] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null') || defaultForm(user); }
+    catch { return defaultForm(user); }
   });
+
+  function defaultForm(u: any) {
+    return {
+      name: u?.name || '', cpf: '', birthdate: '', phone: '', email: u?.email || '',
+      city: '', gender: '', shirt_size: '', distance_index: 0,
+      team_name: '', emergency_contact: '', blood_type: '', medical_condition: '',
+    };
+  }
 
   useEffect(() => {
     supabase.from('events').select('*').eq('slug', eventSlug).single()
       .then(({ data }) => { setEvent(data); if (data) trackRegistrationStart(data.title); setLoading(false); });
   }, [eventSlug]);
 
-  const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+  // Salvar rascunho no localStorage
+  useEffect(() => {
+    if (!loading) localStorage.setItem(LS_KEY, JSON.stringify(form));
+  }, [form, loading]);
+
+  const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
   const validate = () => {
     if (!form.name.trim()) return 'Informe seu nome completo.';
@@ -73,18 +82,17 @@ export function RegistrationPage() {
     const err = validate();
     if (err) { setError(err); return; }
     setError('');
-    setStep('summary');
+    setStep('termo');
   };
 
-  const handleConfirm = async () => {
+  const handleTermoAccepted = async () => {
     setSubmitting(true);
     setError('');
     try {
       const distances = event.distances || [];
       const chosen = distances[form.distance_index] || distances[0];
-      const regNumber = generateRegistrationNumber();
-
       const price = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
+      const regNumber = generateRegistrationNumber();
 
       const { data, error: insertError } = await supabase.from('registrations').insert({
         event_id: event.id,
@@ -101,13 +109,20 @@ export function RegistrationPage() {
         distance_name: chosen?.name,
         amount: Number(price),
         status: 'pending',
+        team_name: form.team_name || null,
+        emergency_contact: form.emergency_contact || null,
+        blood_type: form.blood_type || null,
+        medical_condition: form.medical_condition || null,
       }).select().single();
 
       if (insertError) throw insertError;
       trackRegistrationComplete(event.title, Number(price));
-      navigate(`/confirmacao/${data.id}`);
+      localStorage.removeItem(LS_KEY);
+      setRegistrationId(data.id);
+      setStep('confirmação');
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar inscrição. Tente novamente.');
+      setStep('form');
     } finally {
       setSubmitting(false);
     }
@@ -118,65 +133,70 @@ export function RegistrationPage() {
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" />
     </div>
   );
-
-  if (!event) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">Evento não encontrado.</p>
-    </div>
-  );
+  if (!event) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Evento não encontrado.</p></div>;
 
   const distances: any[] = event.distances || [];
   const chosen = distances[form.distance_index] || distances[0];
   const chosenPrice = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
+  const currentStepIdx = STEPS.indexOf(step);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4">
-        <Link to={`/evento/${eventSlug}`} className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-800 text-sm mb-6">
+        <Link to={`/evento/${eventSlug}`} className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-800 text-sm mb-4">
           <ChevronLeft size={16} /> Voltar ao evento
         </Link>
 
-        {/* Event header */}
-        <div className="bg-white rounded-xl border shadow-sm p-5 mb-6 flex items-center gap-4">
-          {event.banner_url && <img src={event.banner_url} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />}
+        {/* Cabeçalho do evento */}
+        <div className="bg-white rounded-xl border shadow-sm p-4 mb-5 flex items-center gap-4">
+          {event.banner_url && <img src={event.banner_url} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />}
           <div>
-            <h1 className="font-bold text-gray-900 text-lg">{event.title}</h1>
+            <h1 className="font-bold text-gray-900">{event.title}</h1>
             <p className="text-sm text-gray-500">{new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })} · {event.city}</p>
+          </div>
+        </div>
+
+        {/* Barra de progresso */}
+        <div className="bg-white rounded-xl border shadow-sm p-4 mb-5">
+          <div className="flex items-center justify-between">
+            {STEP_LABELS.map((label, i) => (
+              <div key={i} className="flex items-center gap-2 flex-1">
+                <div className="flex flex-col items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i <= currentStepIdx ? 'text-black' : 'bg-gray-100 text-gray-400'}`}
+                    style={{ backgroundColor: i <= currentStepIdx ? '#C9A84C' : undefined }}>
+                    {i < currentStepIdx ? '✓' : i + 1}
+                  </div>
+                  <span className={`text-xs mt-1 font-medium ${i <= currentStepIdx ? 'text-gray-900' : 'text-gray-400'}`}>{label}</span>
+                </div>
+                {i < STEP_LABELS.length - 1 && (
+                  <div className="flex-1 h-0.5 mx-2 mb-4" style={{ backgroundColor: i < currentStepIdx ? '#C9A84C' : '#e5e7eb' }} />
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
         {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-4">{error}</div>}
 
+        {/* ETAPA 1: Dados */}
         {step === 'form' && (
           <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Dados do Participante</h2>
+            <h2 className="text-xl font-bold text-gray-900">Dados do Participante</h2>
 
-            <Field label="Nome completo *">
-              <input className={inp} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Seu nome completo" />
-            </Field>
+            <Field label="Nome completo *"><input className={inp} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Seu nome completo" /></Field>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="CPF *">
-                <input className={inp} value={form.cpf} onChange={e => set('cpf', formatCPF(e.target.value))} placeholder="000.000.000-00" />
-              </Field>
-              <Field label="Data de Nascimento *">
-                <input type="date" className={inp} value={form.birthdate} onChange={e => set('birthdate', e.target.value)} />
-              </Field>
+              <Field label="CPF *"><input className={inp} value={form.cpf} onChange={e => set('cpf', formatCPF(e.target.value))} placeholder="000.000.000-00" /></Field>
+              <Field label="Data de Nascimento *"><input type="date" className={inp} value={form.birthdate} onChange={e => set('birthdate', e.target.value)} /></Field>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Telefone *">
-                <input className={inp} value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))} placeholder="(22) 99999-9999" />
-              </Field>
-              <Field label="E-mail *">
-                <input type="email" className={inp} value={form.email} onChange={e => set('email', e.target.value)} placeholder="seu@email.com" />
-              </Field>
+              <Field label="Telefone *"><input className={inp} value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))} placeholder="(22) 99999-9999" /></Field>
+              <Field label="E-mail *"><input type="email" className={inp} value={form.email} onChange={e => set('email', e.target.value)} placeholder="seu@email.com" /></Field>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Cidade *">
-                <input className={inp} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Sua cidade" />
-              </Field>
+              <Field label="Cidade *"><input className={inp} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Sua cidade" /></Field>
               <Field label="Sexo *">
                 <select className={inp} value={form.gender} onChange={e => set('gender', e.target.value)}>
                   <option value="">Selecione</option>
@@ -197,54 +217,89 @@ export function RegistrationPage() {
               <Field label="Distância *">
                 <select className={inp} value={form.distance_index} onChange={e => set('distance_index', Number(e.target.value))}>
                   {distances.map((d: any, i: number) => (
-                    <option key={i} value={i}>{d.name} — R$ {Number(d.price).toFixed(2).replace('.', ',')}</option>
+                    <option key={i} value={i}>{d.name} — R$ {Number(d.lots?.[0]?.price ?? d.price ?? 0).toFixed(2).replace('.', ',')}</option>
                   ))}
                 </select>
               </Field>
             </div>
 
-            <button onClick={handleNext}
-              className="w-full bg-[#C9A84C] text-white py-3 rounded-xl font-bold text-lg hover:bg-[#B8962E] transition-colors mt-4">
-              Revisar Inscrição →
+            {/* Novos campos */}
+            <div className="border-t pt-4 space-y-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Informações Adicionais</p>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Nome da equipe (opcional)"><input className={inp} value={form.team_name} onChange={e => set('team_name', e.target.value)} placeholder="Ex: Clube de Corrida" /></Field>
+                <Field label="Tipo sanguíneo (opcional)">
+                  <select className={inp} value={form.blood_type} onChange={e => set('blood_type', e.target.value)}>
+                    <option value="">Selecione</option>
+                    {BLOOD_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </Field>
+              </div>
+
+              <Field label="Contato de emergência (nome + telefone)">
+                <input className={inp} value={form.emergency_contact} onChange={e => set('emergency_contact', e.target.value)} placeholder="Ex: Maria Silva — (22) 98888-7777" />
+              </Field>
+
+              <Field label="Condição médica relevante (opcional)">
+                <textarea className={inp + ' resize-none'} rows={2} value={form.medical_condition} onChange={e => set('medical_condition', e.target.value)} placeholder="Alergias, condições cardíacas, uso de medicamentos..." />
+              </Field>
+            </div>
+
+            <button onClick={handleNext} className="w-full font-bold py-3 rounded-xl text-lg mt-2 transition-colors" style={{ backgroundColor: '#C9A84C', color: '#000' }}>
+              Avançar para o Termo →
             </button>
           </div>
         )}
 
-        {step === 'summary' && (
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-5">Resumo da Inscrição</h2>
-
-            <div className="space-y-3 mb-6">
-              {[
-                ['Participante', form.name],
-                ['CPF', form.cpf],
-                ['Data de Nascimento', form.birthdate ? new Date(form.birthdate + 'T00:00').toLocaleDateString('pt-BR') : ''],
-                ['Telefone', form.phone],
-                ['E-mail', form.email],
-                ['Cidade', form.city],
-                ['Sexo', form.gender === 'M' ? 'Masculino' : form.gender === 'F' ? 'Feminino' : 'Outro'],
-                ['Camiseta', form.shirt_size],
-                ['Distância', chosen?.name],
-              ].map(([label, val]) => (
-                <div key={label} className="flex justify-between text-sm border-b pb-2">
-                  <span className="text-gray-500">{label}</span>
-                  <span className="font-medium text-gray-900">{val}</span>
-                </div>
-              ))}
-              <div className="flex justify-between font-bold text-lg pt-2">
-                <span>Total</span>
-                <span className="text-[#C9A84C]">R$ {Number(chosenPrice).toFixed(2).replace('.', ',')}</span>
+        {/* ETAPA 2: Termo */}
+        {step === 'termo' && (
+          <div className="space-y-4">
+            {submitting ? (
+              <div className="bg-white rounded-xl border p-8 text-center">
+                <Loader2 size={32} className="animate-spin mx-auto mb-3" style={{ color: '#C9A84C' }} />
+                <p className="text-gray-600">Salvando sua inscrição...</p>
               </div>
-            </div>
+            ) : (
+              <TermoResponsabilidade
+                registration={{
+                  id: 'pending',
+                  name: form.name,
+                  cpf: form.cpf,
+                  birthdate: form.birthdate,
+                  gender: form.gender,
+                  distanceName: chosen?.name || '',
+                  city: form.city,
+                  phone: form.phone,
+                  email: form.email,
+                }}
+                event={{ id: event.id, title: event.title }}
+                userId={user?.id || ''}
+                onAccepted={handleTermoAccepted}
+              />
+            )}
+            <button onClick={() => setStep('form')} className="w-full border text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-50">
+              ← Voltar
+            </button>
+          </div>
+        )}
 
-            <div className="flex gap-3">
-              <button onClick={() => setStep('form')}
-                className="flex-1 border text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-50">
-                Voltar
+        {/* ETAPA 3: Confirmação */}
+        {step === 'confirmação' && registrationId && (
+          <div className="bg-white rounded-xl border shadow-sm p-6 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{ backgroundColor: '#f0fdf4' }}>
+              <span className="text-3xl">✅</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Inscrição registrada!</h2>
+            <p className="text-gray-500 text-sm">Agora finalize o pagamento para confirmar sua vaga.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button onClick={() => navigate(`/pagamento/${registrationId}`)}
+                className="w-full font-bold py-3 rounded-xl" style={{ backgroundColor: '#C9A84C', color: '#000' }}>
+                💳 Ir para Pagamento
               </button>
-              <button onClick={handleConfirm} disabled={submitting}
-                className="flex-1 bg-[#C9A84C] text-white py-3 rounded-xl font-bold hover:bg-[#B8962E] disabled:opacity-60 flex items-center justify-center gap-2">
-                {submitting ? <><Loader2 size={18} className="animate-spin" /> Confirmando...</> : '✅ Confirmar Inscrição'}
+              <button onClick={() => navigate(`/confirmacao/${registrationId}`)}
+                className="w-full font-bold py-3 rounded-xl border" style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
+                Ver Confirmação
               </button>
             </div>
           </div>

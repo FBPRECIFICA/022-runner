@@ -2,7 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { WhatsAppButton } from './WhatsAppButton';
+import { ChatBot } from './ChatBot';
 import { MobileBottomNav } from './MobileBottomNav';
 
 export function Layout() {
@@ -13,7 +13,7 @@ export function Layout() {
         <Outlet />
       </main>
       <Footer />
-      <WhatsAppButton />
+      <ChatBot />
       <MobileBottomNav />
       <Toaster position="top-right" toastOptions={{
         style: { background: '#1a1a1a', color: '#fff', border: '1px solid #C9A84C' },

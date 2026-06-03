@@ -14,7 +14,9 @@
       "Bash(npm list *)",
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__execute_sql",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "mcp__claude_ai_Supabase__deploy_edge_function",
+      "Bash(npx supabase *)"
     ]
   }
 }

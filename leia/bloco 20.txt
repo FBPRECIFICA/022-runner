@@ -1,0 +1,172 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+- Verificar .gitignore antes de cada push
+- NUNCA commitar arquivos .env ou chaves de API
+
+## TAREFA 1 — Supabase Edge Function para Claude API
+No Supabase criar Edge Function segura para chamar Claude API:
+Criar arquivo supabase/functions/ai-assistant/index.ts com:
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
+  try {
+    const { type, eventData, platform } = await req.json()
+    
+    const systemPrompt = `Você é o assistente oficial da plataforma 022 RUNNER — a maior plataforma de eventos esportivos da Região dos Lagos, Rio de Janeiro.
+
+SOBRE A PLATAFORMA:
+- 022 RUNNER conecta organizadores e atletas de corrida, trail, ciclismo, triathlon e caminhada
+- Cidades cobertas: Cabo Frio, Arraial do Cabo, Búzios, São Pedro da Aldeia, Iguaba Grande, São Sebastião, Araruama, Saquarema
+- Foco em eventos regionais com qualidade premium
+
+SOBRE EVENTOS:
+- Distâncias típicas: 3km, 5km, 10km, 21km, 42km
+- Kit padrão: camiseta, medalha, número de peito
+- Cronometragem oficial obrigatória em provas competitivas
+
+TOM DE VOZ:
+- Esportivo, motivacional, regional e inclusivo
+- Use emojis com moderação
+- Hashtags regionais: #022runner #regiãodoslagos #corridaderua #cabofrio #buzios #saopedrodaaldeia #arraial
+- Sempre mencionar o nome do evento e cidade
+
+TIPOS DE CONTEÚDO:
+- abertura_inscricoes: animado, urgência, destacar data limite e preço do 1º lote
+- ultimas_vagas: urgência máxima, número de vagas restantes
+- dia_evento: motivacional, logística, local de largada, horário
+- resultados: celebração, parabéns aos participantes, fotos
+
+Para Instagram: máximo 2200 chars, emojis, hashtags no final
+Para WhatsApp: direto, sem hashtags, máximo 500 chars
+Para Facebook: formal, completo, link do evento`
+
+    const userPrompt = type === 'post' 
+      ? `Crie um post de ${eventData.postType} para o evento "${eventData.title}" em ${eventData.city} no dia ${eventData.date} para ${platform}. Distâncias: ${eventData.distances}. ${eventData.extraInfo || ''}`
+      : `Responda essa dúvida sobre o evento "${eventData.title}": ${eventData.question}`
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': Deno.env.get('ANTHROPIC_API_KEY') || '',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: userPrompt }],
+        system: systemPrompt
+      })
+    })
+
+    const data = await response.json()
+    const text = data.content[0].text
+
+    return new Response(JSON.stringify({ text }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+})
+
+Adicionar secret no Supabase via CLI:
+npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-api03-V8ribE7dSrefpfF89Yf13YAli4zE8WlnMoi9ZQPAQE71EwAWQF7h8ZHwef8bODauE26CSkb2QqaXxE1mmji7MQ-hFhizAAA --project-ref adorzqjhazsfvbttlfht
+
+Deploy da Edge Function:
+npx supabase functions deploy ai-assistant --project-ref adorzqjhazsfvbttlfht
+
+## TAREFA 2 — Gerador de posts IA funcional
+No src/pages/SocialGeneratorPage.tsx atualizar para usar a Edge Function:
+- Criar função callAIAssistant(type, eventData, platform) que chama a Edge Function do Supabase
+- URL da Edge Function: https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/ai-assistant
+- Mostrar loading animado enquanto IA processa
+- Mostrar resultado em textarea editável
+- Botões: copiar, regenerar, compartilhar
+- Histórico dos últimos 10 posts gerados (salvar no localStorage)
+- Preview visual do post com arte gerada via Canvas
+
+## TAREFA 3 — Chatbot de atendimento ao atleta
+Criar src/components/ChatBot.tsx com:
+- Botão flutuante dourado no canto inferior direito (substituir botão WhatsApp atual)
+- Ao clicar abre janela de chat premium
+- Header: "Assistente 022 RUNNER" com avatar dourado
+- Campo de mensagem e botão enviar
+- Chamar Edge Function ai-assistant com type='chat' e pergunta do atleta
+- Contexto do evento atual se estiver na página do evento
+- Respostas sobre: inscrições, pagamento, percurso, kit, regulamento, como chegar
+- Sugestões rápidas: "Como me inscrever?", "Qual o percurso?", "Onde retirar o kit?"
+- Histórico da conversa na sessão atual
+- Design premium preto e dourado com animações suaves
+- Substituir o WhatsAppButton.tsx pelo ChatBot em todas as páginas
+
+## TAREFA 4 — Termo de responsabilidade digital
+Criar src/components/TermoResponsabilidade.tsx com o seguinte termo adaptado para a plataforma:
+
+TERMO DE RESPONSABILIDADE — 022 RUNNER
+
+Eu, [NOME DO ATLETA], data de nasc.: [DATA], [SEXO], CPF: [CPF]
+Modalidade: [DISTÂNCIA ESCOLHIDA]
+Endereço: [ENDEREÇO], Cidade: [CIDADE], Telefone: [TELEFONE]
+E-mail: [EMAIL], Equipe: [EQUIPE se houver]
+
+DECLARAÇÃO:
+Declaro que minha participação no evento "[NOME DO EVENTO]", organizado pela plataforma 022 RUNNER, ocorre por livre e espontânea vontade, isentando de quaisquer responsabilidades por acidentes que venha a sofrer os organizadores, patrocinadores e promotores, em meu nome e de meus herdeiros ou sucessores.
+
+Declaro estar em boas condições físicas e médicas para participar e que estou adequadamente preparado para esta prova. Assumo quaisquer despesas médicas e hospitalares decorrentes de acidentes que porventura venham a ocorrer durante o evento, caso a comissão organizadora julgue necessário.
+
+Autorizo a veiculação da minha imagem em televisão, jornais, redes sociais ou qualquer outro tipo de mídia relacionada a este evento ou ao esporte em geral.
+
+Declaro ter lido e concordado com o regulamento completo do evento disponível na plataforma 022 RUNNER.
+
+Assinado digitalmente em: [DATA/HORA] — IP: [IP] — Plataforma: 022runner.com.br
+
+- Mostrar termo completo com scroll obrigatório antes de habilitar checkbox
+- Checkbox: "Li, compreendi e aceito os termos acima"
+- Campo adicional: "Nome da equipe (opcional)"
+- Ao aceitar salvar no Supabase:
+CREATE TABLE IF NOT EXISTS termo_aceites (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, registration_id UUID REFERENCES registrations(id), user_id UUID REFERENCES users(id), event_id UUID REFERENCES events(id), nome TEXT, cpf TEXT, data_nascimento DATE, sexo TEXT, distancia TEXT, cidade TEXT, telefone TEXT, email TEXT, equipe TEXT, ip_hint TEXT, aceito_em TIMESTAMP DEFAULT NOW(), termo_versao TEXT DEFAULT 'v1.0');
+CREATE POLICY "Usuários veem próprios aceites" ON termo_aceites FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Sistema insere aceites" ON termo_aceites FOR INSERT WITH CHECK (true);
+ALTER TABLE termo_aceites ENABLE ROW LEVEL SECURITY;
+- Integrar no fluxo de inscrição: mostrar ANTES da tela de pagamento
+- No OrganizerDashboard botão "Baixar termos assinados" exporta Excel com todos os aceites do evento
+
+## TAREFA 5 — Melhorias no fluxo de inscrição
+No src/pages/RegistrationPage.tsx:
+- Adicionar campo "Nome da equipe" (opcional)
+- Adicionar campo "Contato de emergência" (nome + telefone)
+- Adicionar campo "Tipo sanguíneo"
+- Adicionar campo "Condição médica relevante" (opcional, textarea)
+- Barra de progresso do fluxo: 1.Dados → 2.Termo → 3.Pagamento → 4.Confirmação
+- Salvar dados em localStorage para não perder se fechar por acidente
+- Botão "Voltar" em cada etapa
+Adicionar colunas no Supabase:
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS team_name TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS emergency_contact TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS blood_type TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS medical_condition TEXT;
+
+## TAREFA 6 — Build final e push
+npm install
+npx supabase functions deploy ai-assistant --project-ref adorzqjhazsfvbttlfht 2>/dev/null || echo "Deploy manual necessário"
+npm run build
+Corrigir TODOS os erros TypeScript
+git add -A
+git commit -m "BLOCO20: IA assistente Claude API, chatbot, gerador posts, termo responsabilidade, fluxo inscrição melhorado"
+git push origin main
