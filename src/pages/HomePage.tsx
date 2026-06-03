@@ -17,6 +17,17 @@ const blueIcon = new L.Icon({
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
 });
 
+const CITY_COORDS: Record<string, [number, number]> = {
+  'Cabo Frio':           [-22.8779, -42.0189],
+  'Búzios':             [-22.7469, -41.8826],
+  'São Pedro da Aldeia': [-22.8400, -42.1020],
+  'Iguaba Grande':       [-22.8360, -42.2290],
+  'Araruama':            [-22.8724, -42.3435],
+  'Saquarema':           [-22.9200, -42.5100],
+  'Macaé':              [-22.3710, -41.7870],
+  'Bacaxá':             [-22.9550, -42.5720],
+};
+
 function supabaseToEvent(e: any): Event {
   const distances = (e.distances || []).map((d: any, i: number) => ({
     id: `d${i}`,
@@ -425,17 +436,22 @@ export function HomePage() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              {allEvents.filter(e => (e as any).lat && (e as any).lng).map(e => (
-                <Marker key={e.id} position={[(e as any).lat, (e as any).lng]} icon={blueIcon}>
-                  <Popup>
-                    <div className="text-sm">
-                      <p className="font-bold">{e.name}</p>
-                      <p className="text-gray-500">{new Date(e.date).toLocaleDateString('pt-BR')}</p>
-                      <a href={`/evento/${e.slug}`} className="text-blue-600 hover:underline">Ver evento →</a>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
+              {allEvents
+                .filter(e => CITY_COORDS[e.city])
+                .map(e => {
+                  const coords = CITY_COORDS[e.city];
+                  return (
+                    <Marker key={e.id} position={coords} icon={blueIcon}>
+                      <Popup>
+                        <div style={{ minWidth: 160 }}>
+                          <p style={{ fontWeight: 700, marginBottom: 4 }}>{e.name}</p>
+                          <p style={{ color: '#6b7280', fontSize: 12, marginBottom: 4 }}>{new Date(e.date).toLocaleDateString('pt-BR')} · {e.city}</p>
+                          <a href={`/evento/${e.slug}`} style={{ color: '#2563EB', fontSize: 12, fontWeight: 600 }}>Ver evento →</a>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  );
+                })}
             </MapContainer>
           </div>
         </div>

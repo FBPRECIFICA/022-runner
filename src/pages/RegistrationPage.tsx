@@ -83,25 +83,27 @@ export function RegistrationPage() {
       const chosen = distances[form.distance_index] || distances[0];
       const regNumber = generateRegistrationNumber();
 
+      const price = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
+
       const { data, error: insertError } = await supabase.from('registrations').insert({
         event_id: event.id,
         user_id: user?.id || null,
         registration_number: regNumber,
         name: form.name,
         cpf: form.cpf.replace(/\D/g, ''),
-        birthdate: form.birthdate,
+        birth_date: form.birthdate || null,
         phone: form.phone.replace(/\D/g, ''),
         email: form.email,
         city: form.city,
         gender: form.gender,
         shirt_size: form.shirt_size,
         distance_name: chosen?.name,
-        amount: chosen?.price || 0,
+        amount: Number(price),
         status: 'pending',
       }).select().single();
 
       if (insertError) throw insertError;
-      trackRegistrationComplete(event.title, chosen?.price || 0);
+      trackRegistrationComplete(event.title, Number(price));
       navigate(`/confirmacao/${data.id}`);
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar inscrição. Tente novamente.');
@@ -124,6 +126,7 @@ export function RegistrationPage() {
 
   const distances: any[] = event.distances || [];
   const chosen = distances[form.distance_index] || distances[0];
+  const chosenPrice = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -229,7 +232,7 @@ export function RegistrationPage() {
               ))}
               <div className="flex justify-between font-bold text-lg pt-2">
                 <span>Total</span>
-                <span className="text-blue-600">R$ {Number(chosen?.price || 0).toFixed(2).replace('.', ',')}</span>
+                <span className="text-blue-600">R$ {Number(chosenPrice).toFixed(2).replace('.', ',')}</span>
               </div>
             </div>
 

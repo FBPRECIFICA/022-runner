@@ -1,0 +1,64 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+- Verificar .gitignore antes de cada push
+
+## TAREFA 1 — Corrigir erro no formulário de inscrição
+No src/pages/RegistrationPage.tsx corrigir erro ao confirmar inscrição.
+Rodar esse SQL no Supabase para adicionar colunas faltantes e políticas RLS:
+
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS cpf TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS birth_date DATE;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS gender TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS shirt_size TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS checkin_at TIMESTAMP;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS amount DECIMAL(10,2);
+
+DROP POLICY IF EXISTS "Usuários criam próprias inscrições" ON registrations;
+DROP POLICY IF EXISTS "Usuários veem próprias inscrições" ON registrations;
+DROP POLICY IF EXISTS "Organizadores veem inscrições dos seus eventos" ON registrations;
+
+CREATE POLICY "Usuários criam próprias inscrições" ON registrations FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Usuários veem próprias inscrições" ON registrations FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Organizadores veem inscrições dos seus eventos" ON registrations FOR SELECT USING (EXISTS (SELECT 1 FROM events WHERE events.id = registrations.event_id AND events.organizer_id = auth.uid()));
+
+## TAREFA 2 — Corrigir cadastro no desktop
+No src/pages/RegisterPage.tsx identificar e corrigir erro que impede cadastro no desktop.
+Verificar conflito com políticas RLS da tabela users.
+Garantir redirecionamento correto após cadastro conforme role.
+
+## TAREFA 3 — Corrigir pin do evento no mapa da home
+No src/pages/HomePage.tsx na seção do mapa Leaflet:
+Adicionar coordenadas fixas para o evento de teste em Cabo Frio (lat: -22.8779, lng: -42.0189).
+Garantir que o pin aparece e popup funciona com botão "Ver evento".
+
+## TAREFA 4 — Corrigir políticas RLS do admin
+Rodar SQL no Supabase:
+DROP POLICY IF EXISTS "Admin vê todos usuários" ON users;
+DROP POLICY IF EXISTS "Admin vê todos eventos" ON events;
+DROP POLICY IF EXISTS "Admin vê todas inscrições" ON registrations;
+CREATE POLICY "Admin vê todos usuários" ON users FOR SELECT USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admin vê todos eventos" ON events FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admin vê todas inscrições" ON registrations FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+## TAREFA 5 — Corrigir PWA
+No index.html verificar e adicionar se faltar:
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="022 RUNNER">
+<link rel="apple-touch-icon" href="/images/logo-022runner.png">
+Verificar se public/manifest.json existe e está correto.
+
+## TAREFA 6 — Build e push
+npm install
+npm run build
+Corrigir TODOS os erros TypeScript
+git add -A
+git commit -m "Correções bugs: inscrição amount, cadastro, mapa, admin RLS, PWA"
+git push origin main

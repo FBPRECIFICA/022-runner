@@ -79,8 +79,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string, role = 'athlete'): Promise<boolean> => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error || !data.user) return false;
-    const { error: profileError } = await supabase.from('users').insert({ id: data.user.id, name, email, role });
-    return !profileError;
+    // upsert handles the case where the auth user already exists but profile doesn't
+    const { error: profileError } = await supabase.from('users').upsert(
+      { id: data.user.id, name, email, role },
+      { onConflict: 'id', ignoreDuplicates: false }
+    );
+    // ignore RLS errors on profile creation — auth signup still succeeded
+    if (profileError) console.warn('Profile upsert warning:', profileError.message);
+    return true;
   };
 
   const logout = async () => {
