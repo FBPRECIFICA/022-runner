@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle, Star, Timer } from 'lucide-react';
 import { scoreBadge } from '../utils/scoreCalculator';
+import { Helmet } from 'react-helmet-async';
+import { trackEventView, trackShare } from '../utils/analytics';
 
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -38,6 +40,7 @@ export function EventDetailPage() {
       const { data, error } = await supabase.from('events').select('*').eq('slug', slug).single();
       if (error || !data) { setNotFound(true); setLoading(false); return; }
       setEvent(data);
+      trackEventView(data.title);
       if (data.organizer_id) {
         const { data: org } = await supabase.from('users').select('name, email').eq('id', data.organizer_id).single();
         setOrganizer(org);
@@ -50,6 +53,7 @@ export function EventDetailPage() {
   const countdown = useCountdown(event?.date || '');
 
   const handleShare = async () => {
+    trackShare(event?.title || '', 'clipboard');
     try {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
@@ -83,8 +87,23 @@ export function EventDetailPage() {
   const score = event.quality_score || 0;
   const isPast = eventDate.getTime() < Date.now();
 
+  const sponsors: { name: string; logo_url: string }[] = event.sponsors || [];
+  const metaDesc = event.description ? event.description.slice(0, 160) : `${event.title} — ${event.city}`;
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>{event.title} — 022 RUNNER</title>
+        <meta name="description" content={metaDesc} />
+        <meta property="og:title" content={`${event.title} — 022 RUNNER`} />
+        <meta property="og:description" content={metaDesc} />
+        <meta property="og:image" content={event.banner_url || '/images/hero-bg.jpg'} />
+        <meta property="og:url" content={`https://022runner.com.br/evento/${event.slug}`} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={event.title} />
+        <meta name="twitter:image" content={event.banner_url || '/images/hero-bg.jpg'} />
+      </Helmet>
+
       {/* Banner */}
       <div className="relative w-full bg-gray-900" style={{ height: '400px' }}>
         {event.banner_url
@@ -218,6 +237,24 @@ export function EventDetailPage() {
                     <span key={i} className="flex items-center gap-1.5 bg-green-50 text-green-700 border border-green-200 text-sm font-medium px-3 py-1.5 rounded-full">
                       <CheckCircle size={13} /> {item}
                     </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Patrocinadores */}
+            {sponsors.length > 0 && (
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4">Realização e Patrocínio</h2>
+                <div className="flex flex-wrap gap-4 items-center">
+                  {sponsors.map((s, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      {s.logo_url ? (
+                        <img src={s.logo_url} alt={s.name} className="h-12 w-auto object-contain" />
+                      ) : (
+                        <div className="h-12 w-20 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">{s.name}</div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>

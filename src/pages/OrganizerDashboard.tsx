@@ -23,6 +23,7 @@ interface EventForm {
   event_type: string;
   kit_items: string[];
   additional_info: string;
+  sponsors: { name: string; logo_url: string }[];
   distances: DistanceWithLots[];
 }
 
@@ -38,6 +39,7 @@ const emptyForm: EventForm = {
   event_type: '',
   kit_items: [],
   additional_info: '',
+  sponsors: [],
   distances: [{ name: '5km', lots: [{ price: '', qty: '' }] }],
 };
 
@@ -201,6 +203,7 @@ export function OrganizerDashboard() {
       event_type: event.event_type || '',
       kit_items: event.kit_items || [],
       additional_info: event.additional_info || '',
+      sponsors: event.sponsors || [],
       distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }] }],
     });
     setEditingEventId(event.id);
@@ -252,6 +255,7 @@ export function OrganizerDashboard() {
         event_type: form.event_type || null,
         kit_items: form.kit_items.length > 0 ? form.kit_items : null,
         additional_info: form.additional_info || null,
+        sponsors: form.sponsors.length > 0 ? form.sponsors : null,
         quality_score: score,
       };
 
@@ -467,6 +471,27 @@ export function OrganizerDashboard() {
                 <textarea value={form.additional_info} onChange={e => setForm(p => ({ ...p, additional_info: e.target.value }))}
                   rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Regras, percurso detalhado, informações de kit, etc..." />
+              </div>
+
+              {/* Patrocinadores */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Patrocinadores (máx. 3)</label>
+                <div className="space-y-2">
+                  {form.sponsors.map((s, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input value={s.name} onChange={e => setForm(p => { const sp = [...p.sponsors]; sp[i] = { ...sp[i], name: e.target.value }; return { ...p, sponsors: sp }; })}
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nome do patrocinador" />
+                      <input value={s.logo_url} onChange={e => setForm(p => { const sp = [...p.sponsors]; sp[i] = { ...sp[i], logo_url: e.target.value }; return { ...p, sponsors: sp }; })}
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="URL do logo" />
+                      <button onClick={() => setForm(p => ({ ...p, sponsors: p.sponsors.filter((_, j) => j !== i) }))}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                    </div>
+                  ))}
+                  {form.sponsors.length < 3 && (
+                    <button onClick={() => setForm(p => ({ ...p, sponsors: [...p.sponsors, { name: '', logo_url: '' }] }))}
+                      className="text-blue-600 text-sm hover:underline">+ Adicionar patrocinador</button>
+                  )}
+                </div>
               </div>
 
               {/* Score de qualidade */}

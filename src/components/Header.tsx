@@ -62,6 +62,7 @@ export function Header() {
         >
           <NavLink to="/">Home</NavLink>
           <NavLink to="/eventos">Eventos</NavLink>
+          <NavLink to="/ranking">Ranking</NavLink>
 
           <span style={{ color: '#C9A84C', fontSize: '20px', lineHeight: 1, opacity: 0.6 }}>|</span>
 
@@ -104,6 +105,7 @@ export function Header() {
         >
           <MobileLink to="/" onClick={() => setMobileOpen(false)}>Home</MobileLink>
           <MobileLink to="/eventos" onClick={() => setMobileOpen(false)}>Eventos</MobileLink>
+          <MobileLink to="/ranking" onClick={() => setMobileOpen(false)}>Ranking</MobileLink>
 
           <div style={{ height: '1px', backgroundColor: '#f0e6c8', margin: '4px 16px' }} />
 

@@ -1,0 +1,133 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+- Verificar .gitignore antes de cada push
+
+## TAREFA 1 — Painel Administrativo completo
+Crie src/pages/AdminDashboard.tsx com:
+- Aba "Visão Geral": cards com total de eventos, atletas cadastrados, inscrições, receita total
+- Gráfico de barras (usar recharts já instalado) mostrando inscrições por mês
+- Gráfico de pizza mostrando eventos por cidade
+- Aba "Eventos": tabela com todos os eventos (todos os organizadores), colunas: nome, organizador, cidade, data, inscrições, status, ações (aprovar/rejeitar/destacar)
+- Aba "Usuários": tabela com todos os usuários, colunas: nome, email, role, data cadastro, ações (promover a organizador, bloquear)
+- Aba "Inscrições": tabela geral de todas as inscrições com filtros
+- Botão "Destacar evento" que muda plan para featured no Supabase
+- Botão "Promover a Premium" que muda plan para premium
+- Design dark premium com sidebar lateral
+Adicionar rota /admin no App.tsx protegida para role admin
+
+## TAREFA 2 — Sistema de pagamento PIX simulado
+Crie src/pages/PaymentPage.tsx com:
+- Mostrar resumo da inscrição (evento, distância, valor)
+- Gerar chave PIX fake formatada: 022runner@pagamentos.com.br
+- Mostrar QR Code do PIX (usar qrcode.react)
+- Countdown de 30 minutos para expirar o pagamento
+- Botão "Simular pagamento aprovado" que muda status para confirmed no Supabase
+- Após confirmação redirecionar para /confirmacao/:id
+- Mostrar instruções claras de como pagar via PIX
+Adicionar rota /pagamento/:registrationId no App.tsx
+
+## TAREFA 3 — Certificado digital automático
+Crie src/pages/CertificatePage.tsx com:
+- Buscar dados da inscrição e evento no Supabase
+- Certificado visual bonito em HTML/CSS com:
+  - Logo 022 RUNNER no topo
+  - "Certificamos que [NOME DO ATLETA]"
+  - "Participou do [NOME DO EVENTO]"
+  - "Realizado em [DATA] em [CIDADE]"
+  - "Percurso: [DISTÂNCIA]"
+  - Número de inscrição e QR Code de validação
+  - Linha dourada decorativa
+  - Assinatura digital da organização
+- Botão "Baixar PDF" usando window.print() com CSS de impressão
+- Botão "Compartilhar" no WhatsApp e Instagram
+Adicionar rota /certificado/:registrationId no App.tsx
+
+## TAREFA 4 — Controle de patrocinadores
+No formulário de criação de evento no OrganizerDashboard.tsx adicionar seção "Patrocinadores":
+- Campo para adicionar até 3 patrocinadores: nome + URL do logo
+- Salvar como JSON no banco (adicionar coluna sponsors JSONB na tabela events via SQL)
+- Na EventDetailPage.tsx mostrar seção "Realização e Patrocínio" com logos dos patrocinadores
+- Badge especial "PATROCINADO" no card do evento na listagem
+
+## TAREFA 5 — Notificações WhatsApp automáticas
+Crie src/utils/whatsappNotifier.ts com função sendWhatsAppMessage que:
+- Gera link wa.me com mensagem formatada
+- Mensagem de confirmação de inscrição: "✅ Inscrição confirmada! Evento: [nome], Data: [data], Nº: [número]. Boa corrida! 🏃"
+- Mensagem de lembrete (link gerado mas aberto manualmente pelo organizador)
+Na ConfirmationPage.tsx adicionar botão "Receber confirmação no WhatsApp" que abre o link wa.me
+
+## TAREFA 6 — Página de perfil público do atleta
+Crie src/pages/AthleteProfilePage.tsx com:
+- URL: /atleta/:userId
+- Foto de perfil (avatar com iniciais se não tiver)
+- Nome, cidade, bio
+- Estatísticas públicas: eventos participados, distância total, medalhas
+- Histórico de eventos em cards
+- Botão "Seguir atleta" (incrementar contador no Supabase)
+- Design premium com banner de capa esportivo
+Adicionar rota /atleta/:userId no App.tsx
+
+## TAREFA 7 — Ranking de atletas
+Crie src/pages/RankingPage.tsx com:
+- Filtros: cidade, modalidade, período (mês/ano/todos)
+- Tabela de ranking com: posição, avatar, nome, cidade, eventos, km totais, medalhas
+- Top 3 com destaque visual (ouro/prata/bronze)
+- Buscar dados reais do Supabase (count de registrations por user)
+- Paginação de 20 em 20
+- Design premium esportivo
+Adicionar link "Ranking" no Header e rota /ranking no App.tsx
+
+## TAREFA 8 — Check-in digital no evento
+Crie src/pages/CheckinPage.tsx com:
+- Página para organizador usar no dia do evento
+- Campo de busca por nome ou número de inscrição
+- Lista de inscritos com status de check-in
+- Botão "Fazer check-in" que muda campo checkin_at no Supabase (adicionar coluna na tabela registrations)
+- Contador: X/Y inscritos já fizeram check-in
+- Filtros por distância
+- Design otimizado para mobile (botões grandes, fácil uso)
+Adicionar rota /checkin/:eventSlug no App.tsx protegida para organizer e admin
+
+## TAREFA 9 — SEO dinâmico por evento
+No src/pages/EventDetailPage.tsx:
+- Usar react-helmet-async (instalar: npm install react-helmet-async @types/react-helmet)
+- Adicionar no App.tsx: import HelmetProvider
+- Para cada evento definir dinamicamente:
+  - title: "[Nome do Evento] — 022 RUNNER"
+  - meta description: primeiros 160 chars da descrição do evento
+  - og:title, og:description, og:image (primeira foto do evento)
+  - og:url: https://022runner.com.br/evento/[slug]
+  - twitter:card, twitter:title, twitter:image
+- Na HomePage adicionar meta tags gerais do site
+
+## TAREFA 10 — Pixel Facebook e Google Analytics
+No index.html adicionar comentários para inserção posterior dos pixels:
+<!-- FB_PIXEL_CODE_HERE -->
+<!-- GA_CODE_HERE -->
+Crie src/utils/analytics.ts com funções:
+- trackPageView(page: string)
+- trackEventView(eventName: string)
+- trackRegistrationStart(eventName: string)  
+- trackRegistrationComplete(eventName: string, value: number)
+- trackShare(eventName: string, method: string)
+Chamar essas funções nos lugares corretos (EventDetailPage, RegistrationPage, ConfirmationPage)
+Por enquanto as funções fazem console.log — fácil substituir pelo pixel real depois
+
+## TAREFA 11 — Melhorias visuais gerais
+- No src/pages/HomePage.tsx adicionar seção "Depoimentos" com 3 cards de atletas fictícios com foto avatar, nome, cidade e texto de depoimento
+- Adicionar seção "Organizadores parceiros" com logos fictícios (usar divs coloridas com iniciais)
+- Adicionar botão flutuante de WhatsApp no canto inferior direito em todas as páginas (número: 22999999999) — criar src/components/WhatsAppButton.tsx
+- Adicionar animação de loading skeleton em todas as listas que buscam do Supabase
+- Footer completo com: logo, links úteis, redes sociais, copyright, "Desenvolvido com ❤️ na Região dos Lagos"
+
+## TAREFA 12 — Build final e push
+npm install
+npm run build
+Corrigir TODOS os erros TypeScript
+git add -A
+git commit -m "Dias 10-11-12: admin, pagamento PIX, certificado, patrocinadores, WhatsApp, ranking, check-in, SEO, analytics, melhorias visuais"
+git push origin main

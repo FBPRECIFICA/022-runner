@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronLeft, CheckCircle, Loader2 } from 'lucide-react';
+import { trackRegistrationStart, trackRegistrationComplete } from '../utils/analytics';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 
@@ -50,7 +51,7 @@ export function RegistrationPage() {
 
   useEffect(() => {
     supabase.from('events').select('*').eq('slug', eventSlug).single()
-      .then(({ data }) => { setEvent(data); setLoading(false); });
+      .then(({ data }) => { setEvent(data); if (data) trackRegistrationStart(data.title); setLoading(false); });
   }, [eventSlug]);
 
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
@@ -100,6 +101,7 @@ export function RegistrationPage() {
       }).select().single();
 
       if (insertError) throw insertError;
+      trackRegistrationComplete(event.title, chosen?.price || 0);
       navigate(`/confirmacao/${data.id}`);
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar inscrição. Tente novamente.');

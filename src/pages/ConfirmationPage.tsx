@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, Share2, Download, Home } from 'lucide-react';
+import { CheckCircle, Share2, Download, Home, MessageCircle } from 'lucide-react';
+import { confirmationMessage } from '../utils/whatsappNotifier';
 import { QRCodeSVG } from 'qrcode.react';
 
 export function ConfirmationPage() {
@@ -126,6 +127,15 @@ export function ConfirmationPage() {
             <Download size={16} /> Baixar Comprovante
           </button>
         </div>
+
+        {/* WhatsApp confirmação */}
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(confirmationMessage(event.title, new Date(event.date).toLocaleDateString('pt-BR'), reg.registration_number))}`}
+          target="_blank" rel="noreferrer"
+          className="flex items-center justify-center gap-2 bg-green-500 text-white font-semibold py-3 rounded-xl hover:bg-green-600 transition-colors text-sm"
+        >
+          <MessageCircle size={18} /> Receber confirmação no WhatsApp
+        </a>
 
         <Link to="/" className="flex items-center justify-center gap-2 text-gray-500 hover:text-gray-800 text-sm py-2">
           <Home size={16} /> Voltar ao início
