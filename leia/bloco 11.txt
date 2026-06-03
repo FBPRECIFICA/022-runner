@@ -1,0 +1,21 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+
+## TAREFA 1 — Corrigir logo no Header
+No src/components/Header.tsx, na camada preta do topo:
+- Fundo da camada: #000000
+- A tag <img> do logo deve ter: width="100%" style com max-width: 500px, height: auto, display: block, margin: 0 auto, padding: 10px 40px, box-sizing: border-box
+- IMPORTANTE: adicionar na tag <img> o seguinte style: mix-blend-mode: normal, filter: brightness(1) — isso vai garantir que o logo funda com o fundo preto sem diferença de tonalidade
+- A imagem logo-022runner.png tem fundo preto — para fundir perfeitamente adicione background-color: #000000 no container pai e na própria img
+- Remover qualquer border, outline ou box-shadow ao redor da logo
+- A camada preta deve ter padding: 0 e a img deve ir de ponta a ponta com padding interno de 8px 60px
+
+## TAREFA 2 — Build e push
+npm run build
+git add -A
+git commit -m "Header: logo grande centralizada fundo unificado"
+git push origin main

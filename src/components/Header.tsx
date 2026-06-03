@@ -21,20 +21,35 @@ export function Header() {
       {/* CAMADA 1 — fundo preto com logo */}
       <div
         className="w-full flex items-center"
-        style={{ backgroundColor: '#000000', borderBottom: '2px solid #C9A84C', height: '70px', padding: '12px 40px' }}
+        style={{ backgroundColor: '#000000', borderBottom: '2px solid #C9A84C', height: '70px', padding: 0 }}
       >
-        <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center h-full" style={{ flex: 1 }}>
+        <Link
+          to="/"
+          onClick={() => setMobileOpen(false)}
+          style={{ flex: 1, display: 'block', backgroundColor: '#000000', lineHeight: 0 }}
+        >
           <img
             src="/images/logo-022runner.png"
             alt="022 RUNNER"
-            style={{ width: '100%', maxWidth: '400px', height: 'auto', display: 'block', margin: '0 auto' }}
+            style={{
+              width: '100%',
+              maxWidth: '500px',
+              height: 'auto',
+              display: 'block',
+              margin: '0 auto',
+              padding: '8px 60px',
+              boxSizing: 'border-box',
+              backgroundColor: '#000000',
+              mixBlendMode: 'normal',
+              filter: 'brightness(1)',
+            }}
           />
         </Link>
 
         {/* Hamburger — mobile only */}
         <button
-          className="ml-auto md:hidden p-2 rounded transition-colors duration-200"
-          style={{ color: '#ffffff' }}
+          className="md:hidden p-3 rounded transition-colors duration-200 flex-shrink-0"
+          style={{ color: '#ffffff', backgroundColor: '#000000' }}
           onClick={() => setMobileOpen(prev => !prev)}
           aria-label="Menu"
         >
