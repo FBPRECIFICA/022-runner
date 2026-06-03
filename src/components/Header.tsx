@@ -18,7 +18,7 @@ export function Header() {
 
   return (
     <div className="sticky top-0 z-50">
-      {/* CAMADA 1 — logo 100% largura */}
+      {/* CAMADA 1 — logo banner */}
       <div style={{ backgroundColor: '#000', width: '100%', padding: 0, margin: 0, overflow: 'hidden', position: 'relative' }}>
         <Link to="/" onClick={() => setMobileOpen(false)} style={{ display: 'block', lineHeight: 0 }}>
           <img
@@ -26,18 +26,17 @@ export function Header() {
             alt="022 RUNNERS"
             style={{
               width: '100%',
-              height: '90px',
-              objectFit: 'cover',
-              objectPosition: 'center',
+              height: 'auto',
+              maxHeight: '110px',
+              objectFit: 'contain',
               display: 'block',
-              margin: 0,
-              padding: 0,
+              background: '#000',
             }}
           />
         </Link>
         <div style={{ height: '3px', background: 'linear-gradient(90deg, #C9A84C, #FFD700, #C9A84C)' }} />
 
-        {/* Hamburger — mobile only, posicionado sobre a logo */}
+        {/* Hamburger — mobile only */}
         <button
           className="md:hidden"
           style={{

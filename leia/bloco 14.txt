@@ -1,0 +1,20 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+
+## TAREFA 1 — Atualizar logo no Header
+Em public/images/ renomeie o arquivo "logo tamanho certo.png" para "logo-022runner.png" substituindo o arquivo anterior.
+
+No src/components/Header.tsx:
+- Container preto: width 100%, padding 0, margin 0, overflow hidden, background #000
+- Img src="/images/logo-022runner.png": width 100%, height auto, max-height 110px, object-fit contain, display block, background #000
+- Linha dourada 3px embaixo: background linear-gradient(90deg, #C9A84C, #FFD700, #C9A84C)
+
+## TAREFA 2 — Build e push
+npm run build
+git add -A
+git commit -m "Header: nova logo banner tamanho certo"
+git push origin main
