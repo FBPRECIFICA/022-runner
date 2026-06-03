@@ -1,0 +1,9 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente.
+
+O Vercel está falhando com "Permissão negada" no vite. O node_modules foi commitado por engano.
+Faça o seguinte em ordem:
+1. Crie o arquivo .gitignore na raiz com o conteúdo: node_modules/ dist/ .env .claude/
+2. git rm -r --cached node_modules dist 2>/dev/null || true
+3. git add -A
+4. git commit -m "Fix: remover node_modules do git, adicionar .gitignore"
+5. git push origin main
