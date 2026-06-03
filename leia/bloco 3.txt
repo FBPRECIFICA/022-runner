@@ -1,0 +1,41 @@
+leia o arquivo TAREFAS_DIA3.md e execute tarefa por tarefa começando pelos bugs
+
+
+
+## BUGS PARA CORRIGIR PRIMEIRO
+
+BUG 1 — Menu mobile abre 404 ao clicar em Entrar
+Adicionar menu hamburguer responsivo no Header com todos os links funcionando.
+
+BUG 2 — Botão Ver evento abre 404
+Será resolvido pela TAREFA 2.
+
+BUG 3 — Botão editar não funciona
+Implementar edição básica abrindo formulário preenchido com dados do evento.
+
+
+## TAREFA 1
+npm install
+
+## TAREFA 2
+Crie src/pages/EventDetailPage.tsx com landing page completa buscando evento do Supabase pelo slug da URL /evento/:slug. Mostrar banner, título, data, cidade, local, descrição, distâncias com preços, barra de progresso de inscrições, prazo, botão Inscrever-se, botão Compartilhar. Design azul #2563EB responsivo para mobile.
+
+## TAREFA 3
+Atualize src/App.tsx adicionando rota /evento/:slug para EventDetailPage e rota /atleta para página simples Em breve.
+
+## TAREFA 4
+Corrija menu mobile no Header com hamburguer funcional.
+
+## TAREFA 5
+Atualize OrganizerDashboard com botão Visualizar antes de publicar e edição de evento funcionando.
+
+## TAREFA 6
+Atualize HomePage para buscar eventos reais do Supabase mantendo mockados como fallback.
+
+## TAREFA 7
+npm run build — corrigir erros se houver.
+
+## TAREFA 8
+git add -A
+git commit -m "Dia 3: Landing page, menu mobile, eventos reais Supabase, bugs corrigidos"
+git push origin main
