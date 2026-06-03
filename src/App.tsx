@@ -8,16 +8,10 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { OrganizerDashboard } from './pages/OrganizerDashboard';
 import { EventDetailPage } from './pages/EventDetailPage';
 import { EventsPage } from './pages/EventsPage';
+import { RegistrationPage } from './pages/RegistrationPage';
+import { ConfirmationPage } from './pages/ConfirmationPage';
+import { AthleteDashboard } from './pages/AthleteDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
-
-function AthletePage() {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Área do Atleta</h1>
-      <p className="text-gray-500">Em breve...</p>
-    </div>
-  );
-}
 
 function App() {
   return (
@@ -30,7 +24,13 @@ function App() {
             <Route path="cadastro" element={<RegisterPage />} />
             <Route path="evento/:slug" element={<EventDetailPage />} />
             <Route path="eventos" element={<EventsPage />} />
-            <Route path="atleta" element={<AthletePage />} />
+            <Route path="inscricao/:eventSlug" element={<RegistrationPage />} />
+            <Route path="confirmacao/:registrationId" element={<ConfirmationPage />} />
+            <Route path="atleta" element={
+              <ProtectedRoute allowedRoles={['athlete', 'admin']}>
+                <AthleteDashboard />
+              </ProtectedRoute>
+            } />
             <Route path="organizador" element={
               <ProtectedRoute allowedRoles={['organizer', 'admin']}>
                 <OrganizerDashboard />

@@ -7,6 +7,15 @@ import { events as mockEvents, LAGOS_REGION_CITIES } from '../data/mockData';
 import { formatDate } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import type { Event } from '../types';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+const blueIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
+});
 
 function supabaseToEvent(e: any): Event {
   const distances = (e.distances || []).map((d: any, i: number) => ({
@@ -396,6 +405,38 @@ export function HomePage() {
                 Assinar Premium
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mapa de Eventos */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full mb-4">
+              <MapPin className="w-4 h-4" />
+              <span className="font-semibold">EVENTOS NO MAPA</span>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900">Eventos na Região dos Lagos</h2>
+          </div>
+          <div className="rounded-2xl overflow-hidden border shadow-md" style={{ height: '400px' }}>
+            <MapContainer center={[-22.8, -42.0]} zoom={10} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {allEvents.filter(e => (e as any).lat && (e as any).lng).map(e => (
+                <Marker key={e.id} position={[(e as any).lat, (e as any).lng]} icon={blueIcon}>
+                  <Popup>
+                    <div className="text-sm">
+                      <p className="font-bold">{e.name}</p>
+                      <p className="text-gray-500">{new Date(e.date).toLocaleDateString('pt-BR')}</p>
+                      <a href={`/evento/${e.slug}`} className="text-blue-600 hover:underline">Ver evento →</a>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
           </div>
         </div>
       </section>

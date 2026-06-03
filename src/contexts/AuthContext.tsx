@@ -9,6 +9,7 @@ interface AuthContextType {
   isOrganizer: boolean;
   isAthlete: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<void>;
   register: (name: string, email: string, password: string, role?: string) => Promise<boolean>;
   logout: () => void;
 }
@@ -68,6 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return !error;
   };
 
+  const loginWithGoogle = async (): Promise<void> => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: 'https://adorzqjhazsfvbttlfht.supabase.co/auth/v1/callback' },
+    });
+  };
+
   const register = async (name: string, email: string, password: string, role = 'athlete'): Promise<boolean> => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error || !data.user) return false;
@@ -87,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isOrganizer: user?.role === 'organizer',
     isAthlete: user?.role === 'athlete',
     login,
+    loginWithGoogle,
     register,
     logout,
   };

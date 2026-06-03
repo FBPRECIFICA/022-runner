@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
-import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit } from 'lucide-react';
+import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
 const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Mochila', 'Outros'];
+
+interface Lot { price: string; qty: string; }
+interface DistanceWithLots { name: string; lots: Lot[]; }
 
 interface EventForm {
   title: string;
@@ -19,7 +23,7 @@ interface EventForm {
   event_type: string;
   kit_items: string[];
   additional_info: string;
-  distances: { name: string; price: string }[];
+  distances: DistanceWithLots[];
 }
 
 const emptyForm: EventForm = {
@@ -34,7 +38,7 @@ const emptyForm: EventForm = {
   event_type: '',
   kit_items: [],
   additional_info: '',
-  distances: [{ name: '5km', price: '' }],
+  distances: [{ name: '5km', lots: [{ price: '', qty: '' }] }],
 };
 
 function calcScore(form: EventForm, hasPhotos: boolean): number {
@@ -49,7 +53,7 @@ function calcScore(form: EventForm, hasPhotos: boolean): number {
   if (form.event_type) score += 5;
   if (form.kit_items.length > 0) score += 10;
   if (form.additional_info && form.additional_info.length > 30) score += 5;
-  if (form.distances.some(d => d.name && d.price)) score += 5;
+  if (form.distances.some(d => d.name && d.lots.some(l => l.price))) score += 5;
   if (hasPhotos) score += 5;
   return Math.min(score, 100);
 }
@@ -108,19 +112,70 @@ export function OrganizerDashboard() {
   };
 
   const addDistance = () => {
-    setForm(prev => ({ ...prev, distances: [...prev.distances, { name: '', price: '' }] }));
+    setForm(prev => ({ ...prev, distances: [...prev.distances, { name: '', lots: [{ price: '', qty: '' }] }] }));
   };
 
   const removeDistance = (index: number) => {
     setForm(prev => ({ ...prev, distances: prev.distances.filter((_, i) => i !== index) }));
   };
 
-  const updateDistance = (index: number, field: 'name' | 'price', value: string) => {
+  const updateDistanceName = (index: number, value: string) => {
     setForm(prev => {
       const distances = [...prev.distances];
-      distances[index] = { ...distances[index], [field]: value };
+      distances[index] = { ...distances[index], name: value };
       return { ...prev, distances };
     });
+  };
+
+  const updateLot = (di: number, li: number, field: 'price' | 'qty', value: string) => {
+    setForm(prev => {
+      const distances = prev.distances.map((d, i) => {
+        if (i !== di) return d;
+        const lots = d.lots.map((l, j) => j === li ? { ...l, [field]: value } : l);
+        return { ...d, lots };
+      });
+      return { ...prev, distances };
+    });
+  };
+
+  const addLot = (di: number) => {
+    setForm(prev => {
+      const distances = prev.distances.map((d, i) =>
+        i === di && d.lots.length < 3 ? { ...d, lots: [...d.lots, { price: '', qty: '' }] } : d
+      );
+      return { ...prev, distances };
+    });
+  };
+
+  const removeLot = (di: number, li: number) => {
+    setForm(prev => {
+      const distances = prev.distances.map((d, i) =>
+        i === di ? { ...d, lots: d.lots.filter((_, j) => j !== li) } : d
+      );
+      return { ...prev, distances };
+    });
+  };
+
+  const exportExcel = async (event: any) => {
+    const { data } = await supabase.from('registrations').select('*').eq('event_id', event.id);
+    const rows = (data || []).map(r => ({
+      'Nº Inscrição': r.registration_number,
+      'Nome': r.name,
+      'CPF': r.cpf,
+      'Email': r.email,
+      'Telefone': r.phone,
+      'Cidade': r.city,
+      'Distância': r.distance_name,
+      'Tamanho Camiseta': r.shirt_size,
+      'Valor': r.amount,
+      'Status': r.status,
+      'Data Inscrição': new Date(r.created_at).toLocaleDateString('pt-BR'),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
+    const date = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
   };
 
   const openEdit = (event: any) => {
@@ -129,7 +184,8 @@ export function OrganizerDashboard() {
     const timeStr = dateObj.toTimeString().slice(0, 5);
     const distances = (event.distances || []).map((d: any) => ({
       name: d.name || '',
-      price: String(d.price || ''),
+      lots: d.lots ? d.lots.map((l: any) => ({ price: String(l.price || ''), qty: String(l.qty || '') }))
+        : [{ price: String(d.price || ''), qty: '' }],
     }));
     setForm({
       title: event.title || '',
@@ -145,7 +201,7 @@ export function OrganizerDashboard() {
       event_type: event.event_type || '',
       kit_items: event.kit_items || [],
       additional_info: event.additional_info || '',
-      distances: distances.length > 0 ? distances : [{ name: '5km', price: '' }],
+      distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }] }],
     });
     setEditingEventId(event.id);
     setPhotos([]);
@@ -176,9 +232,10 @@ export function OrganizerDashboard() {
         }
       }
 
-      const distances = form.distances.filter(d => d.name && d.price).map(d => ({
+      const distances = form.distances.filter(d => d.name).map(d => ({
         name: d.name,
-        price: parseFloat(d.price),
+        price: parseFloat(d.lots[0]?.price || '0'),
+        lots: d.lots.filter(l => l.price).map(l => ({ price: parseFloat(l.price), qty: parseInt(l.qty) || null })),
       }));
       const prices = distances.map(d => d.price);
       const score = calcScore(form, photoUrls.length > 0 || photos.length > 0);
@@ -302,6 +359,7 @@ export function OrganizerDashboard() {
                 <div className="flex gap-2">
                   <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-blue-600 border rounded-lg" title="Visualizar"><Eye size={18} /></a>
                   <button onClick={() => openEdit(event)} className="p-2 text-gray-500 hover:text-blue-600 border rounded-lg" title="Editar"><Edit size={18} /></button>
+                  <button onClick={() => exportExcel(event)} className="p-2 text-gray-500 hover:text-green-600 border rounded-lg" title="Exportar Excel"><Download size={18} /></button>
                 </div>
               </div>
             ))}
@@ -429,21 +487,39 @@ export function OrganizerDashboard() {
                 <p className="text-xs text-gray-400 mt-1">Preencha mais campos para aumentar o score e ter mais visibilidade</p>
               </div>
 
-              {/* Distâncias e Preços */}
+              {/* Distâncias com Lotes */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Distâncias e Preços</label>
-                <div className="space-y-2">
-                  {form.distances.map((d, i) => (
-                    <div key={i} className="flex gap-2">
-                      <input value={d.name} onChange={e => updateDistance(i, 'name', e.target.value)}
-                        className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ex: 5km, 10km, 21km" />
-                      <input type="number" value={d.price} onChange={e => updateDistance(i, 'price', e.target.value)}
-                        className="w-32 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="R$ preço" />
-                      {form.distances.length > 1 && (
-                        <button onClick={() => removeDistance(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
-                      )}
+                <label className="block text-sm font-medium text-gray-700 mb-2">Distâncias e Lotes de Preço</label>
+                <div className="space-y-4">
+                  {form.distances.map((d, di) => (
+                    <div key={di} className="border rounded-xl p-4 bg-gray-50">
+                      <div className="flex gap-2 mb-3">
+                        <input value={d.name} onChange={e => updateDistanceName(di, e.target.value)}
+                          className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          placeholder="Ex: 5km, 10km, 21km" />
+                        {form.distances.length > 1 && (
+                          <button onClick={() => removeDistance(di)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                        )}
+                      </div>
+                      <div className="space-y-2 pl-2">
+                        {d.lots.map((lot, li) => (
+                          <div key={li} className="flex gap-2 items-center">
+                            <span className="text-xs font-semibold text-gray-500 w-14">Lote {li + 1}</span>
+                            <input type="number" value={lot.price} onChange={e => updateLot(di, li, 'price', e.target.value)}
+                              className="w-28 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                              placeholder="R$ preço" />
+                            <input type="number" value={lot.qty} onChange={e => updateLot(di, li, 'qty', e.target.value)}
+                              className="w-28 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                              placeholder="Vagas (opt)" />
+                            {d.lots.length > 1 && (
+                              <button onClick={() => removeLot(di, li)} className="p-1 text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+                            )}
+                          </div>
+                        ))}
+                        {d.lots.length < 3 && (
+                          <button onClick={() => addLot(di)} className="text-blue-600 text-xs hover:underline mt-1">+ Lote {d.lots.length + 1}</button>
+                        )}
+                      </div>
                     </div>
                   ))}
                   <button onClick={addDistance} className="text-blue-600 text-sm hover:underline">+ Adicionar distância</button>

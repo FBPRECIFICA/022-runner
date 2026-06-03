@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle, Star, Timer } from 'lucide-react';
+import { scoreBadge } from '../utils/scoreCalculator';
 
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -25,6 +26,7 @@ function useCountdown(targetDate: string) {
 
 export function EventDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [event, setEvent] = useState<any>(null);
   const [organizer, setOrganizer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -100,12 +102,15 @@ export function EventDetailPage() {
             {event.status === 'published' && (
               <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">INSCRIÇÕES ABERTAS</span>
             )}
-            {score > 0 && (
-              <span className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1"
-                style={{ backgroundColor: '#C9A84C', color: '#000' }}>
-                <Star size={11} fill="#000" /> {score}/100
-              </span>
-            )}
+            {score > 0 && (() => {
+              const b = scoreBadge(score);
+              return (
+                <span className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1"
+                  style={{ backgroundColor: b.bg, color: b.color }}>
+                  {b.label}
+                </span>
+              );
+            })()}
             {event.event_type && (
               <span className="bg-blue-500/80 text-white text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-sm">{event.event_type}</span>
             )}
@@ -268,6 +273,7 @@ export function EventDetailPage() {
 
             {/* Botão Inscrever */}
             <button
+              onClick={() => navigate(`/inscricao/${event.slug}`)}
               className="w-full font-bold py-5 rounded-xl text-lg transition-all duration-200 shadow-lg text-white"
               style={{ backgroundColor: '#2563EB', boxShadow: '0 4px 20px rgba(37,99,235,0.4)' }}
               onMouseOver={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}

@@ -1,0 +1,112 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+- Verificar .gitignore antes de cada push
+
+## TAREFA 1 — Sistema de inscrição completo
+Crie src/pages/RegistrationPage.tsx com:
+- Formulário de inscrição: nome completo, CPF, data nascimento, telefone, email, cidade, sexo, tamanho camiseta (P/M/G/GG), distância escolhida com preço
+- Validação de todos os campos obrigatórios
+- Resumo do pedido antes de confirmar
+- Salvar inscrição na tabela registrations do Supabase com status pending
+- Gerar número de inscrição único (formato: 022-ANO-XXXX)
+- Após confirmar redirecionar para página de pagamento (por ora mostrar tela "Aguardando pagamento" com PIX fake)
+Adicionar rota /inscricao/:eventSlug no App.tsx
+No EventDetailPage.tsx o botão INSCREVER-SE deve redirecionar para /inscricao/:slug
+
+## TAREFA 2 — Página de confirmação de inscrição
+Crie src/pages/ConfirmationPage.tsx com:
+- Mensagem de confirmação com ícone verde grande
+- Número da inscrição gerado
+- QR Code da inscrição (usar biblioteca qrcode.react — instalar com npm install qrcode.react)
+- Detalhes do evento: nome, data, local, distância, valor
+- Botão compartilhar no WhatsApp com link do evento
+- Botão baixar comprovante (por ora apenas exibir dados formatados)
+- Design premium azul e dourado
+Adicionar rota /confirmacao/:registrationId no App.tsx
+
+## TAREFA 3 — Painel do atleta completo
+Crie src/pages/AthleteDashboard.tsx com:
+- Header com foto de perfil (avatar com iniciais se não tiver foto)
+- Cards de estatísticas: total de corridas, km percorridos, medalhas, próximo evento
+- Lista de inscrições ativas com status (confirmado, pendente, cancelado)
+- Histórico de eventos passados
+- Botão cancelar inscrição (muda status para cancelled no Supabase)
+- Seção próximos eventos recomendados (buscar do Supabase)
+- Design premium responsivo
+Adicionar rota /atleta no App.tsx protegida para role athlete e admin
+
+## TAREFA 4 — Login com Google
+No src/contexts/AuthContext.tsx adicionar método loginWithGoogle usando supabase.auth.signInWithOAuth provider google
+No src/pages/LoginPage.tsx adicionar botão "Entrar com Google" com ícone Google, cor branco com borda, acima do formulário atual
+No src/pages/RegisterPage.tsx adicionar botão "Cadastrar com Google"
+Configurar redirect URL para https://adorzqjhazsfvbttlfht.supabase.co/auth/v1/callback
+
+## TAREFA 5 — PWA (Progressive Web App)
+Crie public/manifest.json com:
+{
+  "name": "022 RUNNER",
+  "short_name": "022Runner",
+  "description": "Plataforma de Eventos Esportivos da Região dos Lagos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#2563EB",
+  "icons": [
+    {"src": "/images/logo-022runner.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/images/logo-022runner.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}
+No index.html adicionar: <link rel="manifest" href="/manifest.json"> e <meta name="theme-color" content="#2563EB">
+Crie public/sw.js com service worker básico para cache offline das páginas principais
+
+## TAREFA 6 — Mapa interativo de eventos
+No src/pages/HomePage.tsx adicionar seção "Eventos no Mapa" após os cards de eventos:
+- Instalar: npm install leaflet react-leaflet @types/leaflet
+- Mapa centrado na Região dos Lagos RJ (lat: -22.8, lng: -42.0, zoom: 10)
+- Pin azul para cada evento publicado buscado do Supabase
+- Ao clicar no pin mostrar popup com nome do evento, data e botão "Ver evento"
+- Altura do mapa: 400px, largura 100%
+- Adicionar CSS do leaflet no index.html: <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+## TAREFA 7 — Exportar inscritos em Excel
+No src/pages/OrganizerDashboard.tsx:
+- Instalar: npm install xlsx
+- Em cada evento na lista adicionar botão "Exportar Excel" (ícone download verde)
+- Ao clicar buscar todos os inscritos daquele evento no Supabase (tabela registrations join users)
+- Gerar arquivo Excel com colunas: Nº Inscrição, Nome, CPF, Email, Telefone, Cidade, Distância, Tamanho Camiseta, Valor, Status, Data Inscrição
+- Nome do arquivo: inscritos-[slug-evento]-[data].xlsx
+
+## TAREFA 8 — Lotes automáticos de inscrição
+No formulário de criação de evento no OrganizerDashboard.tsx:
+- Substituir campo único de preço por sistema de lotes
+- Cada distância pode ter até 3 lotes: Lote 1 (ex: R$80 até 100 vagas), Lote 2 (ex: R$100 até 200 vagas), Lote 3 (ex: R$120 até esgotamento)
+- Salvar lotes como JSON no campo prices do Supabase
+- Na EventDetailPage.tsx mostrar lote atual ativo com vagas restantes e próximo lote
+- Lógica: quando vagas do lote atual esgotam, próximo lote ativa automaticamente
+
+## TAREFA 9 — Score de qualidade real e badge de destaque
+Criar src/utils/scoreCalculator.ts com função que calcula score 0-100 baseado em:
+- Tem foto: +20 pontos
+- Tem mais de 3 fotos: +10 pontos
+- Tem descrição longa (>200 chars): +15 pontos
+- Tem múltiplas distâncias: +10 pontos
+- Tem kit definido: +10 pontos
+- Tem regulamento: +10 pontos
+- Tem prazo de inscrição: +5 pontos
+- Tem local detalhado: +5 pontos
+- Tem patrocinador: +5 pontos
+- Tem mais de 50 inscritos: +10 pontos
+Aplicar cálculo ao criar/editar evento e salvar no campo quality_score
+Na EventDetailPage mostrar badge colorido: 0-40 cinza, 41-70 azul, 71-90 verde, 91-100 dourado com estrela
+
+## TAREFA 10 — Build final e push
+npm install (garantir todas as dependências)
+npm run build
+Corrigir TODOS os erros TypeScript antes de continuar
+git add -A
+git commit -m "Dias 7-8-9: inscrição, atleta, Google login, PWA, mapa, Excel, lotes, score"
+git push origin main
