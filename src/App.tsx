@@ -21,7 +21,10 @@ const AthleteProfilePage = lazy(() => import('./pages/AthleteProfilePage').then(
 const AthleteDashboard   = lazy(() => import('./pages/AthleteDashboard').then(m => ({ default: m.AthleteDashboard })));
 const OrganizerDashboard = lazy(() => import('./pages/OrganizerDashboard').then(m => ({ default: m.OrganizerDashboard })));
 const AdminDashboard     = lazy(() => import('./pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const CheckinPage        = lazy(() => import('./pages/CheckinPage').then(m => ({ default: m.CheckinPage })));
+const CheckinPage           = lazy(() => import('./pages/CheckinPage').then(m => ({ default: m.CheckinPage })));
+const ProfilePage           = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const TeamsPage             = lazy(() => import('./pages/TeamsPage').then(m => ({ default: m.TeamsPage })));
+const SocialGeneratorPage   = lazy(() => import('./pages/SocialGeneratorPage').then(m => ({ default: m.SocialGeneratorPage })));
 
 function PageSpinner() {
   return (
@@ -69,6 +72,17 @@ function App() {
                 <Route path="admin" element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <AdminDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="perfil" element={
+                  <ProtectedRoute allowedRoles={['athlete', 'organizer', 'admin']}>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="equipes" element={<TeamsPage />} />
+                <Route path="gerador-social" element={
+                  <ProtectedRoute allowedRoles={['organizer', 'admin']}>
+                    <SocialGeneratorPage />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFoundPage />} />

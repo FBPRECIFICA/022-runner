@@ -1,0 +1,7 @@
+{
+  "nav": { "home": "Home", "events": "Events", "ranking": "Ranking", "login": "Login", "register": "Sign Up", "logout": "Logout", "panel": "Dashboard" },
+  "hero": { "title": "RUN WITH US", "subtitle": "The sports events platform for the Lagos Region — RJ, Brazil", "cta_events": "View Events", "cta_register": "Sign Up Free" },
+  "events": { "title": "All Events", "no_results": "No events found", "load_more": "Load more", "register": "REGISTER NOW", "share": "Share" },
+  "registration": { "title": "Participant Details", "next": "Review Registration", "confirm": "Confirm Registration", "cancel": "Cancel" },
+  "common": { "loading": "Loading...", "error": "An error occurred. Please try again.", "save": "Save", "back": "Back" }
+}

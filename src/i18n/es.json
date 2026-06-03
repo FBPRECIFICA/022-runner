@@ -1,0 +1,7 @@
+{
+  "nav": { "home": "Inicio", "events": "Eventos", "ranking": "Ranking", "login": "Entrar", "register": "Registrarse", "logout": "Salir", "panel": "Panel" },
+  "hero": { "title": "CORRE CON NOSOTROS", "subtitle": "La plataforma de eventos deportivos de la Región dos Lagos — RJ, Brasil", "cta_events": "Ver Eventos", "cta_register": "Regístrate Gratis" },
+  "events": { "title": "Todos los Eventos", "no_results": "No se encontraron eventos", "load_more": "Cargar más", "register": "INSCRIBIRSE", "share": "Compartir" },
+  "registration": { "title": "Datos del Participante", "next": "Revisar Inscripción", "confirm": "Confirmar Inscripción", "cancel": "Cancelar" },
+  "common": { "loading": "Cargando...", "error": "Ocurrió un error. Inténtalo de nuevo.", "save": "Guardar", "back": "Volver" }
+}

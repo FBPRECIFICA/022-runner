@@ -1,0 +1,205 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+- Verificar .gitignore antes de cada push
+
+## TAREFA 1 — Integração real com pagamento Mercado Pago
+Instalar: npm install mercadopago
+Criar src/services/mercadopago.ts com:
+- Função createPixPayment(registration) que gera QR Code PIX real via API Mercado Pago
+- Função checkPaymentStatus(paymentId) que verifica status do pagamento
+- Função createPreference(registration) para checkout pro
+No src/pages/PaymentPage.tsx:
+- Substituir PIX fake por integração real com Mercado Pago
+- Mostrar QR Code real gerado pela API
+- Polling automático a cada 5 segundos verificando se pagamento foi aprovado
+- Ao aprovar atualizar status no Supabase e redirecionar para confirmação
+- Adicionar campo para inserir Access Token do Mercado Pago nas variáveis de ambiente
+Criar arquivo .env.example com: VITE_MERCADOPAGO_PUBLIC_KEY=sua_chave_aqui
+
+## TAREFA 2 — Email automático com Resend
+Instalar: npm install resend
+Criar src/services/emailService.ts com funções:
+- sendConfirmationEmail(registration, event) — email bonito HTML com detalhes da inscrição e QR Code
+- sendReminderEmail(registration, event) — lembrete 3 dias antes do evento
+- sendOrganizerNotification(event, registration) — notifica organizador de nova inscrição
+- sendWelcomeEmail(user) — boas vindas ao cadastrar
+Criar templates HTML bonitos para cada email com logo 022 RUNNER, cores dourado/preto
+Adicionar ao .env.example: VITE_RESEND_API_KEY=sua_chave_aqui
+Chamar sendConfirmationEmail na ConfirmationPage após inscrição confirmada
+Chamar sendWelcomeEmail na RegisterPage após cadastro
+
+## TAREFA 3 — Dashboard de métricas em tempo real
+No src/pages/AdminDashboard.tsx implementar Supabase Realtime:
+- Contador de usuários online em tempo real
+- Feed de atividades ao vivo: "João Silva se inscreveu em Corrida da Praia", "Maria cadastrou novo evento"
+- Gráfico de inscrições em tempo real atualizando a cada nova inscrição
+- Alertas visuais quando nova inscrição ou cadastro acontece (toast notification)
+Instalar: npm install react-hot-toast
+Usar em todo o projeto para notificações de sucesso/erro substituindo alerts
+
+## TAREFA 4 — Sistema de notificações interno
+Criar tabela no Supabase:
+CREATE TABLE IF NOT EXISTS notifications (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, user_id UUID REFERENCES users(id), title TEXT NOT NULL, message TEXT NOT NULL, type TEXT DEFAULT 'info' CHECK (type IN ('info','success','warning','error')), read BOOLEAN DEFAULT false, link TEXT, created_at TIMESTAMP DEFAULT NOW());
+CREATE POLICY "Usuários veem próprias notificações" ON notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Sistema insere notificações" ON notifications FOR INSERT WITH CHECK (true);
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+Criar src/components/NotificationBell.tsx:
+- Ícone de sino no Header com contador de não lidas (badge vermelho)
+- Dropdown com lista de notificações ao clicar
+- Marcar como lida ao clicar
+- Notificações em tempo real via Supabase Realtime
+Adicionar no Header ao lado do nome do usuário logado
+
+## TAREFA 5 — Galeria de fotos pós-evento
+No src/pages/OrganizerDashboard.tsx adicionar aba "Fotos Pós-Evento":
+- Upload múltiplo de fotos após o evento (até 50 fotos)
+- Organizar por evento
+- Salvar no Supabase Storage bucket event-photos
+Criar tabela: CREATE TABLE IF NOT EXISTS event_photos (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, event_id UUID REFERENCES events(id), url TEXT NOT NULL, caption TEXT, uploaded_by UUID REFERENCES users(id), created_at TIMESTAMP DEFAULT NOW());
+CREATE POLICY "Fotos públicas visíveis" ON event_photos FOR SELECT USING (true);
+CREATE POLICY "Organizadores inserem fotos" ON event_photos FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM events WHERE events.id = event_photos.event_id AND events.organizer_id = auth.uid()));
+ALTER TABLE event_photos ENABLE ROW LEVEL SECURITY;
+Na EventDetailPage.tsx adicionar seção "Galeria" com grid de fotos em lightbox
+Criar src/components/PhotoLightbox.tsx com navegação entre fotos, zoom, download
+
+## TAREFA 6 — Perfil completo do usuário
+Criar src/pages/ProfilePage.tsx com:
+- Editar nome, telefone, cidade, bio, data de nascimento
+- Upload de foto de perfil (Supabase Storage bucket avatars)
+- Alterar senha
+- Preferências de notificação (email, WhatsApp)
+- Histórico completo de atividades
+- Botão "Excluir conta" com confirmação
+- Design premium com banner de capa
+Adicionar rota /perfil no App.tsx
+Adicionar link "Meu Perfil" no menu dropdown do usuário logado no Header
+
+## TAREFA 7 — Landing page institucional melhorada
+No src/pages/HomePage.tsx redesenhar completamente:
+- Hero section com vídeo de fundo (usar URL de vídeo do YouTube embed ou video tag com src de corrida)
+- Contador animado: X eventos realizados, Y atletas cadastrados, Z cidades cobertas (buscar dados reais do Supabase)
+- Seção "Eventos em Destaque" — apenas eventos com plan=premium ou featured
+- Seção "Próximos Eventos" — próximos 6 eventos por data
+- Seção "Como funciona" para organizadores com 3 passos animados
+- Seção "Depoimentos" com carrossel automático
+- Seção "Nossos Números" com stats animados
+- Seção "Mapa de Eventos" com todos os eventos no mapa
+- Seção "Newsletter"
+- CTA final: "Organize seu evento agora" com botão dourado grande
+- Footer completo com logo, links, redes sociais, copyright 2027 022 RUNNER
+
+## TAREFA 8 — Sistema de check-in avançado com QR Code scanner
+No src/pages/CheckinPage.tsx melhorar para:
+- Instalar: npm install html5-qrcode
+- Câmera abre automaticamente para escanear QR Code do atleta
+- Ao escanear busca inscrição no Supabase e mostra dados do atleta
+- Confirma check-in com um toque
+- Som de confirmação (beep via Web Audio API)
+- Modo lista: busca por nome ou número de inscrição
+- Estatísticas em tempo real: X de Y fizeram check-in
+- Exportar lista de presença em Excel
+
+## TAREFA 9 — App mobile otimizado
+Melhorar experiência mobile em todo o projeto:
+- Instalar: npm install swiper
+- Usar Swiper para carrosséis de eventos no mobile
+- Bottom navigation bar no mobile: Home, Eventos, Buscar, Perfil (fixo na parte inferior)
+- Criar src/components/MobileBottomNav.tsx visível apenas em telas < 768px
+- Gestos de swipe nos carrosséis
+- Pull-to-refresh na lista de eventos
+- Scroll infinito na EventsPage no mobile
+- Otimizar tamanho de fonte e espaçamento para mobile
+
+## TAREFA 10 — Integração com Strava
+Criar src/services/stravaService.ts:
+- Botão "Conectar com Strava" no perfil do atleta
+- OAuth flow com Strava API
+- Importar últimas atividades do atleta (corridas)
+- Mostrar no perfil: distância total rodada, atividades recentes
+- Sincronizar evento do 022 RUNNER como atividade no Strava após check-in
+Adicionar ao .env.example: VITE_STRAVA_CLIENT_ID e VITE_STRAVA_CLIENT_SECRET
+
+## TAREFA 11 — Sistema de equipes e grupos
+Criar tabela no Supabase:
+CREATE TABLE IF NOT EXISTS teams (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT NOT NULL, description TEXT, city TEXT, logo_url TEXT, captain_id UUID REFERENCES users(id), created_at TIMESTAMP DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS team_members (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, team_id UUID REFERENCES teams(id), user_id UUID REFERENCES users(id), role TEXT DEFAULT 'member', joined_at TIMESTAMP DEFAULT NOW(), UNIQUE(team_id, user_id));
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Times públicos visíveis" ON teams FOR SELECT USING (true);
+CREATE POLICY "Membros veem próprios times" ON team_members FOR SELECT USING (auth.uid() = user_id);
+Criar src/pages/TeamsPage.tsx com:
+- Criar equipe com nome, descrição, cidade, logo
+- Convidar membros por email
+- Ranking de equipes por eventos participados
+- Na inscrição opção de se inscrever como parte de uma equipe
+- Página pública da equipe com membros e histórico
+Adicionar rota /equipes no App.tsx e link no Header
+
+## TAREFA 12 — Gerador de posts para redes sociais
+Criar src/pages/SocialGeneratorPage.tsx:
+- Organizador seleciona evento
+- Escolhe tipo de post: abertura de inscrições, últimas vagas, dia do evento, resultados
+- IA (Claude API — usar key do projeto) gera texto otimizado para Instagram, Facebook, WhatsApp
+- Preview visual do post com arte gerada (usar Canvas API com logo, foto do evento, texto)
+- Botões: copiar texto, baixar imagem, compartilhar direto
+- Histórico de posts gerados
+Adicionar rota /gerador-social no App.tsx
+Adicionar link "Gerar Posts IA" no painel do organizador
+
+## TAREFA 13 — Relatório de desempenho do evento
+No src/pages/OrganizerDashboard.tsx ao clicar em um evento mostrar relatório completo:
+- Total de inscrições por distância em gráfico pizza
+- Inscrições por cidade em gráfico barras
+- Evolução de inscrições por dia em gráfico linha
+- Distribuição por gênero e tamanho de camiseta
+- Taxa de conversão (visitantes vs inscritos se tiver dados)
+- Comparativo com evento anterior do mesmo organizador
+- Exportar relatório completo em PDF (usar window.print com CSS)
+
+## TAREFA 14 — Segurança avançada
+- Implementar rate limiting no frontend: bloquear mais de 5 tentativas de login erradas em 1 minuto
+- Sanitizar todos os inputs contra XSS
+- Validar todos os campos no frontend E verificar no Supabase RLS
+- Adicionar CAPTCHA simples (matemática: "quanto é 3+4?") no cadastro e inscrição
+- Logs de auditoria: CREATE TABLE IF NOT EXISTS audit_logs (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, user_id UUID, action TEXT, details JSONB, ip_hint TEXT, created_at TIMESTAMP DEFAULT NOW()); INSERT INTO audit_logs ao fazer login, cadastro, inscrição, pagamento
+- Timeout de sessão: logout automático após 8 horas de inatividade
+
+## TAREFA 15 — Internacionalização básica
+Preparar estrutura para suporte a inglês e espanhol no futuro:
+- Instalar: npm install i18next react-i18next
+- Criar src/i18n/pt-BR.json com todas as strings do sistema em português
+- Criar src/i18n/en-US.json com traduções em inglês
+- Criar src/i18n/es.json com traduções em espanhol
+- Implementar seletor de idioma no Footer
+- Usar t('chave') em vez de strings fixas nos componentes principais: Header, HomePage, EventDetailPage, RegistrationPage
+
+## TAREFA 16 — Testes automatizados básicos
+Instalar: npm install --save-dev vitest @testing-library/react @testing-library/jest-dom jsdom
+Criar testes para funções críticas em src/__tests__/:
+- validators.test.ts: testar validateCPF, formatCPF, formatPhone
+- scoreCalculator.test.ts: testar cálculo de score com diferentes combinações
+- slugGenerator.test.ts: testar geração de slug com caracteres especiais
+- Rodar: npx vitest run — todos devem passar
+
+## TAREFA 17 — Documentação técnica
+Criar DOCUMENTACAO_TECNICA.md na raiz com:
+- Arquitetura do sistema (stack completa)
+- Variáveis de ambiente necessárias
+- Como rodar localmente
+- Estrutura de pastas explicada
+- Fluxos principais documentados (inscrição, pagamento, check-in)
+- Guia de contribuição
+- Changelog das versões
+
+## TAREFA 18 — Build final otimizado e push
+npm install
+npm run build
+Corrigir TODOS os erros TypeScript sem exceção
+Verificar que bundle está abaixo de 2MB
+git add -A
+git commit -m "Dias 20-21-22-23: Mercado Pago, emails, realtime, notificações, galeria, perfil, homepage redesign, QR scanner, mobile app, Strava, equipes, gerador IA, relatórios, segurança, i18n, testes, documentação"
+git push origin main

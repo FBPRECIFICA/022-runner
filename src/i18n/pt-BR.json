@@ -1,0 +1,7 @@
+{
+  "nav": { "home": "Home", "events": "Eventos", "ranking": "Ranking", "login": "Entrar", "register": "Cadastrar", "logout": "Sair", "panel": "Painel" },
+  "hero": { "title": "CORRA COM A GENTE", "subtitle": "A plataforma de eventos esportivos da Região dos Lagos — RJ", "cta_events": "Ver Eventos", "cta_register": "Cadastre-se Grátis" },
+  "events": { "title": "Todos os Eventos", "no_results": "Nenhum evento encontrado", "load_more": "Carregar mais", "register": "INSCREVER-SE", "share": "Compartilhar" },
+  "registration": { "title": "Dados do Participante", "next": "Revisar Inscrição", "confirm": "Confirmar Inscrição", "cancel": "Cancelar" },
+  "common": { "loading": "Carregando...", "error": "Ocorreu um erro. Tente novamente.", "save": "Salvar", "back": "Voltar" }
+}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, LayoutDashboard, Menu, X, Search } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 export function Header() {
   const { user, isAuthenticated, isAdmin, isOrganizer, logout } = useAuth();
@@ -69,6 +70,7 @@ export function Header() {
           <NavLink to="/">Home</NavLink>
           <NavLink to="/eventos">Eventos</NavLink>
           <NavLink to="/ranking">Ranking</NavLink>
+          <NavLink to="/equipes">Equipes</NavLink>
 
           {/* Busca inline */}
           <form onSubmit={handleSearch} className="flex items-center">
@@ -90,7 +92,8 @@ export function Header() {
                   <LayoutDashboard size={14} /> Painel
                 </span>
               </NavLink>
-              <span style={{ color: '#555555', fontSize: '14px' }}>{user?.name}</span>
+              <NotificationBell />
+              <Link to="/perfil" style={{ color: '#555555', fontSize: '14px' }}>{user?.name}</Link>
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-1.5 transition-colors duration-200 hover:text-red-500"
