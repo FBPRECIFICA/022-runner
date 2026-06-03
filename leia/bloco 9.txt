@@ -1,0 +1,33 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+
+## TAREFA 1 — Header Premium Elite
+Redesenhe o componente src/components/Header.tsx com layout de 2 camadas:
+
+CAMADA 1 (topo): fundo preto #000000, largura 100%, altura 70px
+- Logo 022RUNNERS centralizado ou à esquerda com padding
+- Logo ocupa toda a altura da camada com padding vertical de 8px
+- Sem texto ao lado do logo — logo fala por si só
+- Linha dourada/gold (#C9A84C) de 2px na parte inferior desta camada
+
+CAMADA 2 (menu): fundo branco puro, largura 100%, altura 48px
+- Navegação centralizada: Início | Eventos | (separador) | Painel | Nome do usuário | Logout
+- Fonte Inter, peso 500, tamanho 14px, cor #111111
+- Hover com underline dourado animado
+- Sombra suave embaixo: box-shadow 0 2px 8px rgba(0,0,0,0.08)
+- Sticky no topo
+
+ESTILO GERAL:
+- Visual clean, premium, esportivo
+- Sem bordas desnecessárias
+- Transições suaves 200ms
+
+## TAREFA 2 — Build e push
+npm run build
+git add -A
+git commit -m "Header premium 2 camadas — logo fundo preto + menu branco"
+git push origin main

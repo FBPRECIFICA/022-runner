@@ -17,83 +17,148 @@ export function Header() {
   const painelLink = isAdmin ? '/organizador' : isOrganizer ? '/organizador' : '/atleta';
 
   return (
-    <header className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
-            <img src="/images/logo-022runner.png" alt="022 RUNNER" className="h-10 w-auto" />
-            <div>
-              <span className="text-xl font-bold text-blue-600">022</span>
-              <span className="text-xl font-bold text-gray-900">RUNNER</span>
-              <p className="text-xs text-gray-500">Região dos Lagos - RJ</p>
-            </div>
-          </Link>
+    <div className="sticky top-0 z-50">
+      {/* CAMADA 1 — fundo preto com logo */}
+      <div
+        className="w-full flex items-center px-6"
+        style={{ backgroundColor: '#000000', borderBottom: '2px solid #C9A84C', height: '70px' }}
+      >
+        <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center h-full py-2">
+          <img
+            src="/images/logo-022runner.png"
+            alt="022 RUNNER"
+            style={{ height: '54px', width: 'auto', objectFit: 'contain' }}
+          />
+        </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-gray-700 hover:text-blue-600 font-medium">Início</Link>
-            <Link to="/eventos" className="text-gray-700 hover:text-blue-600 font-medium">Eventos</Link>
-            {isAuthenticated ? (
-              <div className="flex items-center gap-3">
-                <Link to={painelLink} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">
-                  <LayoutDashboard size={16} />
-                  Painel
-                </Link>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span>{user?.name}</span>
-                  <button onClick={handleLogout} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg">
-                    <LogOut size={16} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <Link to="/login" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">Entrar</Link>
-            )}
-          </nav>
-
-          {/* Hamburger button (mobile) */}
-          <button
-            className="md:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100"
-            onClick={() => setMobileOpen(prev => !prev)}
-            aria-label="Menu"
-          >
-            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-
-        {/* Mobile menu */}
-        {mobileOpen && (
-          <nav className="md:hidden mt-3 pb-3 border-t pt-3 flex flex-col gap-1">
-            <Link to="/" onClick={() => setMobileOpen(false)}
-              className="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium">
-              Início
-            </Link>
-            <Link to="/eventos" onClick={() => setMobileOpen(false)}
-              className="px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium">
-              Eventos
-            </Link>
-            {isAuthenticated ? (
-              <>
-                <Link to={painelLink} onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium">
-                  <LayoutDashboard size={16} /> Painel
-                </Link>
-                <div className="flex items-center justify-between px-3 py-2">
-                  <span className="text-sm text-gray-600">{user?.name}</span>
-                  <button onClick={handleLogout} className="flex items-center gap-1 text-sm text-red-500 hover:underline">
-                    <LogOut size={14} /> Sair
-                  </button>
-                </div>
-              </>
-            ) : (
-              <Link to="/login" onClick={() => setMobileOpen(false)}
-                className="px-3 py-2 rounded-lg bg-blue-600 text-white font-medium text-center">
-                Entrar
-              </Link>
-            )}
-          </nav>
-        )}
+        {/* Hamburger — mobile only */}
+        <button
+          className="ml-auto md:hidden p-2 rounded transition-colors duration-200"
+          style={{ color: '#ffffff' }}
+          onClick={() => setMobileOpen(prev => !prev)}
+          aria-label="Menu"
+        >
+          {mobileOpen ? <X size={26} /> : <Menu size={26} />}
+        </button>
       </div>
-    </header>
+
+      {/* CAMADA 2 — menu branco (desktop) */}
+      <div
+        className="w-full bg-white hidden md:flex items-center justify-center"
+        style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)', height: '48px' }}
+      >
+        <nav
+          className="flex items-center gap-6"
+          style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '14px', color: '#111111' }}
+        >
+          <NavLink to="/">Início</NavLink>
+          <NavLink to="/eventos">Eventos</NavLink>
+
+          <span style={{ color: '#C9A84C', fontSize: '20px', lineHeight: 1, opacity: 0.6 }}>|</span>
+
+          {isAuthenticated ? (
+            <>
+              <NavLink to={painelLink}>
+                <span className="flex items-center gap-1.5">
+                  <LayoutDashboard size={14} /> Painel
+                </span>
+              </NavLink>
+              <span style={{ color: '#555555', fontSize: '14px' }}>{user?.name}</span>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 transition-colors duration-200 hover:text-red-500"
+                style={{ fontWeight: 500, fontSize: '14px', color: '#111111' }}
+              >
+                <LogOut size={14} /> Sair
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink to="/login">Entrar</NavLink>
+              <Link
+                to="/cadastro"
+                className="px-4 py-1.5 rounded text-white text-sm font-medium transition-opacity duration-200 hover:opacity-90"
+                style={{ backgroundColor: '#C9A84C', fontSize: '14px', fontWeight: 500 }}
+              >
+                Cadastrar
+              </Link>
+            </>
+          )}
+        </nav>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div
+          className="md:hidden bg-white flex flex-col"
+          style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.12)', fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '14px' }}
+        >
+          <MobileLink to="/" onClick={() => setMobileOpen(false)}>Início</MobileLink>
+          <MobileLink to="/eventos" onClick={() => setMobileOpen(false)}>Eventos</MobileLink>
+
+          <div style={{ height: '1px', backgroundColor: '#f0e6c8', margin: '4px 16px' }} />
+
+          {isAuthenticated ? (
+            <>
+              <MobileLink to={painelLink} onClick={() => setMobileOpen(false)}>
+                <span className="flex items-center gap-2"><LayoutDashboard size={14} /> Painel</span>
+              </MobileLink>
+              <div className="px-4 py-3 flex items-center justify-between">
+                <span style={{ color: '#555555', fontSize: '13px' }}>{user?.name}</span>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1 text-red-500 text-sm"
+                >
+                  <LogOut size={13} /> Sair
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <MobileLink to="/login" onClick={() => setMobileOpen(false)}>Entrar</MobileLink>
+              <div className="px-4 py-3">
+                <Link
+                  to="/cadastro"
+                  onClick={() => setMobileOpen(false)}
+                  className="block text-center py-2 rounded text-white text-sm font-medium"
+                  style={{ backgroundColor: '#C9A84C' }}
+                >
+                  Cadastrar
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="relative group flex items-center transition-colors duration-200"
+      style={{ color: '#111111', paddingBottom: '2px' }}
+    >
+      {children}
+      <span
+        className="absolute bottom-0 left-0 w-0 group-hover:w-full transition-all duration-200"
+        style={{ height: '2px', backgroundColor: '#C9A84C' }}
+      />
+    </Link>
+  );
+}
+
+function MobileLink({ to, onClick, children }: { to: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      className="block px-4 py-3 transition-colors duration-200 hover:bg-gray-50"
+      style={{ color: '#111111' }}
+    >
+      {children}
+    </Link>
   );
 }
