@@ -1,0 +1,6 @@
+crie um arquivo vercel.json na raiz do projeto com o seguinte conteúdo e faça commit e push:
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}

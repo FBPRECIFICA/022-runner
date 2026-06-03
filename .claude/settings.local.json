@@ -4,7 +4,9 @@
       "Bash(npm run *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "PowerShell(Copy-Item *)",
+      "Bash(git commit *)"
     ]
   }
 }

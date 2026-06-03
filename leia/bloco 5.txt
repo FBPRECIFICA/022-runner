@@ -1,0 +1,23 @@
+Para esta sessão: execute todas as tarefas em sequência sem pausar, não pergunte se deve continuar, responda sim automaticamente para confirmações, só pare se houver erro crítico.
+
+## TAREFA 1 — Trocar logo
+Substitua o arquivo public/images/logo-022runner.png pelo arquivo logo runner.png que está na mesma pasta. Renomeie logo runner.png para logo-022runner.png substituindo o arquivo antigo.
+
+## TAREFA 2 — Verificar se vercel.json foi criado
+Confirme se o arquivo vercel.json existe na raiz do projeto com o conteúdo correto:
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+}
+Se não existir, crie agora.
+
+## TAREFA 3 — Testar build
+npm run build
+Corrija erros se houver.
+
+## TAREFA 4 — Verificar EventDetailPage
+Acesse o arquivo src/pages/EventDetailPage.tsx e confirme se está buscando o evento pelo slug corretamente no Supabase usando a URL /evento/:slug.
+
+## TAREFA 5 — Commit e push
+git add -A
+git commit -m "Dia 3 Bloco 5: novo logo, vercel.json, ajustes finais"
+git push origin main
