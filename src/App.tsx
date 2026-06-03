@@ -7,6 +7,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { OrganizerDashboard } from './pages/OrganizerDashboard';
 import { EventDetailPage } from './pages/EventDetailPage';
+import { EventsPage } from './pages/EventsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function AthletePage() {
@@ -28,6 +29,7 @@ function App() {
             <Route path="login" element={<LoginPage />} />
             <Route path="cadastro" element={<RegisterPage />} />
             <Route path="evento/:slug" element={<EventDetailPage />} />
+            <Route path="eventos" element={<EventsPage />} />
             <Route path="atleta" element={<AthletePage />} />
             <Route path="organizador" element={
               <ProtectedRoute allowedRoles={['organizer', 'admin']}>

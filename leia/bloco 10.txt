@@ -1,0 +1,71 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+
+## TAREFA 1 — Corrigir logo premium
+No src/components/Header.tsx, na camada preta do topo:
+- A imagem do logo deve ter width: 100% com max-width de 400px, height: auto
+- Centralizar o logo horizontalmente com margin: 0 auto e display: block
+- A camada preta deve ter padding: 12px 40px
+- Logo deve parecer grande e imponente ocupando boa parte da barra preta
+- Linha dourada #C9A84C de 2px embaixo da camada preta
+- No menu branco trocar "Início" por "Home" para evitar tradução automática do Chrome
+
+## TAREFA 2 — Landing page do evento completa
+No src/pages/EventDetailPage.tsx:
+- Banner do evento ocupando 100% da largura, altura 400px, com overlay escuro gradiente
+- Título do evento em branco grande sobre o banner
+- Badge de status (Inscrições Abertas) em verde
+- Score de qualidade badge colorido (ex: 92/100 em dourado)
+- Seção de informações: data, hora, local, cidade em cards elegantes
+- Seção de distâncias com cards premium mostrando nome e preço
+- Barra de progresso de vagas (atual/máximo) com porcentagem
+- Countdown regressivo até a data do evento (dias, horas, minutos)
+- Botão INSCREVER-SE grande em azul com efeito hover premium
+- Botão COMPARTILHAR copiando link para área de transferência
+- Seção de informações do organizador
+- Design totalmente responsivo mobile
+
+## TAREFA 3 — Página de eventos completa
+Crie src/pages/EventsPage.tsx com:
+- Header com título "Todos os Eventos" e contador total
+- Filtros: cidade (dropdown com cidades da Região dos Lagos), modalidade, data
+- Grid de cards de eventos buscados do Supabase em tempo real
+- Loading skeleton enquanto carrega
+- Mensagem "Nenhum evento encontrado" se vazio
+- Paginação simples (carregar mais)
+- Design premium consistente com o restante do site
+Adicione a rota /eventos no App.tsx
+
+## TAREFA 4 — Página de cadastro melhorada
+No src/pages/RegisterPage.tsx:
+- Adicionar campo de seleção de perfil: Atleta ou Organizador
+- Design premium consistente
+- Validação de campos obrigatórios
+- Após cadastro redirecionar para painel correto conforme perfil
+
+## TAREFA 5 — HomePage com eventos reais
+No src/pages/HomePage.tsx:
+- Buscar eventos reais do Supabase (status published) 
+- Mostrar seção "Próximos Eventos" com os 6 mais recentes
+- Se não houver eventos reais usar mockados como fallback
+- Adicionar seção de estatísticas animadas: número de eventos, atletas, cidades
+- Adicionar seção "Como funciona" com 3 passos para organizadores
+
+## TAREFA 6 — Painel do organizador melhorado
+No src/pages/OrganizerDashboard.tsx:
+- Corrigir nome "022 CORREDOR" para "022 RUNNER" em todos os lugares
+- Adicionar campo "Tipo de evento" no formulário: Corrida de Rua, Trail Run, Ciclismo, Triathlon, Caminhada, Outro
+- Adicionar campo "Kit do evento" com checkbox: Camiseta, Medalha, Número de peito, Mochila, Outros
+- Adicionar campo "Informações adicionais / Regulamento" textarea
+- Recalcular score de qualidade automaticamente baseado nos campos preenchidos
+- Após criar evento mostrar link gerado para copiar e compartilhar
+
+## TAREFA 7 — Build e push
+npm run build
+git add -A
+git commit -m "Dias 4-5-6: logo premium, landing page, eventos, cadastro, painel melhorado"
+git push origin main

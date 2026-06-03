@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
 import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit } from 'lucide-react';
 
+const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
+const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Mochila', 'Outros'];
+
 interface EventForm {
   title: string;
   description: string;
@@ -13,6 +16,9 @@ interface EventForm {
   location: string;
   max_participants: string;
   registration_deadline: string;
+  event_type: string;
+  kit_items: string[];
+  additional_info: string;
   distances: { name: string; price: string }[];
 }
 
@@ -25,8 +31,28 @@ const emptyForm: EventForm = {
   location: '',
   max_participants: '',
   registration_deadline: '',
+  event_type: '',
+  kit_items: [],
+  additional_info: '',
   distances: [{ name: '5km', price: '' }],
 };
+
+function calcScore(form: EventForm, hasPhotos: boolean): number {
+  let score = 10;
+  if (form.title) score += 15;
+  if (form.description && form.description.length > 50) score += 15;
+  if (form.date) score += 10;
+  if (form.city) score += 5;
+  if (form.location) score += 5;
+  if (form.max_participants) score += 5;
+  if (form.registration_deadline) score += 5;
+  if (form.event_type) score += 5;
+  if (form.kit_items.length > 0) score += 10;
+  if (form.additional_info && form.additional_info.length > 30) score += 5;
+  if (form.distances.some(d => d.name && d.price)) score += 5;
+  if (hasPhotos) score += 5;
+  return Math.min(score, 100);
+}
 
 function generateSlug(title: string) {
   return title
@@ -116,6 +142,9 @@ export function OrganizerDashboard() {
       registration_deadline: event.registration_deadline
         ? new Date(event.registration_deadline).toISOString().split('T')[0]
         : '',
+      event_type: event.event_type || '',
+      kit_items: event.kit_items || [],
+      additional_info: event.additional_info || '',
       distances: distances.length > 0 ? distances : [{ name: '5km', price: '' }],
     });
     setEditingEventId(event.id);
@@ -152,6 +181,7 @@ export function OrganizerDashboard() {
         price: parseFloat(d.price),
       }));
       const prices = distances.map(d => d.price);
+      const score = calcScore(form, photoUrls.length > 0 || photos.length > 0);
       const payload: any = {
         title: form.title,
         description: form.description,
@@ -162,6 +192,10 @@ export function OrganizerDashboard() {
         prices,
         max_participants: parseInt(form.max_participants) || null,
         registration_deadline: form.registration_deadline || null,
+        event_type: form.event_type || null,
+        kit_items: form.kit_items.length > 0 ? form.kit_items : null,
+        additional_info: form.additional_info || null,
+        quality_score: score,
       };
 
       if (photoUrls.length > 0) {
@@ -184,10 +218,9 @@ export function OrganizerDashboard() {
           organizer_id: user?.id,
           status: 'published',
           plan: 'free',
-          quality_score: photoUrls.length > 0 ? 60 : 30,
         });
         if (insertError) throw insertError;
-        setSuccess(`Evento criado! Link: 022runner.com.br/evento/${slug}`);
+        setSuccess(`✅ Evento criado! Link: https://022runner.com.br/evento/${slug}`);
       }
 
       setForm(emptyForm);
@@ -338,6 +371,62 @@ export function OrganizerDashboard() {
                 <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                   rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Descreva o evento, percurso, atrações..." />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Evento</label>
+                <select value={form.event_type} onChange={e => setForm(p => ({ ...p, event_type: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Selecione o tipo</option>
+                  {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Kit do Evento</label>
+                <div className="flex flex-wrap gap-2">
+                  {KIT_OPTIONS.map(item => (
+                    <label key={item} className="flex items-center gap-2 cursor-pointer bg-gray-50 border rounded-lg px-3 py-2 hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={form.kit_items.includes(item)}
+                        onChange={e => setForm(p => ({
+                          ...p,
+                          kit_items: e.target.checked
+                            ? [...p.kit_items, item]
+                            : p.kit_items.filter(k => k !== item),
+                        }))}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">{item}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Informações Adicionais / Regulamento</label>
+                <textarea value={form.additional_info} onChange={e => setForm(p => ({ ...p, additional_info: e.target.value }))}
+                  rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Regras, percurso detalhado, informações de kit, etc..." />
+              </div>
+
+              {/* Score de qualidade */}
+              <div className="md:col-span-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm font-medium text-gray-700">Score de Qualidade</label>
+                  <span className="text-sm font-bold" style={{ color: calcScore(form, photos.length > 0) >= 70 ? '#16a34a' : '#d97706' }}>
+                    {calcScore(form, photos.length > 0)}/100
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2">
+                  <div className="h-2 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${calcScore(form, photos.length > 0)}%`,
+                      backgroundColor: calcScore(form, photos.length > 0) >= 70 ? '#16a34a' : '#d97706',
+                    }} />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Preencha mais campos para aumentar o score e ter mais visibilidade</p>
               </div>
 
               {/* Distâncias e Preços */}

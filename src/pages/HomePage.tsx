@@ -400,6 +400,59 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* Estatísticas */}
+      <section className="py-14 bg-black">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {[
+              { value: '50+', label: 'Eventos realizados' },
+              { value: '3.000+', label: 'Atletas cadastrados' },
+              { value: '8', label: 'Cidades atendidas' },
+              { value: '100%', label: 'Gratuito para atletas' },
+            ].map((stat, i) => (
+              <div key={i}>
+                <p className="text-4xl font-bold" style={{ color: '#C9A84C' }}>{stat.value}</p>
+                <p className="text-gray-400 text-sm mt-1 font-medium">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Como funciona */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full mb-4">
+              <Sparkles className="w-4 h-4" />
+              <span className="font-semibold">PARA ORGANIZADORES</span>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900">Como publicar seu evento</h2>
+            <p className="text-gray-600 mt-2 max-w-xl mx-auto">Em 3 passos simples seu evento está no ar</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              { step: '01', title: 'Crie sua conta', desc: 'Cadastre-se como organizador gratuitamente em menos de 2 minutos.' },
+              { step: '02', title: 'Configure o evento', desc: 'Preencha dados, distâncias, preços e fotos. O sistema gera a landing page automaticamente.' },
+              { step: '03', title: 'Publique e divulgue', desc: 'Compartilhe o link do evento nas redes sociais e comece a receber inscrições.' },
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 text-2xl font-bold text-white" style={{ backgroundColor: '#000' }}>
+                  <span style={{ color: '#C9A84C' }}>{item.step}</span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-10">
+            <Link to="/cadastro" className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 transition-colors">
+              Criar conta grátis <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Final */}
       <section className="py-16">
         <div className="container mx-auto px-4">

@@ -1,64 +1,75 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle, Star, Timer } from 'lucide-react';
+
+function useCountdown(targetDate: string) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  useEffect(() => {
+    const calc = () => {
+      const diff = new Date(targetDate).getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 }); return; }
+      setTimeLeft({
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+      });
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, [targetDate]);
+  return timeLeft;
+}
 
 export function EventDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [event, setEvent] = useState<any>(null);
+  const [organizer, setOrganizer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function fetchEvent() {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-      if (error || !data) {
-        setNotFound(true);
-      } else {
-        setEvent(data);
+      const { data, error } = await supabase.from('events').select('*').eq('slug', slug).single();
+      if (error || !data) { setNotFound(true); setLoading(false); return; }
+      setEvent(data);
+      if (data.organizer_id) {
+        const { data: org } = await supabase.from('users').select('name, email').eq('id', data.organizer_id).single();
+        setOrganizer(org);
       }
       setLoading(false);
     }
     fetchEvent();
   }, [slug]);
 
+  const countdown = useCountdown(event?.date || '');
+
   const handleShare = async () => {
-    const url = window.location.href;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2500);
     } catch {
-      if (navigator.share) {
-        navigator.share({ title: event?.title, url });
-      }
+      if (navigator.share) navigator.share({ title: event?.title, url: window.location.href });
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+    </div>
+  );
 
-  if (notFound) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Evento não encontrado</h1>
-        <p className="text-gray-500 mb-6">O evento que você procura não existe ou foi removido.</p>
-        <Link to="/" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium">
-          Voltar ao início
-        </Link>
-      </div>
-    );
-  }
+  if (notFound) return (
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">Evento não encontrado</h1>
+      <p className="text-gray-500 mb-6">O evento que você procura não existe ou foi removido.</p>
+      <Link to="/" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium">Voltar ao início</Link>
+    </div>
+  );
 
   const eventDate = new Date(event.date);
   const deadline = event.registration_deadline ? new Date(event.registration_deadline) : null;
@@ -66,120 +77,176 @@ export function EventDetailPage() {
   const maxP = event.max_participants || 0;
   const currentP = event.current_participants || 0;
   const progressPct = maxP > 0 ? Math.min(Math.round((currentP / maxP) * 100), 100) : 0;
-
-  const daysLeft = deadline
-    ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000))
-    : null;
+  const daysLeft = deadline ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000)) : null;
+  const score = event.quality_score || 0;
+  const isPast = eventDate.getTime() < Date.now();
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Banner */}
-      <div className="relative w-full h-64 md:h-96 bg-gray-200">
-        {event.banner_url ? (
-          <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <Link to="/" className="inline-flex items-center gap-1 text-white/80 hover:text-white text-sm mb-3">
+      <div className="relative w-full bg-gray-900" style={{ height: '400px' }}>
+        {event.banner_url
+          ? <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover" />
+          : <div className="w-full h-full bg-gradient-to-br from-blue-800 to-blue-600" />
+        }
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.25) 100%)' }} />
+        <div className="absolute top-4 left-4">
+          <Link to="/" className="inline-flex items-center gap-1 text-white/80 hover:text-white text-sm bg-black/30 px-3 py-1.5 rounded-full backdrop-blur-sm">
             <ChevronLeft size={16} /> Voltar
           </Link>
-          <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">{event.title}</h1>
-          {event.status === 'published' && (
-            <span className="inline-block mt-2 bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-              Inscrições Abertas
-            </span>
-          )}
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+          <div className="flex flex-wrap gap-2 mb-3">
+            {event.status === 'published' && (
+              <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">INSCRIÇÕES ABERTAS</span>
+            )}
+            {score > 0 && (
+              <span className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1"
+                style={{ backgroundColor: '#C9A84C', color: '#000' }}>
+                <Star size={11} fill="#000" /> {score}/100
+              </span>
+            )}
+            {event.event_type && (
+              <span className="bg-blue-500/80 text-white text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-sm">{event.event_type}</span>
+            )}
+          </div>
+          <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight drop-shadow-lg">{event.title}</h1>
+          <p className="text-white/80 mt-2 text-base md:text-lg">{event.city} — RJ</p>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        {/* Info Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-white rounded-xl border p-4 flex flex-col items-center text-center gap-1">
-            <Calendar size={22} className="text-blue-600" />
-            <p className="text-xs text-gray-500 font-medium">Data</p>
-            <p className="text-sm font-bold text-gray-900">
-              {eventDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl border p-4 flex flex-col items-center text-center gap-1">
-            <Clock size={22} className="text-blue-600" />
-            <p className="text-xs text-gray-500 font-medium">Horário</p>
-            <p className="text-sm font-bold text-gray-900">
-              {eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl border p-4 flex flex-col items-center text-center gap-1">
-            <MapPin size={22} className="text-blue-600" />
-            <p className="text-xs text-gray-500 font-medium">Cidade</p>
-            <p className="text-sm font-bold text-gray-900">{event.city}</p>
-          </div>
-          <div className="bg-white rounded-xl border p-4 flex flex-col items-center text-center gap-1">
-            <Users size={22} className="text-blue-600" />
-            <p className="text-xs text-gray-500 font-medium">Vagas</p>
-            <p className="text-sm font-bold text-gray-900">{maxP > 0 ? `${currentP}/${maxP}` : 'Ilimitado'}</p>
-          </div>
-        </div>
-
+      <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="grid md:grid-cols-3 gap-6">
-          {/* Left: Main Info */}
+          {/* COLUNA PRINCIPAL */}
           <div className="md:col-span-2 space-y-6">
-            {/* Local */}
-            <div className="bg-white rounded-xl border p-5">
-              <h2 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                <MapPin size={18} className="text-blue-600" /> Local de Largada
-              </h2>
-              <p className="text-gray-700">{event.location}</p>
+            {/* Info Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { icon: <Calendar size={20} className="text-blue-600" />, label: 'Data', value: eventDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) },
+                { icon: <Clock size={20} className="text-blue-600" />, label: 'Horário', value: eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) },
+                { icon: <MapPin size={20} className="text-blue-600" />, label: 'Cidade', value: event.city },
+                { icon: <Users size={20} className="text-blue-600" />, label: 'Vagas', value: maxP > 0 ? `${currentP}/${maxP}` : 'Ilimitado' },
+              ].map((item, i) => (
+                <div key={i} className="bg-white rounded-xl border p-3 flex flex-col items-center text-center gap-1 shadow-sm">
+                  {item.icon}
+                  <p className="text-xs text-gray-400 font-medium">{item.label}</p>
+                  <p className="text-sm font-bold text-gray-900">{item.value}</p>
+                </div>
+              ))}
             </div>
 
-            {/* Descrição */}
-            {event.description && (
-              <div className="bg-white rounded-xl border p-5">
-                <h2 className="font-bold text-gray-900 mb-3">Sobre o Evento</h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.description}</p>
-              </div>
-            )}
+            {/* Local */}
+            <div className="bg-white rounded-xl border p-5 shadow-sm">
+              <h2 className="font-bold text-gray-900 mb-1 flex items-center gap-2 text-sm uppercase tracking-wide text-gray-500">
+                <MapPin size={15} /> Local de Largada
+              </h2>
+              <p className="text-gray-800 font-medium mt-1">{event.location}</p>
+            </div>
 
-            {/* Distâncias */}
-            {distances.length > 0 && (
-              <div className="bg-white rounded-xl border p-5">
-                <h2 className="font-bold text-gray-900 mb-4">Distâncias e Preços</h2>
-                <div className="space-y-3">
-                  {distances.map((d, i) => (
-                    <div key={i} className="flex items-center justify-between py-3 border-b last:border-0">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <span className="text-blue-600 font-bold text-xs">{d.name}</span>
-                        </div>
-                        <span className="font-medium text-gray-900">{d.name}</span>
-                      </div>
-                      <span className="text-blue-600 font-bold text-lg">
-                        R$ {Number(d.price).toFixed(2).replace('.', ',')}
+            {/* Countdown */}
+            {!isPast && (
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
+                  <Timer size={15} /> Contagem Regressiva
+                </h2>
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { value: countdown.days, label: 'Dias' },
+                    { value: countdown.hours, label: 'Horas' },
+                    { value: countdown.minutes, label: 'Min' },
+                    { value: countdown.seconds, label: 'Seg' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex flex-col items-center justify-center rounded-xl py-4"
+                      style={{ backgroundColor: '#000', color: '#C9A84C' }}>
+                      <span className="text-3xl font-bold tabular-nums" style={{ color: '#C9A84C' }}>
+                        {String(item.value).padStart(2, '0')}
                       </span>
+                      <span className="text-xs font-semibold mt-1" style={{ color: '#ffffff99' }}>{item.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Descrição */}
+            {event.description && (
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Sobre o Evento</h2>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.description}</p>
+              </div>
+            )}
+
+            {/* Regulamento */}
+            {event.additional_info && (
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Regulamento / Informações</h2>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.additional_info}</p>
+              </div>
+            )}
+
+            {/* Distâncias */}
+            {distances.length > 0 && (
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4">Distâncias e Preços</h2>
+                <div className="space-y-2">
+                  {distances.map((d, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold text-xs">{d.name}</span>
+                        </div>
+                        <span className="font-semibold text-gray-900">{d.name}</span>
+                      </div>
+                      <span className="text-blue-600 font-bold text-xl">R$ {Number(d.price).toFixed(2).replace('.', ',')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Kit */}
+            {event.kit_items && event.kit_items.length > 0 && (
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Kit do Evento</h2>
+                <div className="flex flex-wrap gap-2">
+                  {event.kit_items.map((item: string, i: number) => (
+                    <span key={i} className="flex items-center gap-1.5 bg-green-50 text-green-700 border border-green-200 text-sm font-medium px-3 py-1.5 rounded-full">
+                      <CheckCircle size={13} /> {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Organizador */}
+            {organizer && (
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Organizador</h2>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
+                    {organizer.name?.charAt(0)?.toUpperCase() || 'O'}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{organizer.name}</p>
+                    <p className="text-sm text-gray-500">{organizer.email}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Right: CTA + Progress */}
+          {/* COLUNA LATERAL — CTA */}
           <div className="space-y-4">
             {/* Barra de Progresso */}
             {maxP > 0 && (
-              <div className="bg-white rounded-xl border p-5">
-                <h3 className="font-bold text-gray-900 mb-3 text-sm">Vagas Preenchidas</h3>
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide mb-3">Vagas Preenchidas</h3>
                 <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
-                  <div
-                    className="h-3 rounded-full bg-blue-600 transition-all"
-                    style={{ width: `${progressPct}%` }}
-                  />
+                  <div className="h-3 rounded-full transition-all bg-blue-600" style={{ width: `${progressPct}%` }} />
                 </div>
                 <div className="flex justify-between text-xs text-gray-500">
-                  <span>{progressPct}% preenchido</span>
-                  <span>{maxP - currentP} vagas restantes</span>
+                  <span className="font-semibold text-blue-600">{progressPct}%</span>
+                  <span>{maxP - currentP} restantes</span>
                 </div>
               </div>
             )}
@@ -187,31 +254,45 @@ export function EventDetailPage() {
             {/* Prazo */}
             {deadline && (
               <div className={`rounded-xl border p-4 ${daysLeft! <= 7 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-                <p className="text-xs font-semibold text-gray-500 mb-1">PRAZO DE INSCRIÇÃO</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Prazo de Inscrição</p>
                 <p className="font-bold text-gray-900">
                   {deadline.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                 </p>
                 {daysLeft !== null && (
-                  <p className={`text-sm mt-1 font-medium ${daysLeft <= 7 ? 'text-red-600' : 'text-gray-500'}`}>
+                  <p className={`text-sm mt-1 font-semibold ${daysLeft <= 7 ? 'text-red-600' : 'text-gray-500'}`}>
                     {daysLeft === 0 ? 'Último dia!' : `${daysLeft} dias restantes`}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Botão Inscrever-se */}
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-lg transition-colors shadow-lg shadow-blue-200">
-              Inscrever-se
+            {/* Botão Inscrever */}
+            <button
+              className="w-full font-bold py-5 rounded-xl text-lg transition-all duration-200 shadow-lg text-white"
+              style={{ backgroundColor: '#2563EB', boxShadow: '0 4px 20px rgba(37,99,235,0.4)' }}
+              onMouseOver={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
+              onMouseOut={e => (e.currentTarget.style.backgroundColor = '#2563EB')}
+            >
+              INSCREVER-SE
             </button>
 
             {/* Botão Compartilhar */}
             <button
               onClick={handleShare}
-              className="w-full flex items-center justify-center gap-2 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold py-3 rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all duration-200 border-2"
+              style={{ borderColor: '#2563EB', color: '#2563EB' }}
+              onMouseOver={e => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
+              onMouseOut={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
             >
               {copied ? <CheckCircle size={18} className="text-green-600" /> : <Share2 size={18} />}
               {copied ? 'Link copiado!' : 'Compartilhar'}
             </button>
+
+            {/* Link direto */}
+            <div className="bg-gray-50 rounded-xl p-3 border">
+              <p className="text-xs text-gray-400 mb-1">Link do evento</p>
+              <p className="text-xs text-blue-600 font-mono break-all">022runner.com.br/evento/{event.slug}</p>
+            </div>
           </div>
         </div>
       </div>

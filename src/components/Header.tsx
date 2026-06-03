@@ -20,14 +20,14 @@ export function Header() {
     <div className="sticky top-0 z-50">
       {/* CAMADA 1 — fundo preto com logo */}
       <div
-        className="w-full flex items-center px-6"
-        style={{ backgroundColor: '#000000', borderBottom: '2px solid #C9A84C', height: '70px' }}
+        className="w-full flex items-center"
+        style={{ backgroundColor: '#000000', borderBottom: '2px solid #C9A84C', height: '70px', padding: '12px 40px' }}
       >
-        <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center h-full py-2">
+        <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center h-full" style={{ flex: 1 }}>
           <img
             src="/images/logo-022runner.png"
             alt="022 RUNNER"
-            style={{ height: '54px', width: 'auto', objectFit: 'contain' }}
+            style={{ width: '100%', maxWidth: '400px', height: 'auto', display: 'block', margin: '0 auto' }}
           />
         </Link>
 
@@ -51,7 +51,7 @@ export function Header() {
           className="flex items-center gap-6"
           style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '14px', color: '#111111' }}
         >
-          <NavLink to="/">Início</NavLink>
+          <NavLink to="/">Home</NavLink>
           <NavLink to="/eventos">Eventos</NavLink>
 
           <span style={{ color: '#C9A84C', fontSize: '20px', lineHeight: 1, opacity: 0.6 }}>|</span>
@@ -93,7 +93,7 @@ export function Header() {
           className="md:hidden bg-white flex flex-col"
           style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.12)', fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '14px' }}
         >
-          <MobileLink to="/" onClick={() => setMobileOpen(false)}>Início</MobileLink>
+          <MobileLink to="/" onClick={() => setMobileOpen(false)}>Home</MobileLink>
           <MobileLink to="/eventos" onClick={() => setMobileOpen(false)}>Eventos</MobileLink>
 
           <div style={{ height: '1px', backgroundColor: '#f0e6c8', margin: '4px 16px' }} />
