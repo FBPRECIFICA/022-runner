@@ -1,0 +1,3 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente.
+
+Verifique se o vercel.json está na raiz do projeto (não dentro de src ou dist). Se estiver correto, verifique se o vite.config.ts ainda tem o viteSingleFile plugin. Se sim, remova o viteSingleFile do vite.config.ts pois ele gera um único HTML e o Vercel não consegue aplicar rewrites nesse modo. Após remover, faça o build e push no GitHub.
