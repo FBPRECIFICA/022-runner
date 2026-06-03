@@ -49,7 +49,7 @@ export function EventCard({ event }: EventCardProps) {
         </div>
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <span className="text-blue-600 font-bold text-lg">{priceRange}</span>
-          <Link to={`/eventos/${event.slug}`} className="text-blue-600 hover:text-blue-700 font-semibold text-sm">Ver detalhes →</Link>
+          <Link to={`/evento/${event.slug}`} className="text-blue-600 hover:text-blue-700 font-semibold text-sm">Ver detalhes →</Link>
         </div>
       </div>
     </div>

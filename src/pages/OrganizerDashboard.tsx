@@ -43,6 +43,7 @@ export function OrganizerDashboard() {
   const [tab, setTab] = useState<'eventos' | 'criar'>('eventos');
   const [events, setEvents] = useState<any[]>([]);
   const [form, setForm] = useState<EventForm>(emptyForm);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -96,6 +97,35 @@ export function OrganizerDashboard() {
     });
   };
 
+  const openEdit = (event: any) => {
+    const dateObj = new Date(event.date);
+    const dateStr = dateObj.toISOString().split('T')[0];
+    const timeStr = dateObj.toTimeString().slice(0, 5);
+    const distances = (event.distances || []).map((d: any) => ({
+      name: d.name || '',
+      price: String(d.price || ''),
+    }));
+    setForm({
+      title: event.title || '',
+      description: event.description || '',
+      date: dateStr,
+      time: timeStr,
+      city: event.city || '',
+      location: event.location || '',
+      max_participants: event.max_participants ? String(event.max_participants) : '',
+      registration_deadline: event.registration_deadline
+        ? new Date(event.registration_deadline).toISOString().split('T')[0]
+        : '',
+      distances: distances.length > 0 ? distances : [{ name: '5km', price: '' }],
+    });
+    setEditingEventId(event.id);
+    setPhotos([]);
+    setPhotoPreviews([]);
+    setSuccess('');
+    setError('');
+    setTab('criar');
+  };
+
   const handleSubmit = async () => {
     setError('');
     if (!form.title || !form.date || !form.city || !form.location) {
@@ -104,7 +134,6 @@ export function OrganizerDashboard() {
     }
     setLoading(true);
     try {
-      // Upload de fotos
       const photoUrls: string[] = [];
       for (const photo of photos) {
         const ext = photo.name.split('.').pop();
@@ -118,42 +147,57 @@ export function OrganizerDashboard() {
         }
       }
 
-      const slug = generateSlug(form.title);
       const distances = form.distances.filter(d => d.name && d.price).map(d => ({
         name: d.name,
         price: parseFloat(d.price),
       }));
       const prices = distances.map(d => d.price);
-
-      const { error: insertError } = await supabase.from('events').insert({
-        slug,
+      const payload: any = {
         title: form.title,
         description: form.description,
         date: `${form.date}T${form.time || '07:00'}:00`,
         city: form.city,
         location: form.location,
-        organizer_id: user?.id,
         distances,
         prices,
-        photos: photoUrls,
-        banner_url: photoUrls[0] || null,
         max_participants: parseInt(form.max_participants) || null,
         registration_deadline: form.registration_deadline || null,
-        status: 'published',
-        plan: 'free',
-        quality_score: photoUrls.length > 0 ? 60 : 30,
-      });
+      };
 
-      if (insertError) throw insertError;
+      if (photoUrls.length > 0) {
+        payload.photos = photoUrls;
+        payload.banner_url = photoUrls[0];
+      }
 
-      setSuccess(`Evento criado! Link: 022runner.com.br/evento/${slug}`);
+      if (editingEventId) {
+        const { error: updateError } = await supabase
+          .from('events')
+          .update(payload)
+          .eq('id', editingEventId);
+        if (updateError) throw updateError;
+        setSuccess('Evento atualizado com sucesso!');
+      } else {
+        const slug = generateSlug(form.title);
+        const { error: insertError } = await supabase.from('events').insert({
+          ...payload,
+          slug,
+          organizer_id: user?.id,
+          status: 'published',
+          plan: 'free',
+          quality_score: photoUrls.length > 0 ? 60 : 30,
+        });
+        if (insertError) throw insertError;
+        setSuccess(`Evento criado! Link: 022runner.com.br/evento/${slug}`);
+      }
+
       setForm(emptyForm);
       setPhotos([]);
       setPhotoPreviews([]);
+      setEditingEventId(null);
       loadEvents();
       setTab('eventos');
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar evento.');
+      setError(err.message || 'Erro ao salvar evento.');
     } finally {
       setLoading(false);
     }
@@ -223,8 +267,8 @@ export function OrganizerDashboard() {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${event.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{event.status === 'published' ? 'Publicado' : 'Rascunho'}</span>
                 </div>
                 <div className="flex gap-2">
-                  <a href={`/evento/${event.slug}`} target="_blank" className="p-2 text-gray-500 hover:text-blue-600 border rounded-lg"><Eye size={18} /></a>
-                  <button className="p-2 text-gray-500 hover:text-blue-600 border rounded-lg"><Edit size={18} /></button>
+                  <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-blue-600 border rounded-lg" title="Visualizar"><Eye size={18} /></a>
+                  <button onClick={() => openEdit(event)} className="p-2 text-gray-500 hover:text-blue-600 border rounded-lg" title="Editar"><Edit size={18} /></button>
                 </div>
               </div>
             ))}
@@ -234,7 +278,7 @@ export function OrganizerDashboard() {
         {/* Criar Evento */}
         {tab === 'criar' && (
           <div className="bg-white rounded-xl border p-6">
-            <h2 className="text-lg font-bold mb-6">Criar Novo Evento</h2>
+            <h2 className="text-lg font-bold mb-6">{editingEventId ? 'Editar Evento' : 'Criar Novo Evento'}</h2>
 
             {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>}
             {success && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">{success}</div>}
@@ -345,10 +389,10 @@ export function OrganizerDashboard() {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setTab('eventos')} className="flex-1 border text-gray-600 py-3 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
+              <button onClick={() => { setTab('eventos'); setEditingEventId(null); setForm(emptyForm); }} className="flex-1 border text-gray-600 py-3 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
               <button onClick={handleSubmit} disabled={loading}
                 className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50">
-                {loading ? 'Criando evento...' : '🚀 Publicar Evento'}
+                {loading ? 'Salvando...' : editingEventId ? '💾 Salvar Alterações' : '🚀 Publicar Evento'}
               </button>
             </div>
           </div>

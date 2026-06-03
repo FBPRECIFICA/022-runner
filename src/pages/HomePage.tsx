@@ -1,20 +1,69 @@
+import { useState, useEffect } from 'react';
 import { HeroSection } from '../components/HeroSection';
 import { EventCard } from '../components/EventCard';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Star, Award, Clock, ArrowRight, Sparkles, Trophy } from 'lucide-react';
-import { events, LAGOS_REGION_CITIES } from '../data/mockData';
+import { events as mockEvents, LAGOS_REGION_CITIES } from '../data/mockData';
 import { formatDate } from '../lib/utils';
+import { supabase } from '../lib/supabase';
+import type { Event } from '../types';
+
+function supabaseToEvent(e: any): Event {
+  const distances = (e.distances || []).map((d: any, i: number) => ({
+    id: `d${i}`,
+    name: d.name,
+    distanceKm: parseFloat(d.name) || 0,
+    price: Number(d.price),
+  }));
+  return {
+    id: e.id,
+    name: e.title,
+    subtitle: e.description?.slice(0, 80) || '',
+    description: e.description || '',
+    date: e.date,
+    startTime: new Date(e.date).toTimeString().slice(0, 5),
+    city: e.city,
+    state: 'RJ',
+    startLocation: e.location || '',
+    maxParticipants: e.max_participants || 0,
+    currentParticipants: e.current_participants || 0,
+    banner: e.banner_url || '',
+    distances,
+    qualityScore: e.quality_score || 0,
+    plan: e.plan || 'free',
+    status: e.status === 'published' ? 'registration_open' : e.status,
+    organizerId: e.organizer_id || '',
+    slug: e.slug,
+  };
+}
 
 export function HomePage() {
+  const [allEvents, setAllEvents] = useState<Event[]>(mockEvents);
+
+  useEffect(() => {
+    supabase
+      .from('events')
+      .select('*')
+      .eq('status', 'published')
+      .order('date', { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setAllEvents(data.map(supabaseToEvent));
+        }
+      });
+  }, []);
+
+  const events = allEvents;
+
   // Eventos em destaque (Premium)
   const premiumEvents = events.filter(e => e.plan === 'premium' && e.status === 'registration_open');
-  
+
   // Próximos eventos
   const upcomingEvents = events
     .filter(e => e.status === 'registration_open')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 6);
-  
+
   // Eventos por cidade (Região dos Lagos)
   const eventsByCity = LAGOS_REGION_CITIES.map(city => {
     const cityEvents = events.filter(e => e.city === city && e.status === 'registration_open');
@@ -120,7 +169,7 @@ export function HomePage() {
                     {cityEvents.slice(0, 2).map((event) => (
                       <div key={event.id} className="mb-3 last:mb-0">
                         <Link 
-                          to={`/eventos/${event.slug}`}
+                          to={`/evento/${event.slug}`}
                           className="flex items-center justify-between text-sm hover:text-blue-600 transition-colors"
                         >
                           <div>
