@@ -1,0 +1,22 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+
+## TAREFA 1 — Logo maior e hero corrigido
+No src/components/Header.tsx:
+- A camada preta do topo deve ter height: 90px
+- A tag <img> do logo deve ter style: width:100%, max-width:100%, height:80px, object-fit:contain, display:block, padding: 5px 20px, box-sizing:border-box, background:#000
+- Remover qualquer container que limite a largura da logo
+
+No src/components/HeroSection.tsx ou src/pages/HomePage.tsx:
+- O título principal "022 RUNNER" deve ser substituído pelo slogan: "CORRA COM A GENTE"
+- O subtítulo deve ser: "A plataforma de eventos esportivos da Região dos Lagos — RJ"
+
+## TAREFA 2 — Build e push
+npm run build
+git add -A
+git commit -m "Header: logo full width 90px + hero slogan corrigido"
+git push origin main

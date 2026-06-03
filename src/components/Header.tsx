@@ -21,7 +21,7 @@ export function Header() {
       {/* CAMADA 1 — fundo preto com logo */}
       <div
         className="w-full flex items-center"
-        style={{ backgroundColor: '#000000', borderBottom: '2px solid #C9A84C', height: '70px', padding: 0 }}
+        style={{ backgroundColor: '#000000', borderBottom: '2px solid #C9A84C', height: '90px', padding: 0 }}
       >
         <Link
           to="/"
@@ -33,15 +33,13 @@ export function Header() {
             alt="022 RUNNER"
             style={{
               width: '100%',
-              maxWidth: '500px',
-              height: 'auto',
+              maxWidth: '100%',
+              height: '80px',
+              objectFit: 'contain',
               display: 'block',
-              margin: '0 auto',
-              padding: '8px 60px',
+              padding: '5px 20px',
               boxSizing: 'border-box',
-              backgroundColor: '#000000',
-              mixBlendMode: 'normal',
-              filter: 'brightness(1)',
+              background: '#000',
             }}
           />
         </Link>

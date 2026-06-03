@@ -7,9 +7,9 @@ export function HeroSection() {
       style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('/images/hero-bg.jpg')" }}
     >
       <div className="container mx-auto px-4">
-        <h1 className="text-5xl md:text-7xl font-bold mb-4">022 RUNNER</h1>
+        <h1 className="text-5xl md:text-7xl font-bold mb-4">CORRA COM A GENTE</h1>
         <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto">
-          Plataforma de Eventos Esportivos da Região dos Lagos - RJ
+          A plataforma de eventos esportivos da Região dos Lagos — RJ
         </p>
         <p className="text-lg mb-12 max-w-3xl mx-auto">
           Encontre e participe de corridas, trails, maratonas e muito mais! 
