@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { QRCodeSVG } from 'qrcode.react';
@@ -21,7 +21,7 @@ export function CertificatePage() {
 
   const handlePrint = () => window.print();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" /></div>;
   if (!reg || !event) return <div className="min-h-screen flex items-center justify-center text-gray-500">Certificado não encontrado.</div>;
 
   const eventDate = new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -40,7 +40,7 @@ export function CertificatePage() {
 
       {/* Botões */}
       <div className="no-print flex justify-center gap-3 py-4 bg-gray-100">
-        <button onClick={handlePrint} className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+        <button onClick={handlePrint} className="flex items-center gap-2 bg-[#C9A84C] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#B8962E] transition-colors">
           <Printer size={18} /> Baixar / Imprimir PDF
         </button>
         <a href={`https://wa.me/?text=${shareMsg}`} target="_blank" rel="noreferrer"
@@ -74,7 +74,7 @@ export function CertificatePage() {
             <h1 className="text-4xl font-bold mb-4" style={{ color: '#1e293b' }}>{reg.name}</h1>
 
             <p className="text-lg text-gray-500 mb-2">participou do evento</p>
-            <h2 className="text-2xl font-bold mb-6" style={{ color: '#2563EB' }}>{event.title}</h2>
+            <h2 className="text-2xl font-bold mb-6" style={{ color: '#C9A84C' }}>{event.title}</h2>
 
             <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto mb-8">
               {[

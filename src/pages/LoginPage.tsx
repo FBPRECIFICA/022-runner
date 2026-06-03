@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -107,10 +107,10 @@ export function LoginPage() {
 
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                <input type="checkbox" className="w-4 h-4 text-[#C9A84C] border-gray-300 rounded focus:ring-[#C9A84C]" />
                 <span className="text-sm text-gray-600">Lembrar-me</span>
               </label>
-              <Link to="/esqueci-senha" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <Link to="/esqueci-senha" className="text-sm text-[#C9A84C] hover:text-[#B8962E] font-medium">
                 Esqueceu a senha?
               </Link>
             </div>
@@ -118,7 +118,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-[#C9A84C] text-white py-3 rounded-lg font-semibold hover:bg-[#B8962E] transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -143,7 +143,7 @@ export function LoginPage() {
           {/* Criar conta */}
           <p className="text-center text-gray-600">
             Não tem uma conta?{' '}
-            <Link to="/cadastro" className="text-blue-600 hover:text-blue-700 font-semibold">
+            <Link to="/cadastro" className="text-[#C9A84C] hover:text-[#B8962E] font-semibold">
               Cadastre-se grátis
             </Link>
           </p>

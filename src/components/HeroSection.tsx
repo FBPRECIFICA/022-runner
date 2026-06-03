@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 
 export function HeroSection() {
   return (
@@ -18,13 +18,13 @@ export function HeroSection() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link 
             to="/eventos" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold transition-colors text-lg"
+            className="bg-[#C9A84C] hover:bg-[#B8962E] text-white px-8 py-4 rounded-xl font-semibold transition-colors text-lg"
           >
             Ver Eventos
           </Link>
           <Link 
             to="/cadastro" 
-            className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold transition-colors text-lg"
+            className="bg-white text-[#C9A84C] hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold transition-colors text-lg"
           >
             Cadastre-se Grátis
           </Link>

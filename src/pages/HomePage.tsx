@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
+import { NewsletterForm } from '../components/NewsletterForm';
 import { HeroSection } from '../components/HeroSection';
 import { EventCard } from '../components/EventCard';
 import { Link } from 'react-router-dom';
@@ -101,7 +102,7 @@ export function HomePage() {
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full mb-4">
+                <div className="inline-flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-full mb-4">
                   <Star className="w-4 h-4 fill-yellow-400" />
                   <span className="font-semibold">DESTAQUE PREMIUM</span>
                 </div>
@@ -110,7 +111,7 @@ export function HomePage() {
               </div>
               <Link 
                 to="/eventos?plano=premium" 
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+                className="flex items-center gap-2 text-[#C9A84C] hover:text-[#B8962E] font-semibold"
               >
                 Ver todos
                 <ArrowRight className="w-4 h-4" />
@@ -140,7 +141,7 @@ export function HomePage() {
             </div>
             <Link 
               to="/calendario" 
-              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+              className="flex items-center gap-2 text-[#C9A84C] hover:text-[#B8962E] font-semibold"
             >
               Ver calendário
               <ArrowRight className="w-4 h-4" />
@@ -160,7 +161,7 @@ export function HomePage() {
         <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full mb-4">
+              <div className="inline-flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-full mb-4">
                 <MapPin className="w-4 h-4" />
                 <span className="font-semibold">REGIAO DOS LAGOS</span>
               </div>
@@ -190,7 +191,7 @@ export function HomePage() {
                       <div key={event.id} className="mb-3 last:mb-0">
                         <Link 
                           to={`/evento/${event.slug}`}
-                          className="flex items-center justify-between text-sm hover:text-blue-600 transition-colors"
+                          className="flex items-center justify-between text-sm hover:text-[#C9A84C] transition-colors"
                         >
                           <div>
                             <p className="font-medium text-gray-900">{event.name}</p>
@@ -203,7 +204,7 @@ export function HomePage() {
                     {cityEvents.length > 2 && (
                       <Link 
                         to={`/eventos?cidade=${encodeURIComponent(city)}`}
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium mt-2 inline-block"
+                        className="text-sm text-[#C9A84C] hover:text-[#B8962E] font-medium mt-2 inline-block"
                       >
                         +{cityEvents.length - 2} mais
                       </Link>
@@ -220,7 +221,7 @@ export function HomePage() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full mb-4">
+            <div className="inline-flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-full mb-4">
               <Sparkles className="w-4 h-4" />
               <span className="font-semibold">DIFERENCIAIS</span>
             </div>
@@ -232,15 +233,15 @@ export function HomePage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Assistente IA */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200 text-center">
-              <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-amber-200 text-center">
+              <div className="w-16 h-16 bg-[#C9A84C] rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Assistente IA</h3>
               <p className="text-gray-600 text-sm mb-4">
                 Nosso assistente de IA analisa automaticamente a qualidade do seu evento e sugere melhorias para aumentar as inscrições.
               </p>
-              <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+              <span className="inline-block bg-[#C9A84C] text-white px-3 py-1 rounded-full text-xs font-semibold">
                 NOVO
               </span>
             </div>
@@ -294,7 +295,7 @@ export function HomePage() {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full mb-4">
+            <div className="inline-flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-full mb-4">
               <Clock className="w-4 h-4" />
               <span className="font-semibold">PLANOS</span>
             </div>
@@ -335,12 +336,12 @@ export function HomePage() {
             </div>
 
             {/* Plano Destaque */}
-            <div className="bg-white rounded-xl shadow-xl p-8 border-2 border-blue-600 text-center relative">
-              <span className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+            <div className="bg-white rounded-xl shadow-xl p-8 border-2 border-[#C9A84C] text-center relative">
+              <span className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-[#C9A84C] text-white px-4 py-1 rounded-full text-sm font-semibold">
                 POPULAR
               </span>
               <div className="mb-6">
-                <h3 className="text-2xl font-bold text-blue-600">Destaque</h3>
+                <h3 className="text-2xl font-bold text-[#C9A84C]">Destaque</h3>
                 <p className="text-gray-500 mt-2">Prioridade nas buscas</p>
               </div>
               <ul className="space-y-4 text-left mb-8">
@@ -369,7 +370,7 @@ export function HomePage() {
                   <span className="text-gray-700">Destaque por categoria</span>
                 </li>
               </ul>
-              <button className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition-colors">
+              <button className="w-full bg-[#C9A84C] text-white font-semibold py-3 rounded-lg hover:bg-[#B8962E] transition-colors">
                 Assinar Destaque
               </button>
             </div>
@@ -424,7 +425,7 @@ export function HomePage() {
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full mb-4">
+            <div className="inline-flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-full mb-4">
               <MapPin className="w-4 h-4" />
               <span className="font-semibold">EVENTOS NO MAPA</span>
             </div>
@@ -446,7 +447,7 @@ export function HomePage() {
                         <div style={{ minWidth: 160 }}>
                           <p style={{ fontWeight: 700, marginBottom: 4 }}>{e.name}</p>
                           <p style={{ color: '#6b7280', fontSize: 12, marginBottom: 4 }}>{new Date(e.date).toLocaleDateString('pt-BR')} · {e.city}</p>
-                          <a href={`/evento/${e.slug}`} style={{ color: '#2563EB', fontSize: 12, fontWeight: 600 }}>Ver evento →</a>
+                          <a href={`/evento/${e.slug}`} style={{ color: '#C9A84C', fontSize: 12, fontWeight: 600 }}>Ver evento →</a>
                         </div>
                       </Popup>
                     </Marker>
@@ -480,7 +481,7 @@ export function HomePage() {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full mb-4">
+            <div className="inline-flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-full mb-4">
               <Star className="w-4 h-4" />
               <span className="font-semibold">DEPOIMENTOS</span>
             </div>
@@ -495,7 +496,7 @@ export function HomePage() {
               <div key={i} className="bg-white rounded-xl shadow-sm border p-6">
                 <p className="text-gray-600 text-sm leading-relaxed mb-4">"{t.text}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: 'linear-gradient(135deg, #2563EB, #1d4ed8)' }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: 'linear-gradient(135deg, #C9A84C, #B8962E)' }}>
                     {t.name.charAt(0)}
                   </div>
                   <div>
@@ -515,7 +516,7 @@ export function HomePage() {
           <p className="text-sm font-semibold tracking-widest text-gray-400 mb-8">ORGANIZADORES PARCEIROS</p>
           <div className="flex flex-wrap justify-center gap-6">
             {[
-              { name: 'Corrida dos Lagos', color: '#2563EB' },
+              { name: 'Corrida dos Lagos', color: '#C9A84C' },
               { name: 'Trail Búzios', color: '#16a34a' },
               { name: 'Run Cabo Frio', color: '#dc2626' },
               { name: 'Pedro Run', color: '#7c3aed' },
@@ -533,7 +534,7 @@ export function HomePage() {
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full mb-4">
+            <div className="inline-flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-full mb-4">
               <Sparkles className="w-4 h-4" />
               <span className="font-semibold">PARA ORGANIZADORES</span>
             </div>
@@ -556,25 +557,27 @@ export function HomePage() {
             ))}
           </div>
           <div className="text-center mt-10">
-            <Link to="/cadastro" className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 transition-colors">
+            <Link to="/cadastro" className="inline-flex items-center gap-2 bg-[#C9A84C] text-white font-semibold px-8 py-4 rounded-xl hover:bg-[#B8962E] transition-colors">
               Criar conta grátis <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
       </section>
 
+      <NewsletterForm />
+
       {/* CTA Final */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-12 text-white text-center">
+          <div className="bg-gradient-to-r from-[#C9A84C] to-blue-800 rounded-2xl p-12 text-white text-center">
             <h2 className="text-3xl font-bold mb-4">Pronto para começar?</h2>
-            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-amber-100 mb-8 max-w-2xl mx-auto">
               Junte-se a milhares de atletas e organizadores na maior plataforma de eventos esportivos da Região dos Lagos!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
                 to="/cadastro" 
-                className="inline-flex items-center justify-center gap-2 bg-white text-blue-600 font-semibold px-8 py-4 rounded-xl hover:bg-gray-100 transition-colors"
+                className="inline-flex items-center justify-center gap-2 bg-white text-[#C9A84C] font-semibold px-8 py-4 rounded-xl hover:bg-gray-100 transition-colors"
               >
                 Cadastre-se Grátis
               </Link>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { EventCard } from '../components/EventCard';
 import { LAGOS_REGION_CITIES } from '../types';
@@ -117,7 +117,7 @@ export function EventsPage() {
             <select
               value={city}
               onChange={e => setCity(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
             >
               <option value="">Todas as cidades</option>
               {LAGOS_REGION_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -129,7 +129,7 @@ export function EventsPage() {
             <select
               value={type}
               onChange={e => setType(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
             >
               {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -141,14 +141,14 @@ export function EventsPage() {
               type="date"
               value={dateFrom}
               onChange={e => setDateFrom(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
             />
           </div>
 
           {(city || type !== 'Todos' || dateFrom) && (
             <button
               onClick={() => { setCity(''); setType('Todos'); setDateFrom(''); }}
-              className="text-sm text-blue-600 hover:underline self-end pb-2"
+              className="text-sm text-[#C9A84C] hover:underline self-end pb-2"
             >
               Limpar filtros
             </button>
@@ -173,7 +173,7 @@ export function EventsPage() {
               <div className="flex justify-center mt-8">
                 <button
                   onClick={handleLoadMore}
-                  className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                  className="px-8 py-3 bg-[#C9A84C] text-white font-semibold rounded-xl hover:bg-[#B8962E] transition-colors shadow-sm"
                 >
                   Carregar mais eventos
                 </button>

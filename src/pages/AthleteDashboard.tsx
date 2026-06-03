@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -47,13 +47,13 @@ export function AthleteDashboard() {
       <div className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 py-6 flex items-center gap-5">
           <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #2563EB, #1d4ed8)' }}>
+            style={{ background: 'linear-gradient(135deg, #C9A84C, #B8962E)' }}>
             {initials}
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">{user?.name}</h1>
             <p className="text-gray-500 text-sm">{user?.email}</p>
-            <span className="inline-block mt-1 text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Atleta</span>
+            <span className="inline-block mt-1 text-xs font-semibold bg-amber-100 text-[#B8962E] px-2 py-0.5 rounded-full">Atleta</span>
           </div>
         </div>
       </div>
@@ -62,7 +62,7 @@ export function AthleteDashboard() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { icon: <Calendar size={20} className="text-blue-600" />, value: registrations.filter(r => r.status !== 'cancelled').length, label: 'Corridas' },
+            { icon: <Calendar size={20} className="text-[#C9A84C]" />, value: registrations.filter(r => r.status !== 'cancelled').length, label: 'Corridas' },
             { icon: <MapPin size={20} className="text-green-600" />, value: `${totalKm.toFixed(0)} km`, label: 'Percorridos' },
             { icon: <Trophy size={20} className="text-yellow-500" />, value: past.length, label: 'Medalhas' },
             { icon: <Clock size={20} className="text-purple-600" />, value: active.length > 0 ? active[0].event?.title?.split(' ')[0] + '...' : '—', label: 'Próximo evento' },
@@ -86,7 +86,7 @@ export function AthleteDashboard() {
             <div className="text-center py-8">
               <Calendar size={36} className="mx-auto text-gray-200 mb-2" />
               <p className="text-gray-400 text-sm">Nenhuma inscrição ativa.</p>
-              <Link to="/eventos" className="mt-3 inline-block text-blue-600 text-sm hover:underline">Ver eventos disponíveis</Link>
+              <Link to="/eventos" className="mt-3 inline-block text-[#C9A84C] text-sm hover:underline">Ver eventos disponíveis</Link>
             </div>
           ) : (
             <div className="space-y-3">
@@ -99,7 +99,7 @@ export function AthleteDashboard() {
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge(r.status)}`}>{statusLabel(r.status)}</span>
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <p className="font-bold text-blue-600 text-sm">R$ {Number(r.amount).toFixed(2).replace('.', ',')}</p>
+                    <p className="font-bold text-[#C9A84C] text-sm">R$ {Number(r.amount).toFixed(2).replace('.', ',')}</p>
                     <p className="text-xs font-mono text-gray-400">{r.registration_number}</p>
                     {r.status !== 'cancelled' && (
                       <button onClick={() => handleCancel(r.id)}
@@ -139,7 +139,7 @@ export function AthleteDashboard() {
             <div className="grid sm:grid-cols-2 gap-3">
               {recommended.map(e => (
                 <Link key={e.id} to={`/evento/${e.slug}`}
-                  className="flex items-center gap-3 border rounded-xl p-3 hover:border-blue-300 hover:bg-blue-50/30 transition-all">
+                  className="flex items-center gap-3 border rounded-xl p-3 hover:border-amber-300 hover:bg-amber-50/30 transition-all">
                   {e.banner_url && <img src={e.banner_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 text-sm truncate">{e.title}</p>

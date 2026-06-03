@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
@@ -307,7 +307,7 @@ export function OrganizerDashboard() {
           </div>
           <button
             onClick={() => setTab('criar')}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+            className="flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-lg hover:bg-[#B8962E] font-medium"
           >
             <Plus size={18} /> Novo Evento
           </button>
@@ -319,7 +319,7 @@ export function OrganizerDashboard() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 border">
             <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-2 rounded-lg"><Calendar className="text-blue-600" size={20} /></div>
+              <div className="bg-amber-100 p-2 rounded-lg"><Calendar className="text-[#C9A84C]" size={20} /></div>
               <div><p className="text-2xl font-bold">{events.length}</p><p className="text-sm text-gray-500">Eventos</p></div>
             </div>
           </div>
@@ -339,8 +339,8 @@ export function OrganizerDashboard() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          <button onClick={() => setTab('eventos')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'eventos' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'}`}>Meus Eventos</button>
-          <button onClick={() => setTab('criar')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'criar' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'}`}>Criar Evento</button>
+          <button onClick={() => setTab('eventos')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'eventos' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Meus Eventos</button>
+          <button onClick={() => setTab('criar')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'criar' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Criar Evento</button>
         </div>
 
         {/* Lista de Eventos */}
@@ -350,7 +350,7 @@ export function OrganizerDashboard() {
               <div className="bg-white rounded-xl border p-12 text-center">
                 <Calendar size={48} className="mx-auto text-gray-300 mb-4" />
                 <p className="text-gray-500 text-lg">Nenhum evento criado ainda.</p>
-                <button onClick={() => setTab('criar')} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Criar primeiro evento</button>
+                <button onClick={() => setTab('criar')} className="mt-4 bg-[#C9A84C] text-white px-6 py-2 rounded-lg hover:bg-[#B8962E]">Criar primeiro evento</button>
               </div>
             ) : events.map(event => (
               <div key={event.id} className="bg-white rounded-xl border p-4 flex items-center gap-4">
@@ -361,8 +361,8 @@ export function OrganizerDashboard() {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${event.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{event.status === 'published' ? 'Publicado' : 'Rascunho'}</span>
                 </div>
                 <div className="flex gap-2">
-                  <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-blue-600 border rounded-lg" title="Visualizar"><Eye size={18} /></a>
-                  <button onClick={() => openEdit(event)} className="p-2 text-gray-500 hover:text-blue-600 border rounded-lg" title="Editar"><Edit size={18} /></button>
+                  <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Visualizar"><Eye size={18} /></a>
+                  <button onClick={() => openEdit(event)} className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Editar"><Edit size={18} /></button>
                   <button onClick={() => exportExcel(event)} className="p-2 text-gray-500 hover:text-green-600 border rounded-lg" title="Exportar Excel"><Download size={18} /></button>
                 </div>
               </div>
@@ -382,7 +382,7 @@ export function OrganizerDashboard() {
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Evento *</label>
                 <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   placeholder="Ex: Corrida da Praia 2027" />
                 {form.title && <p className="text-xs text-gray-400 mt-1">Link: 022runner.com.br/evento/{generateSlug(form.title)}</p>}
               </div>
@@ -390,19 +390,19 @@ export function OrganizerDashboard() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Data *</label>
                 <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Horário de Largada</label>
                 <input type="time" value={form.time} onChange={e => setForm(p => ({ ...p, time: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cidade *</label>
                 <select value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]">
                   <option value="">Selecione a cidade</option>
                   {LAGOS_REGION_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -411,34 +411,34 @@ export function OrganizerDashboard() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Local de Largada *</label>
                 <input value={form.location} onChange={e => setForm(p => ({ ...p, location: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   placeholder="Ex: Praça da Paz" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Máx. Participantes</label>
                 <input type="number" value={form.max_participants} onChange={e => setForm(p => ({ ...p, max_participants: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   placeholder="Ex: 500" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Prazo de Inscrição</label>
                 <input type="date" value={form.registration_deadline} onChange={e => setForm(p => ({ ...p, registration_deadline: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" />
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Descrição do Evento</label>
                 <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                  rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   placeholder="Descreva o evento, percurso, atrações..." />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Evento</label>
                 <select value={form.event_type} onChange={e => setForm(p => ({ ...p, event_type: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]">
                   <option value="">Selecione o tipo</option>
                   {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -448,7 +448,7 @@ export function OrganizerDashboard() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Kit do Evento</label>
                 <div className="flex flex-wrap gap-2">
                   {KIT_OPTIONS.map(item => (
-                    <label key={item} className="flex items-center gap-2 cursor-pointer bg-gray-50 border rounded-lg px-3 py-2 hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                    <label key={item} className="flex items-center gap-2 cursor-pointer bg-gray-50 border rounded-lg px-3 py-2 hover:bg-amber-50 hover:border-amber-300 transition-colors">
                       <input
                         type="checkbox"
                         checked={form.kit_items.includes(item)}
@@ -458,7 +458,7 @@ export function OrganizerDashboard() {
                             ? [...p.kit_items, item]
                             : p.kit_items.filter(k => k !== item),
                         }))}
-                        className="w-4 h-4 text-blue-600"
+                        className="w-4 h-4 text-[#C9A84C]"
                       />
                       <span className="text-sm font-medium text-gray-700">{item}</span>
                     </label>
@@ -469,7 +469,7 @@ export function OrganizerDashboard() {
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Informações Adicionais / Regulamento</label>
                 <textarea value={form.additional_info} onChange={e => setForm(p => ({ ...p, additional_info: e.target.value }))}
-                  rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   placeholder="Regras, percurso detalhado, informações de kit, etc..." />
               </div>
 
@@ -480,16 +480,16 @@ export function OrganizerDashboard() {
                   {form.sponsors.map((s, i) => (
                     <div key={i} className="flex gap-2">
                       <input value={s.name} onChange={e => setForm(p => { const sp = [...p.sponsors]; sp[i] = { ...sp[i], name: e.target.value }; return { ...p, sponsors: sp }; })}
-                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nome do patrocinador" />
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" placeholder="Nome do patrocinador" />
                       <input value={s.logo_url} onChange={e => setForm(p => { const sp = [...p.sponsors]; sp[i] = { ...sp[i], logo_url: e.target.value }; return { ...p, sponsors: sp }; })}
-                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="URL do logo" />
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" placeholder="URL do logo" />
                       <button onClick={() => setForm(p => ({ ...p, sponsors: p.sponsors.filter((_, j) => j !== i) }))}
                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                     </div>
                   ))}
                   {form.sponsors.length < 3 && (
                     <button onClick={() => setForm(p => ({ ...p, sponsors: [...p.sponsors, { name: '', logo_url: '' }] }))}
-                      className="text-blue-600 text-sm hover:underline">+ Adicionar patrocinador</button>
+                      className="text-[#C9A84C] text-sm hover:underline">+ Adicionar patrocinador</button>
                   )}
                 </div>
               </div>
@@ -520,7 +520,7 @@ export function OrganizerDashboard() {
                     <div key={di} className="border rounded-xl p-4 bg-gray-50">
                       <div className="flex gap-2 mb-3">
                         <input value={d.name} onChange={e => updateDistanceName(di, e.target.value)}
-                          className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
                           placeholder="Ex: 5km, 10km, 21km" />
                         {form.distances.length > 1 && (
                           <button onClick={() => removeDistance(di)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
@@ -531,10 +531,10 @@ export function OrganizerDashboard() {
                           <div key={li} className="flex gap-2 items-center">
                             <span className="text-xs font-semibold text-gray-500 w-14">Lote {li + 1}</span>
                             <input type="number" value={lot.price} onChange={e => updateLot(di, li, 'price', e.target.value)}
-                              className="w-28 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                              className="w-28 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
                               placeholder="R$ preço" />
                             <input type="number" value={lot.qty} onChange={e => updateLot(di, li, 'qty', e.target.value)}
-                              className="w-28 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                              className="w-28 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
                               placeholder="Vagas (opt)" />
                             {d.lots.length > 1 && (
                               <button onClick={() => removeLot(di, li)} className="p-1 text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
@@ -542,19 +542,19 @@ export function OrganizerDashboard() {
                           </div>
                         ))}
                         {d.lots.length < 3 && (
-                          <button onClick={() => addLot(di)} className="text-blue-600 text-xs hover:underline mt-1">+ Lote {d.lots.length + 1}</button>
+                          <button onClick={() => addLot(di)} className="text-[#C9A84C] text-xs hover:underline mt-1">+ Lote {d.lots.length + 1}</button>
                         )}
                       </div>
                     </div>
                   ))}
-                  <button onClick={addDistance} className="text-blue-600 text-sm hover:underline">+ Adicionar distância</button>
+                  <button onClick={addDistance} className="text-[#C9A84C] text-sm hover:underline">+ Adicionar distância</button>
                 </div>
               </div>
 
               {/* Upload de Fotos */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Fotos do Evento (máx. 5)</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-amber-400 transition-colors">
                   <input type="file" accept="image/*" multiple onChange={handlePhotoChange}
                     className="hidden" id="photo-upload" />
                   <label htmlFor="photo-upload" className="cursor-pointer">
@@ -570,7 +570,7 @@ export function OrganizerDashboard() {
                         <img src={src} alt="" className="w-full h-20 object-cover rounded-lg" />
                         <button onClick={() => removePhoto(i)}
                           className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
-                        {i === 0 && <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-1 rounded">Capa</span>}
+                        {i === 0 && <span className="absolute bottom-1 left-1 bg-[#C9A84C] text-white text-xs px-1 rounded">Capa</span>}
                       </div>
                     ))}
                   </div>
@@ -581,7 +581,7 @@ export function OrganizerDashboard() {
             <div className="flex gap-3 mt-6">
               <button onClick={() => { setTab('eventos'); setEditingEventId(null); setForm(emptyForm); }} className="flex-1 border text-gray-600 py-3 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
               <button onClick={handleSubmit} disabled={loading}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50">
+                className="flex-1 bg-[#C9A84C] text-white py-3 rounded-lg hover:bg-[#B8962E] font-medium disabled:opacity-50">
                 {loading ? 'Salvando...' : editingEventId ? '💾 Salvar Alterações' : '🚀 Publicar Evento'}
               </button>
             </div>

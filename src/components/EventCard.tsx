@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import type { Event } from '../types';
 
 interface EventCardProps {
@@ -28,7 +28,7 @@ export function EventCard({ event }: EventCardProps) {
           <span className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold">PREMIUM</span>
         )}
         {event.plan === 'featured' && (
-          <span className="absolute top-4 left-4 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold">DESTAQUE</span>
+          <span className="absolute top-4 left-4 bg-[#C9A84C] text-white px-3 py-1 rounded-full text-xs font-bold">DESTAQUE</span>
         )}
         {event.status === 'registration_open' && (
           <span className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium">Inscrições Abertas</span>
@@ -48,8 +48,8 @@ export function EventCard({ event }: EventCardProps) {
           <span>👥 {event.currentParticipants}/{event.maxParticipants}</span>
         </div>
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <span className="text-blue-600 font-bold text-lg">{priceRange}</span>
-          <Link to={`/evento/${event.slug}`} className="text-blue-600 hover:text-blue-700 font-semibold text-sm">Ver detalhes →</Link>
+          <span className="text-[#C9A84C] font-bold text-lg">{priceRange}</span>
+          <Link to={`/evento/${event.slug}`} className="text-[#C9A84C] hover:text-[#B8962E] font-semibold text-sm">Ver detalhes →</Link>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-export function calculateScore(event: {
+﻿export function calculateScore(event: {
   banner_url?: string;
   photos?: string[];
   description?: string;
@@ -30,6 +30,6 @@ export function calculateScore(event: {
 export function scoreBadge(score: number): { label: string; color: string; bg: string } {
   if (score >= 91) return { label: `⭐ ${score}/100`, color: '#92400e', bg: '#C9A84C' };
   if (score >= 71) return { label: `${score}/100`, color: '#fff', bg: '#16a34a' };
-  if (score >= 41) return { label: `${score}/100`, color: '#fff', bg: '#2563EB' };
+  if (score >= 41) return { label: `${score}/100`, color: '#fff', bg: '#C9A84C' };
   return { label: `${score}/100`, color: '#fff', bg: '#9ca3af' };
 }

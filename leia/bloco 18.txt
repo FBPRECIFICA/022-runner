@@ -1,0 +1,145 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript antes do push
+- Verificar .gitignore antes de cada push
+
+## TAREFA 1 — Mapa de percurso do evento
+No src/pages/OrganizerDashboard.tsx formulário de criação de evento adicionar seção "Percurso no Mapa":
+- Mapa interativo react-leaflet onde organizador clica para adicionar waypoints
+- Linha dourada conectando os pontos clicados
+- Ponto verde no primeiro clique (largada) e vermelho no último (chegada)
+- Botão "Desfazer último ponto" e "Limpar percurso"
+- Calcular e mostrar distância aproximada entre os pontos em km
+- Salvar array de coordenadas no Supabase: ALTER TABLE events ADD COLUMN IF NOT EXISTS route_coordinates JSONB; ALTER TABLE events ADD COLUMN IF NOT EXISTS latitude FLOAT; ALTER TABLE events ADD COLUMN IF NOT EXISTS longitude FLOAT;
+- Campo clicável no mapa para definir coordenadas do local de largada
+
+## TAREFA 2 — Percurso e Como Chegar na landing page
+No src/pages/EventDetailPage.tsx adicionar duas seções:
+
+SEÇÃO "Percurso":
+- Se evento tiver route_coordinates mostrar mapa com linha do percurso em dourado
+- Ponto verde largada, vermelho chegada
+- Botão "Baixar GPX" que gera arquivo .gpx para importar no Garmin/Strava
+- Botão "Abrir no Google Maps" com link da rota completa
+
+SEÇÃO "Como Chegar":
+- Mapa centrado nas coordenadas de largada do evento
+- Pin vermelho no local com popup do endereço
+- Botão "Google Maps" abre https://www.google.com/maps/dir/?api=1&destination=[lat],[lng]
+- Botão "Waze" abre https://waze.com/ul?ll=[lat],[lng]&navigate=yes
+- Botão "Apple Maps" abre https://maps.apple.com/?daddr=[lat],[lng]
+
+## TAREFA 3 — Sistema de avaliação de eventos
+Criar src/components/ReviewSection.tsx:
+- Atletas que participaram podem avaliar o evento (1 a 5 estrelas)
+- Campos: nota geral, nota organização, nota percurso, nota kit, comentário texto
+- Salvar no Supabase: CREATE TABLE IF NOT EXISTS reviews (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, event_id UUID REFERENCES events(id), user_id UUID REFERENCES users(id), rating_overall INTEGER CHECK (rating_overall BETWEEN 1 AND 5), rating_organization INTEGER, rating_route INTEGER, rating_kit INTEGER, comment TEXT, created_at TIMESTAMP DEFAULT NOW(), UNIQUE(event_id, user_id));
+- Políticas RLS: CREATE POLICY "Usuários criam avaliações" ON reviews FOR INSERT WITH CHECK (auth.uid() = user_id); CREATE POLICY "Avaliações públicas" ON reviews FOR SELECT USING (true);
+- ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+- Na EventDetailPage mostrar média das avaliações com estrelas e lista de comentários
+
+## TAREFA 4 — Sistema de favoritos
+CREATE TABLE IF NOT EXISTS favorites (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, user_id UUID REFERENCES users(id), event_id UUID REFERENCES events(id), created_at TIMESTAMP DEFAULT NOW(), UNIQUE(user_id, event_id));
+CREATE POLICY "Usuários gerenciam favoritos" ON favorites FOR ALL USING (auth.uid() = user_id);
+ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
+- Na EventDetailPage botão coração que favorita/desfavorita
+- No AthleteDashboard aba "Favoritos" com eventos favoritados
+- Nos cards de eventos mostrar ícone de coração
+
+## TAREFA 5 — Compartilhamento social completo
+No src/pages/EventDetailPage.tsx:
+- Botão WhatsApp com mensagem formatada
+- Botão Facebook sharer
+- Botão Twitter/X com texto e link
+- Botão "Copiar link" com feedback visual
+- Botão Instagram copia texto para Stories
+
+## TAREFA 6 — Newsletter e lista de espera
+CREATE TABLE IF NOT EXISTS newsletter (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT, email TEXT UNIQUE, city TEXT, interests JSONB, created_at TIMESTAMP DEFAULT NOW());
+CREATE POLICY "Qualquer um pode se cadastrar na newsletter" ON newsletter FOR INSERT WITH CHECK (true);
+ALTER TABLE newsletter ENABLE ROW LEVEL SECURITY;
+- Criar src/components/NewsletterForm.tsx e adicionar na HomePage seção "Fique por dentro"
+- Lista de espera: se evento lotado mostrar botão "Entrar na lista de espera" salvando status waitlist
+
+## TAREFA 7 — Página de busca avançada
+Criar src/pages/SearchPage.tsx:
+- URL: /buscar?q=termo
+- Campo de busca grande no topo
+- Filtros: cidade, modalidade, data de/até, preço min/max, distância
+- Resultados em grid, ordenação por relevância/data/preço
+- Busca no Supabase usando ilike no título e descrição
+Adicionar barra de busca no Header
+Adicionar rota /buscar no App.tsx
+
+## TAREFA 8 — Painel financeiro do organizador
+No src/pages/OrganizerDashboard.tsx adicionar aba "Financeiro":
+- Total arrecadado por evento
+- Gráfico de linha com recharts mostrando inscrições e receita por dia
+- Tabela de transações: data, atleta, distância, valor, status
+- Card: receita total, taxa plataforma 10%, valor líquido
+- Exportar relatório financeiro em Excel
+
+## TAREFA 9 — Sistema de cupons de desconto
+CREATE TABLE IF NOT EXISTS coupons (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, event_id UUID REFERENCES events(id), code TEXT UNIQUE, discount_type TEXT CHECK (discount_type IN ('percent','fixed')), discount_value DECIMAL(10,2), valid_until TIMESTAMP, max_uses INTEGER, current_uses INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW());
+CREATE POLICY "Organizadores gerenciam cupons" ON coupons FOR ALL USING (EXISTS (SELECT 1 FROM events WHERE events.id = coupons.event_id AND events.organizer_id = auth.uid()));
+ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
+- No OrganizerDashboard aba "Cupons": criar/listar cupons por evento
+- No RegistrationPage campo "Cupom de desconto" com botão aplicar e desconto no valor final
+
+## TAREFA 10 — Admin analytics e financeiro
+No src/pages/AdminDashboard.tsx:
+- Aba "Analytics": gráfico crescimento usuários por mês, top 5 eventos mais inscrições
+- Aba "Financeiro": receita total plataforma (10% de todas inscrições), projeção mensal
+- Notificações Supabase Realtime para novo cadastro e nova inscrição
+
+## TAREFA 11 — Otimizações de performance
+- Lazy loading em todas as imagens
+- Code splitting nas rotas com React.lazy e Suspense
+- Skeleton loading em todas as listas
+- Compressão de imagem antes do upload (max 800px via canvas)
+
+## TAREFA 12 — Testes e validações
+- Validar CPF com algoritmo real em src/utils/validators.ts
+- Formatar CPF: 000.000.000-00 e telefone: (00) 00000-0000
+- Verificar se usuário já está inscrito no mesmo evento
+- Mensagens de erro amigáveis em português em todos os catch
+
+## TAREFA 13 — Página 404 personalizada
+No src/pages/NotFoundPage.tsx:
+- Design premium fundo preto com detalhes dourados
+- Mensagem "Parece que você saiu da rota! 🏃"
+- Botão "Voltar para a corrida" indo para home
+- Animação CSS de corredor
+
+## TAREFA 14 — Redesign completo — FORA O AZUL
+Substituir TODAS as ocorrências de azul (#2563EB, #3B82F6, blue-600, blue-500, blue-700 etc) em TODOS os arquivos do projeto pela nova paleta premium:
+
+NOVA PALETA:
+- Cor primária: #C9A84C (dourado)
+- Cor primária hover: #B8962E (dourado escuro)
+- Cor secundária: #1A1A1A (preto premium)
+- Cor de fundo escuro: #111111
+- Cor de destaque: #E8C960 (dourado claro)
+- Cor de sucesso: #16A34A (verde)
+- Cor de erro: #DC2626 (vermelho)
+- Cor de texto: #FFFFFF no fundo escuro, #111111 no fundo claro
+- Botões primários: fundo #C9A84C texto #000000 bold
+- Botões secundários: borda #C9A84C texto #C9A84C fundo transparente
+- Links ativos e hovers: #C9A84C
+- Badges e tags: dourado para destaque, verde para confirmado, vermelho para cancelado
+- Substituir todas as classes Tailwind blue-* por equivalentes em amber-* ou criar inline styles com as cores acima
+- Header menu branco: links com hover dourado
+- Ícones e separadores: dourado
+- Score badges: manter cinza/verde/dourado (sem azul)
+- Garantir contraste adequado em todos os elementos
+
+## TAREFA 15 — Build final e push
+npm install
+npm run build
+Corrigir TODOS os erros TypeScript sem exceção
+git add -A
+git commit -m "Dias 16-17-18-19: percurso mapa, avaliações, favoritos, compartilhamento, newsletter, busca, financeiro, cupons, admin, performance, redesign sem azul dourado premium"
+git push origin main

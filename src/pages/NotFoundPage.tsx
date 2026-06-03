@@ -1,41 +1,48 @@
 import { Link } from 'react-router-dom';
-import { Home, ArrowLeft } from 'lucide-react';
 
 export function NotFoundPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="text-center max-w-lg">
-        <div className="mb-8">
-          <img 
-            src="/images/logo-022runner.png" 
-            alt="022 RUNNER" 
-            className="h-16 w-auto mx-auto mb-4"
-          />
-        </div>
-        
-        <h1 className="text-8xl font-bold text-blue-600 mb-4">404</h1>
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Página Não Encontrada</h2>
-        <p className="text-gray-600 mb-8">
-          Desculpe, a página que você está procurando não existe ou foi movida.
-        </p>
-        
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link 
-            to="/" 
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold transition-colors"
-          >
-            <Home className="w-5 h-5" />
-            Voltar para Início
-          </Link>
-          <Link 
-            to="/eventos" 
-            className="inline-flex items-center justify-center gap-2 bg-white text-blue-600 border-2 border-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50 font-semibold transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Ver Eventos
-          </Link>
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-4"
+      style={{ backgroundColor: '#111111' }}>
+
+      {/* Animação corredor CSS */}
+      <style>{`
+        @keyframes run {
+          0%   { transform: translateX(-60px) scaleX(1); }
+          49%  { transform: translateX(60px) scaleX(1); }
+          50%  { transform: translateX(60px) scaleX(-1); }
+          99%  { transform: translateX(-60px) scaleX(-1); }
+          100% { transform: translateX(-60px) scaleX(1); }
+        }
+        .runner { animation: run 2.4s linear infinite; display: inline-block; font-size: 48px; }
+      `}</style>
+
+      <div className="runner mb-6">🏃</div>
+
+      {/* 404 */}
+      <h1 className="text-9xl font-bold mb-2" style={{ color: '#C9A84C', textShadow: '0 0 40px rgba(201,168,76,0.4)' }}>
+        404
+      </h1>
+
+      {/* Linha dourada */}
+      <div style={{ height: '3px', width: '120px', background: 'linear-gradient(90deg, #C9A84C, #FFD700, #C9A84C)', margin: '0 auto 24px', borderRadius: '99px' }} />
+
+      <h2 className="text-2xl font-bold text-white mb-3">Parece que você saiu da rota!</h2>
+      <p className="text-sm mb-8 max-w-sm" style={{ color: '#9ca3af' }}>
+        A página que você procura não existe, foi movida ou você perdeu o km marcador. Não desanime — a corrida continua!
+      </p>
+
+      <Link
+        to="/"
+        className="inline-flex items-center gap-2 font-bold px-8 py-4 rounded-xl transition-all duration-200"
+        style={{ backgroundColor: '#C9A84C', color: '#000000' }}
+        onMouseOver={e => (e.currentTarget.style.backgroundColor = '#B8962E')}
+        onMouseOut={e => (e.currentTarget.style.backgroundColor = '#C9A84C')}
+      >
+        🏁 Voltar para a corrida
+      </Link>
+
+      <p className="text-xs mt-8" style={{ color: '#4b5563' }}>022 RUNNER — Região dos Lagos</p>
     </div>
   );
 }

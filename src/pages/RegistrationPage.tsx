@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronLeft, CheckCircle, Loader2 } from 'lucide-react';
 import { trackRegistrationStart, trackRegistrationComplete } from '../utils/analytics';
+import { validateCPF } from '../utils/validators';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 
@@ -58,7 +59,7 @@ export function RegistrationPage() {
 
   const validate = () => {
     if (!form.name.trim()) return 'Informe seu nome completo.';
-    if (form.cpf.replace(/\D/g, '').length !== 11) return 'CPF inválido.';
+    if (!validateCPF(form.cpf)) return 'CPF inválido. Verifique os dígitos.';
     if (!form.birthdate) return 'Informe sua data de nascimento.';
     if (form.phone.replace(/\D/g, '').length < 10) return 'Telefone inválido.';
     if (!form.email.trim()) return 'Informe seu e-mail.';
@@ -114,7 +115,7 @@ export function RegistrationPage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" />
     </div>
   );
 
@@ -203,7 +204,7 @@ export function RegistrationPage() {
             </div>
 
             <button onClick={handleNext}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors mt-4">
+              className="w-full bg-[#C9A84C] text-white py-3 rounded-xl font-bold text-lg hover:bg-[#B8962E] transition-colors mt-4">
               Revisar Inscrição →
             </button>
           </div>
@@ -232,7 +233,7 @@ export function RegistrationPage() {
               ))}
               <div className="flex justify-between font-bold text-lg pt-2">
                 <span>Total</span>
-                <span className="text-blue-600">R$ {Number(chosenPrice).toFixed(2).replace('.', ',')}</span>
+                <span className="text-[#C9A84C]">R$ {Number(chosenPrice).toFixed(2).replace('.', ',')}</span>
               </div>
             </div>
 
@@ -242,7 +243,7 @@ export function RegistrationPage() {
                 Voltar
               </button>
               <button onClick={handleConfirm} disabled={submitting}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2">
+                className="flex-1 bg-[#C9A84C] text-white py-3 rounded-xl font-bold hover:bg-[#B8962E] disabled:opacity-60 flex items-center justify-center gap-2">
                 {submitting ? <><Loader2 size={18} className="animate-spin" /> Confirmando...</> : '✅ Confirmar Inscrição'}
               </button>
             </div>
@@ -253,7 +254,7 @@ export function RegistrationPage() {
   );
 }
 
-const inp = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
+const inp = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

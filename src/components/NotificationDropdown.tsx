@@ -1,4 +1,4 @@
-import type { Notification } from '../types';
+﻿import type { Notification } from '../types';
 
 interface NotificationDropdownProps {
   notifications: Notification[];
@@ -17,9 +17,9 @@ export function NotificationDropdown({ notifications, onClose }: NotificationDro
           <div className="p-8 text-center text-gray-500"><p>Nenhuma notificação</p></div>
         ) : (
           notifications.map((n) => (
-            <div key={n.id} className={`flex gap-4 p-3 border-b border-gray-100 ${!n.read ? 'bg-blue-50' : ''}`}>
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-600">📢</span>
+            <div key={n.id} className={`flex gap-4 p-3 border-b border-gray-100 ${!n.read ? 'bg-amber-50' : ''}`}>
+              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                <span className="text-[#C9A84C]">📢</span>
               </div>
               <div className="flex-1">
                 <p className="font-medium text-gray-900">{n.title}</p>

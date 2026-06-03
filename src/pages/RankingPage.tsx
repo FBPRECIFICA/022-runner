@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Trophy, Medal } from 'lucide-react';
 import { LAGOS_REGION_CITIES } from '../types';
@@ -55,11 +55,11 @@ export function RankingPage() {
         {/* Filtros */}
         <div className="bg-white rounded-xl border shadow-sm p-4 mb-6 flex flex-wrap gap-3">
           <select value={city} onChange={e => setCity(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]">
             <option value="">Todas as cidades</option>
             {LAGOS_REGION_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          {city && <button onClick={() => setCity('')} className="text-sm text-blue-600 hover:underline">Limpar</button>}
+          {city && <button onClick={() => setCity('')} className="text-sm text-[#C9A84C] hover:underline">Limpar</button>}
         </div>
 
         {/* Top 3 */}
@@ -104,14 +104,14 @@ export function RankingPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                        style={{ backgroundColor: i < 3 ? medalColor(i) : '#2563EB' }}>
+                        style={{ backgroundColor: i < 3 ? medalColor(i) : '#C9A84C' }}>
                         {r.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="font-medium text-gray-900">{r.name}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{r.city || '—'}</td>
-                  <td className="px-4 py-3 text-center font-bold text-blue-600">{r.events}</td>
+                  <td className="px-4 py-3 text-center font-bold text-[#C9A84C]">{r.events}</td>
                   <td className="px-4 py-3 text-center text-gray-500 hidden sm:table-cell">{r.km.toFixed(0)}</td>
                   <td className="px-4 py-3 text-center">
                     <span className="inline-flex items-center gap-1 text-yellow-600 font-semibold"><Trophy size={13} /> {r.medals}</span>
@@ -127,7 +127,7 @@ export function RankingPage() {
         {hasMore && !loading && (
           <div className="flex justify-center mt-5">
             <button onClick={() => setPage(p => p + 1)}
-              className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700">
+              className="px-8 py-3 bg-[#C9A84C] text-white font-semibold rounded-xl hover:bg-[#B8962E]">
               Carregar mais
             </button>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Share2, Download, Home, MessageCircle } from 'lucide-react';
@@ -26,14 +26,14 @@ export function ConfirmationPage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" />
     </div>
   );
 
   if (!reg || !event) return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 text-center">
       <p className="text-gray-500">Inscrição não encontrada.</p>
-      <Link to="/" className="mt-4 text-blue-600 hover:underline">Voltar ao início</Link>
+      <Link to="/" className="mt-4 text-[#C9A84C] hover:underline">Voltar ao início</Link>
     </div>
   );
 
@@ -123,7 +123,7 @@ export function ConfirmationPage() {
           </a>
           <button onClick={handleDownload}
             className="flex items-center justify-center gap-2 border-2 font-semibold py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm"
-            style={{ borderColor: '#2563EB', color: '#2563EB' }}>
+            style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
             <Download size={16} /> Baixar Comprovante
           </button>
         </div>

@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Users, Calendar, TrendingUp, Award, Star, Shield, CheckCircle, XCircle } from 'lucide-react';
 
-const COLORS = ['#2563EB', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
+const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 
 type Tab = 'overview' | 'events' | 'users' | 'registrations';
 
@@ -76,7 +76,7 @@ export function AdminDashboard() {
           {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              style={{ backgroundColor: tab === t.key ? '#2563EB' : 'transparent', color: tab === t.key ? '#fff' : '#94a3b8' }}>
+              style={{ backgroundColor: tab === t.key ? '#C9A84C' : 'transparent', color: tab === t.key ? '#fff' : '#94a3b8' }}>
               {t.label}
             </button>
           ))}
@@ -90,7 +90,7 @@ export function AdminDashboard() {
           {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className="flex-1 py-2 rounded-lg text-xs font-medium"
-              style={{ backgroundColor: tab === t.key ? '#2563EB' : '#334155', color: '#fff' }}>
+              style={{ backgroundColor: tab === t.key ? '#C9A84C' : '#334155', color: '#fff' }}>
               {t.label}
             </button>
           ))}
@@ -99,7 +99,7 @@ export function AdminDashboard() {
         <div className="p-6">
           {loading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" />
             </div>
           ) : (
             <>
@@ -109,7 +109,7 @@ export function AdminDashboard() {
                   <h1 className="text-2xl font-bold text-white">Visão Geral</h1>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      { icon: <Calendar size={20} />, label: 'Eventos', value: stats.events, color: '#2563EB' },
+                      { icon: <Calendar size={20} />, label: 'Eventos', value: stats.events, color: '#C9A84C' },
                       { icon: <Users size={20} />, label: 'Usuários', value: stats.users, color: '#C9A84C' },
                       { icon: <Award size={20} />, label: 'Inscrições', value: stats.registrations, color: '#16a34a' },
                       { icon: <TrendingUp size={20} />, label: 'Receita', value: `R$ ${stats.revenue.toFixed(0)}`, color: '#7c3aed' },
@@ -130,7 +130,7 @@ export function AdminDashboard() {
                           <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 11 }} />
                           <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
                           <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', color: '#fff' }} />
-                          <Bar dataKey="value" fill="#2563EB" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="value" fill="#C9A84C" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -170,7 +170,7 @@ export function AdminDashboard() {
                             <td className="px-4 py-3" style={{ color: '#94a3b8' }}>{e.city}</td>
                             <td className="px-4 py-3" style={{ color: '#94a3b8' }}>{new Date(e.date).toLocaleDateString('pt-BR')}</td>
                             <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full bg-green-900 text-green-300">{e.status}</span></td>
-                            <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full bg-blue-900 text-blue-300">{e.plan}</span></td>
+                            <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full bg-[#1A1A1A] text-amber-300">{e.plan}</span></td>
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
                                 <button onClick={() => updateEventPlan(e.id, 'featured')} className="text-xs px-2 py-1 rounded bg-yellow-700 text-white hover:bg-yellow-600" title="Destacar"><Star size={12} /></button>
@@ -201,7 +201,7 @@ export function AdminDashboard() {
                           <tr key={u.id} style={{ borderTop: '1px solid #334155' }}>
                             <td className="px-4 py-3 text-white font-medium">{u.name}</td>
                             <td className="px-4 py-3" style={{ color: '#94a3b8' }}>{u.email}</td>
-                            <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full bg-blue-900 text-blue-300">{u.role}</span></td>
+                            <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full bg-[#1A1A1A] text-amber-300">{u.role}</span></td>
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
                                 <button onClick={() => updateUserRole(u.id, 'organizer')} className="text-xs px-2 py-1 rounded bg-green-800 text-white hover:bg-green-700" title="Promover a organizador"><Shield size={12} /></button>

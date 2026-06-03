@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Trophy, MapPin, Calendar, ArrowRight, UserPlus } from 'lucide-react';
@@ -32,7 +32,7 @@ export function AthleteProfilePage() {
     setFollowed(f => !f);
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" /></div>;
   if (!profile) return <div className="min-h-screen flex items-center justify-center text-gray-500">Perfil não encontrado.</div>;
 
   const initials = profile.name?.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase() || 'AT';
@@ -48,7 +48,7 @@ export function AthleteProfilePage() {
         {/* Avatar */}
         <div className="flex items-end gap-4 -mt-16 mb-5">
           <div className="w-28 h-28 rounded-full border-4 border-white flex items-center justify-center text-white text-3xl font-bold flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #2563EB, #1d4ed8)' }}>
+            style={{ background: 'linear-gradient(135deg, #C9A84C, #B8962E)' }}>
             {initials}
           </div>
           <div className="pb-2 flex-1">
@@ -57,7 +57,7 @@ export function AthleteProfilePage() {
           </div>
           <button
             onClick={handleFollow}
-            className={`pb-2 px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 transition-colors ${followed ? 'bg-gray-200 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+            className={`pb-2 px-4 py-2 rounded-xl font-semibold text-sm flex items-center gap-2 transition-colors ${followed ? 'bg-gray-200 text-gray-700' : 'bg-[#C9A84C] text-white hover:bg-[#B8962E]'}`}
           >
             <UserPlus size={16} /> {followed ? 'Seguindo' : 'Seguir'} {followers > 0 && `(${followers})`}
           </button>
@@ -66,7 +66,7 @@ export function AthleteProfilePage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { icon: <Calendar size={18} className="text-blue-600" />, value: registrations.length, label: 'Eventos' },
+            { icon: <Calendar size={18} className="text-[#C9A84C]" />, value: registrations.length, label: 'Eventos' },
             { icon: <MapPin size={18} className="text-green-600" />, value: `${totalKm.toFixed(0)} km`, label: 'Percorridos' },
             { icon: <Trophy size={18} className="text-yellow-500" />, value: past.length, label: 'Medalhas' },
           ].map((s, i) => (
@@ -85,7 +85,7 @@ export function AthleteProfilePage() {
             <div className="space-y-3">
               {registrations.map(r => (
                 <Link key={r.id} to={`/evento/${r.event?.slug}`}
-                  className="flex items-center gap-3 border rounded-xl p-3 hover:border-blue-300 hover:bg-blue-50/30 transition-all">
+                  className="flex items-center gap-3 border rounded-xl p-3 hover:border-amber-300 hover:bg-amber-50/30 transition-all">
                   {r.event?.banner_url && <img src={r.event.banner_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />}
                   <div className="flex-1">
                     <p className="font-semibold text-gray-900 text-sm">{r.event?.title}</p>

@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, LayoutDashboard, Menu, X } from 'lucide-react';
+import { LogOut, LayoutDashboard, Menu, X, Search } from 'lucide-react';
 
 export function Header() {
   const { user, isAuthenticated, isAdmin, isOrganizer, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const [searchQ, setSearchQ] = useState('');
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQ.trim()) navigate(`/buscar?q=${encodeURIComponent(searchQ.trim())}`);
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -63,6 +69,17 @@ export function Header() {
           <NavLink to="/">Home</NavLink>
           <NavLink to="/eventos">Eventos</NavLink>
           <NavLink to="/ranking">Ranking</NavLink>
+
+          {/* Busca inline */}
+          <form onSubmit={handleSearch} className="flex items-center">
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
+                className="pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none w-36"
+                style={{ borderColor: '#d1d5db', fontSize: '13px' }}
+                placeholder="Buscar..." />
+            </div>
+          </form>
 
           <span style={{ color: '#C9A84C', fontSize: '20px', lineHeight: 1, opacity: 0.6 }}>|</span>
 

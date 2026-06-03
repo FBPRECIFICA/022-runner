@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Search, Users } from 'lucide-react';
@@ -40,7 +40,7 @@ export function CheckinPage() {
 
   const checkedIn = registrations.filter(r => r.checkin_at).length;
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" /></div>;
   if (!event) return <div className="min-h-screen flex items-center justify-center text-gray-500">Evento não encontrado.</div>;
 
   return (
@@ -50,12 +50,12 @@ export function CheckinPage() {
         <h1 className="text-lg font-bold text-gray-900">{event.title}</h1>
         <div className="flex items-center gap-3 mt-2">
           <div className="flex items-center gap-2 text-sm">
-            <Users size={16} className="text-blue-600" />
-            <span className="font-semibold text-blue-600">{checkedIn}</span>
+            <Users size={16} className="text-[#C9A84C]" />
+            <span className="font-semibold text-[#C9A84C]">{checkedIn}</span>
             <span className="text-gray-400">/ {registrations.length} check-ins</span>
           </div>
           <div className="flex-1 bg-gray-200 rounded-full h-2">
-            <div className="h-2 rounded-full bg-blue-600 transition-all"
+            <div className="h-2 rounded-full bg-[#C9A84C] transition-all"
               style={{ width: `${registrations.length ? (checkedIn / registrations.length) * 100 : 0}%` }} />
           </div>
         </div>
@@ -67,11 +67,11 @@ export function CheckinPage() {
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
               placeholder="Buscar por nome ou nº de inscrição" />
           </div>
           <select value={distanceFilter} onChange={e => setDistanceFilter(e.target.value)}
-            className="border rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            className="border rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white">
             <option value="">Todas</option>
             {distances.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
@@ -97,7 +97,7 @@ export function CheckinPage() {
                 </div>
               ) : (
                 <button onClick={() => handleCheckin(r.id)}
-                  className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 active:scale-95 transition-all">
+                  className="px-4 py-2.5 bg-[#C9A84C] text-white rounded-xl font-semibold text-sm hover:bg-[#B8962E] active:scale-95 transition-all">
                   Check-in
                 </button>
               )}

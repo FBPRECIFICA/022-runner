@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, ArrowLeft, User, Mail, Lock, Building2, Trophy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -76,22 +76,22 @@ export function RegisterPage() {
               type="button"
               onClick={() => setUserType('athlete')}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
-                userType === 'athlete' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                userType === 'athlete' ? 'border-[#C9A84C] bg-amber-50' : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <Trophy size={24} className={userType === 'athlete' ? 'text-blue-600' : 'text-gray-400'} />
-              <span className={`font-semibold text-sm ${userType === 'athlete' ? 'text-blue-600' : 'text-gray-600'}`}>Sou Atleta</span>
+              <Trophy size={24} className={userType === 'athlete' ? 'text-[#C9A84C]' : 'text-gray-400'} />
+              <span className={`font-semibold text-sm ${userType === 'athlete' ? 'text-[#C9A84C]' : 'text-gray-600'}`}>Sou Atleta</span>
               <span className="text-xs text-gray-400 text-center">Inscreva-se em eventos</span>
             </button>
             <button
               type="button"
               onClick={() => setUserType('organizer')}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
-                userType === 'organizer' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                userType === 'organizer' ? 'border-[#C9A84C] bg-amber-50' : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <Building2 size={24} className={userType === 'organizer' ? 'text-blue-600' : 'text-gray-400'} />
-              <span className={`font-semibold text-sm ${userType === 'organizer' ? 'text-blue-600' : 'text-gray-600'}`}>Sou Organizador</span>
+              <Building2 size={24} className={userType === 'organizer' ? 'text-[#C9A84C]' : 'text-gray-400'} />
+              <span className={`font-semibold text-sm ${userType === 'organizer' ? 'text-[#C9A84C]' : 'text-gray-600'}`}>Sou Organizador</span>
               <span className="text-xs text-gray-400 text-center">Crie e gerencie eventos</span>
             </button>
           </div>
@@ -111,7 +111,7 @@ export function RegisterPage() {
                   value={name}
                   onChange={e => setName(e.target.value)}
                   placeholder="Seu nome completo"
-                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A84C] text-sm"
                 />
               </div>
             </div>
@@ -125,7 +125,7 @@ export function RegisterPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="seu@email.com"
-                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A84C] text-sm"
                 />
               </div>
             </div>
@@ -139,7 +139,7 @@ export function RegisterPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
-                  className="w-full pl-10 pr-10 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full pl-10 pr-10 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A84C] text-sm"
                 />
                 <button type="button" onClick={() => setShowPassword(p => !p)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -157,7 +157,7 @@ export function RegisterPage() {
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   placeholder="Repita a senha"
-                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A84C] text-sm"
                 />
               </div>
             </div>
@@ -167,20 +167,20 @@ export function RegisterPage() {
                 type="checkbox"
                 checked={agreed}
                 onChange={e => setAgreed(e.target.checked)}
-                className="w-4 h-4 mt-0.5 text-blue-600 border-gray-300 rounded"
+                className="w-4 h-4 mt-0.5 text-[#C9A84C] border-gray-300 rounded"
               />
               <span className="text-sm text-gray-600">
                 Concordo com os{' '}
-                <Link to="/termos-de-uso" className="text-blue-600 hover:underline font-medium">Termos de Uso</Link>
+                <Link to="/termos-de-uso" className="text-[#C9A84C] hover:underline font-medium">Termos de Uso</Link>
                 {' '}e{' '}
-                <Link to="/politica-de-privacidade" className="text-blue-600 hover:underline font-medium">Política de Privacidade</Link>
+                <Link to="/politica-de-privacidade" className="text-[#C9A84C] hover:underline font-medium">Política de Privacidade</Link>
               </span>
             </label>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-[#C9A84C] text-white py-3 rounded-xl font-semibold hover:bg-[#B8962E] transition-colors disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
             >
               {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Criando conta...</> : 'Criar Conta Grátis'}
             </button>
@@ -194,11 +194,11 @@ export function RegisterPage() {
 
           <p className="text-center text-sm text-gray-600">
             Já tem conta?{' '}
-            <Link to="/login" className="text-blue-600 font-semibold hover:underline">Entrar</Link>
+            <Link to="/login" className="text-[#C9A84C] font-semibold hover:underline">Entrar</Link>
           </p>
 
-          <div className="mt-5 p-3 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-700">
+          <div className="mt-5 p-3 bg-amber-50 rounded-lg">
+            <p className="text-xs text-[#B8962E]">
               <strong>Grátis para todos.</strong> A plataforma retém 10% sobre inscrições pagas.
             </p>
           </div>

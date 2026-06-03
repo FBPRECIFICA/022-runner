@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { QRCodeSVG } from 'qrcode.react';
@@ -48,7 +48,7 @@ export function PaymentPage() {
     navigate(`/confirmacao/${registrationId}`);
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" /></div>;
 
   if (!reg || !event) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Inscrição não encontrada.</p></div>;
 
@@ -72,7 +72,7 @@ export function PaymentPage() {
             ))}
             <div className="flex justify-between pt-1 font-bold text-lg">
               <span>Total</span>
-              <span className="text-blue-600">R$ {Number(reg.amount).toFixed(2).replace('.', ',')}</span>
+              <span className="text-[#C9A84C]">R$ {Number(reg.amount).toFixed(2).replace('.', ',')}</span>
             </div>
           </div>
         </div>
@@ -100,13 +100,13 @@ export function PaymentPage() {
               <p className="text-xs text-gray-500 mb-2">Ou copie a chave PIX:</p>
               <div className="flex items-center gap-2 bg-gray-50 border rounded-lg px-3 py-2">
                 <code className="flex-1 text-sm text-gray-700 text-left truncate">{PIX_KEY}</code>
-                <button onClick={handleCopy} className="text-blue-600 hover:text-blue-800 flex-shrink-0">
+                <button onClick={handleCopy} className="text-[#C9A84C] hover:text-blue-800 flex-shrink-0">
                   {copied ? <CheckCircle size={16} className="text-green-500" /> : <Copy size={16} />}
                 </button>
               </div>
             </div>
 
-            <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 text-left space-y-1">
+            <div className="bg-amber-50 rounded-lg p-3 text-xs text-[#B8962E] text-left space-y-1">
               <p className="font-semibold">Como pagar:</p>
               <p>1. Abra o app do seu banco</p>
               <p>2. Acesse PIX → Pagar com QR Code</p>

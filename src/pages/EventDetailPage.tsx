@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle, Star, Timer } from 'lucide-react';
 import { scoreBadge } from '../utils/scoreCalculator';
 import { Helmet } from 'react-helmet-async';
 import { trackEventView, trackShare } from '../utils/analytics';
+import { ReviewSection } from '../components/ReviewSection';
 
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -65,7 +66,7 @@ export function EventDetailPage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" />
     </div>
   );
 
@@ -73,7 +74,7 @@ export function EventDetailPage() {
     <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
       <h1 className="text-3xl font-bold text-gray-900 mb-2">Evento não encontrado</h1>
       <p className="text-gray-500 mb-6">O evento que você procura não existe ou foi removido.</p>
-      <Link to="/" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium">Voltar ao início</Link>
+      <Link to="/" className="bg-[#C9A84C] text-white px-6 py-3 rounded-lg hover:bg-[#B8962E] font-medium">Voltar ao início</Link>
     </div>
   );
 
@@ -108,7 +109,7 @@ export function EventDetailPage() {
       <div className="relative w-full bg-gray-900" style={{ height: '400px' }}>
         {event.banner_url
           ? <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover" />
-          : <div className="w-full h-full bg-gradient-to-br from-blue-800 to-blue-600" />
+          : <div className="w-full h-full bg-gradient-to-br from-blue-800 to-[#C9A84C]" />
         }
         <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.25) 100%)' }} />
         <div className="absolute top-4 left-4">
@@ -131,7 +132,7 @@ export function EventDetailPage() {
               );
             })()}
             {event.event_type && (
-              <span className="bg-blue-500/80 text-white text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-sm">{event.event_type}</span>
+              <span className="bg-[#C9A84C]/80 text-white text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-sm">{event.event_type}</span>
             )}
           </div>
           <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight drop-shadow-lg">{event.title}</h1>
@@ -146,10 +147,10 @@ export function EventDetailPage() {
             {/* Info Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { icon: <Calendar size={20} className="text-blue-600" />, label: 'Data', value: eventDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) },
-                { icon: <Clock size={20} className="text-blue-600" />, label: 'Horário', value: eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) },
-                { icon: <MapPin size={20} className="text-blue-600" />, label: 'Cidade', value: event.city },
-                { icon: <Users size={20} className="text-blue-600" />, label: 'Vagas', value: maxP > 0 ? `${currentP}/${maxP}` : 'Ilimitado' },
+                { icon: <Calendar size={20} className="text-[#C9A84C]" />, label: 'Data', value: eventDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) },
+                { icon: <Clock size={20} className="text-[#C9A84C]" />, label: 'Horário', value: eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) },
+                { icon: <MapPin size={20} className="text-[#C9A84C]" />, label: 'Cidade', value: event.city },
+                { icon: <Users size={20} className="text-[#C9A84C]" />, label: 'Vagas', value: maxP > 0 ? `${currentP}/${maxP}` : 'Ilimitado' },
               ].map((item, i) => (
                 <div key={i} className="bg-white rounded-xl border p-3 flex flex-col items-center text-center gap-1 shadow-sm">
                   {item.icon}
@@ -214,14 +215,14 @@ export function EventDetailPage() {
                 <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4">Distâncias e Preços</h2>
                 <div className="space-y-2">
                   {distances.map((d, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+                    <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-amber-200 hover:bg-amber-50/30 transition-all">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
                           <span className="text-white font-bold text-xs">{d.name}</span>
                         </div>
                         <span className="font-semibold text-gray-900">{d.name}</span>
                       </div>
-                      <span className="text-blue-600 font-bold text-xl">R$ {Number(d.price).toFixed(2).replace('.', ',')}</span>
+                      <span className="text-[#C9A84C] font-bold text-xl">R$ {Number(d.price).toFixed(2).replace('.', ',')}</span>
                     </div>
                   ))}
                 </div>
@@ -265,7 +266,7 @@ export function EventDetailPage() {
               <div className="bg-white rounded-xl border p-5 shadow-sm">
                 <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Organizador</h2>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center font-bold text-[#C9A84C]">
                     {organizer.name?.charAt(0)?.toUpperCase() || 'O'}
                   </div>
                   <div>
@@ -275,6 +276,9 @@ export function EventDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Avaliações */}
+            <ReviewSection eventId={event.id} />
           </div>
 
           {/* COLUNA LATERAL — CTA */}
@@ -284,10 +288,10 @@ export function EventDetailPage() {
               <div className="bg-white rounded-xl border p-5 shadow-sm">
                 <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide mb-3">Vagas Preenchidas</h3>
                 <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
-                  <div className="h-3 rounded-full transition-all bg-blue-600" style={{ width: `${progressPct}%` }} />
+                  <div className="h-3 rounded-full transition-all bg-[#C9A84C]" style={{ width: `${progressPct}%` }} />
                 </div>
                 <div className="flex justify-between text-xs text-gray-500">
-                  <span className="font-semibold text-blue-600">{progressPct}%</span>
+                  <span className="font-semibold text-[#C9A84C]">{progressPct}%</span>
                   <span>{maxP - currentP} restantes</span>
                 </div>
               </div>
@@ -312,29 +316,47 @@ export function EventDetailPage() {
             <button
               onClick={() => navigate(`/inscricao/${event.slug}`)}
               className="w-full font-bold py-5 rounded-xl text-lg transition-all duration-200 shadow-lg text-white"
-              style={{ backgroundColor: '#2563EB', boxShadow: '0 4px 20px rgba(37,99,235,0.4)' }}
-              onMouseOver={e => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
-              onMouseOut={e => (e.currentTarget.style.backgroundColor = '#2563EB')}
+              style={{ backgroundColor: '#C9A84C', boxShadow: '0 4px 20px rgba(37,99,235,0.4)' }}
+              onMouseOver={e => (e.currentTarget.style.backgroundColor = '#B8962E')}
+              onMouseOut={e => (e.currentTarget.style.backgroundColor = '#C9A84C')}
             >
               INSCREVER-SE
             </button>
 
-            {/* Botão Compartilhar */}
-            <button
-              onClick={handleShare}
-              className="w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all duration-200 border-2"
-              style={{ borderColor: '#2563EB', color: '#2563EB' }}
-              onMouseOver={e => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
-              onMouseOut={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-            >
-              {copied ? <CheckCircle size={18} className="text-green-600" /> : <Share2 size={18} />}
-              {copied ? 'Link copiado!' : 'Compartilhar'}
-            </button>
+            {/* Compartilhamento social */}
+            <div className="bg-white rounded-xl border p-4 space-y-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Compartilhar</p>
+              <a href={`https://wa.me/?text=${encodeURIComponent(`${event.title} 🏃 ${window.location.href}`)}`}
+                target="_blank" rel="noreferrer"
+                onClick={() => trackShare(event.title, 'whatsapp')}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium text-white bg-green-500 hover:bg-green-600 transition-colors">
+                <Share2 size={14} /> WhatsApp
+              </a>
+              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+                target="_blank" rel="noreferrer"
+                onClick={() => trackShare(event.title, 'facebook')}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                style={{ backgroundColor: '#1877f2' }}>
+                <Share2 size={14} /> Facebook
+              </a>
+              <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${event.title} 🏃`)}&url=${encodeURIComponent(window.location.href)}`}
+                target="_blank" rel="noreferrer"
+                onClick={() => trackShare(event.title, 'twitter')}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium text-white bg-black hover:bg-gray-900 transition-colors">
+                <Share2 size={14} /> X / Twitter
+              </a>
+              <button onClick={handleShare}
+                className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-semibold border-2 transition-colors"
+                style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
+                {copied ? <CheckCircle size={14} className="text-green-500" /> : <Share2 size={14} />}
+                {copied ? 'Copiado!' : 'Copiar link'}
+              </button>
+            </div>
 
             {/* Link direto */}
             <div className="bg-gray-50 rounded-xl p-3 border">
               <p className="text-xs text-gray-400 mb-1">Link do evento</p>
-              <p className="text-xs text-blue-600 font-mono break-all">022runner.com.br/evento/{event.slug}</p>
+              <p className="text-xs text-[#C9A84C] font-mono break-all">022runner.com.br/evento/{event.slug}</p>
             </div>
           </div>
         </div>
