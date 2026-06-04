@@ -8,7 +8,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isOrganizer: boolean;
   isAthlete: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; role?: string }>;
+  login: (email: string, password: string, selectedRole?: string) => Promise<{ success: boolean; role?: string }>;
   loginWithGoogle: () => Promise<void>;
   register: (name: string, email: string, password: string, role?: string) => Promise<boolean>;
   logout: () => void;
@@ -64,11 +64,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; role?: string }> => {
+  const login = async (email: string, password: string, selectedRole?: string): Promise<{ success: boolean; role?: string }> => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error || !data.user) return { success: false };
-    const { data: profile } = await supabase.from('users').select('role').eq('id', data.user.id).single();
-    return { success: true, role: profile?.role || 'athlete' };
+
+    // Buscar perfil existente
+    const { data: profile } = await supabase.from('users').select('*').eq('id', data.user.id).single();
+
+    if (profile) {
+      // Perfil existe — usar o role do banco, nunca sobrescrever
+      return { success: true, role: profile.role };
+    }
+
+    // Perfil não existe — criar com o role selecionado na tela de login
+    const roleToUse = selectedRole || 'athlete';
+    const name = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Usuário';
+    await supabase.from('users').upsert({
+      id: data.user.id,
+      email: data.user.email,
+      name,
+      role: roleToUse,
+    });
+    return { success: true, role: roleToUse };
   };
 
   const loginWithGoogle = async (): Promise<void> => {

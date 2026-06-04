@@ -1,0 +1,63 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Corrigir role após login
+O problema: usuário loga como ORGANIZADOR mas o sistema salva/carrega como athlete.
+
+No src/contexts/AuthContext.tsx função login():
+- Após signInWithPassword buscar o perfil do usuário na tabela users
+- Se não encontrar perfil criar automaticamente com o role correto
+- Nunca assumir role padrão athlete se o usuário já existe no banco
+
+No src/pages/LoginPage.tsx:
+- Ao fazer login passar o perfil selecionado (athlete/organizer/admin) para o AuthContext
+- Modificar função login para receber parâmetro role opcional
+- Se usuário não tiver perfil no banco criar com o role selecionado na tela de login
+
+No src/contexts/AuthContext.tsx modificar login():
+const login = async (email: string, password: string, selectedRole?: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return false;
+  
+  const { data: profile } = await supabase.from('users').select('*').eq('id', data.user.id).single();
+  
+  if (!profile && selectedRole) {
+    await supabase.from('users').upsert({
+      id: data.user.id,
+      email: data.user.email,
+      name: data.user.email?.split('@')[0],
+      role: selectedRole
+    });
+  }
+  return true;
+}
+
+Após login usar useEffect para redirecionar quando user carregar:
+useEffect(() => {
+  if (user && isAuthenticated) {
+    if (user.role === 'admin') navigate('/admin');
+    else if (user.role === 'organizer') navigate('/organizador');
+    else navigate('/atleta');
+  }
+}, [user, isAuthenticated]);
+
+## TAREFA 2 — Corrigir usuário admin.testeleandro
+Rodar SQL no Supabase para garantir role correto:
+UPDATE users SET role = 'admin' WHERE email = 'admin.testeleandro@022runner.com.br';
+
+## TAREFA 3 — Verificar todos os redirecionamentos
+No src/components/ProtectedRoute.tsx garantir que:
+- /admin só aceita role admin
+- /organizador aceita role organizer E admin
+- /atleta aceita role athlete, organizer E admin
+- Qualquer outro role redireciona para /login com mensagem clara
+
+## TAREFA 4 — Build e push
+npm run build
+git add -A
+git commit -m "Fix crítico: role correto após login, redirecionamento automático por perfil"
+git push origin main

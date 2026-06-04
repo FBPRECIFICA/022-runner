@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -18,7 +18,7 @@ function roleToPath(role?: string): string {
 }
 
 export function LoginPage() {
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -28,16 +28,25 @@ export function LoginPage() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
+  // Redirecionar automaticamente quando user carregar após login
+  useEffect(() => {
+    if (user && isAuthenticated) {
+      navigate(roleToPath(user.role), { replace: true });
+    }
+  }, [user, isAuthenticated]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const result = await login(email, password);
+      // Passa o perfil selecionado na tela para criar conta se não existir
+      const result = await login(email, password, selectedProfile || undefined);
       if (!result.success) {
         setError('E-mail ou senha incorretos. Verifique suas credenciais.');
         return;
       }
+      // Redirecionar com base no role retornado do banco
       navigate(roleToPath(result.role), { replace: true });
     } catch {
       setError('Ocorreu um erro ao fazer login. Tente novamente.');
