@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        loadUserProfile(session.user.id);
+        setTimeout(() => loadUserProfile(session.user.id), 500);
       } else {
         setIsInitialized(true);
       }
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        loadUserProfile(session.user.id);
+        setTimeout(() => loadUserProfile(session.user.id), 500);
       } else {
         setUser(null);
         setIsInitialized(true);

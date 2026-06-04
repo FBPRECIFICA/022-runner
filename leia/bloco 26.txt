@@ -1,0 +1,21 @@
+No src/contexts/AuthContext.tsx adicionar um delay de 500ms antes de chamar loadUserProfile, assim:
+
+const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+  if (session?.user) {
+    setTimeout(() => loadUserProfile(session.user.id), 500);
+  } else {
+    setUser(null);
+    setIsInitialized(true);
+  }
+});
+
+E no getSession inicial também:
+supabase.auth.getSession().then(({ data: { session } }) => {
+  if (session?.user) {
+    setTimeout(() => loadUserProfile(session.user.id), 500);
+  } else {
+    setIsInitialized(true);
+  }
+});
+
+Depois build e push main.
