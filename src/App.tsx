@@ -25,6 +25,7 @@ const CheckinPage           = lazy(() => import('./pages/CheckinPage').then(m =>
 const ProfilePage           = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const TeamsPage             = lazy(() => import('./pages/TeamsPage').then(m => ({ default: m.TeamsPage })));
 const SocialGeneratorPage   = lazy(() => import('./pages/SocialGeneratorPage').then(m => ({ default: m.SocialGeneratorPage })));
+const SelectProfilePage     = lazy(() => import('./pages/SelectProfilePage').then(m => ({ default: m.SelectProfilePage })));
 
 function PageSpinner() {
   return (
@@ -80,6 +81,7 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="equipes" element={<TeamsPage />} />
+                <Route path="perfil-inicio" element={<SelectProfilePage />} />
                 <Route path="gerador-social" element={
                   <ProtectedRoute allowedRoles={['organizer', 'admin']}>
                     <SocialGeneratorPage />

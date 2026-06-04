@@ -1,0 +1,48 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Página de login clara com perfis
+No src/pages/LoginPage.tsx redesenhar completamente:
+- Título: "Entrar na plataforma"
+- 3 cards de perfil para escolher ANTES de logar:
+  - Card 1: 🏃 ATLETA — "Quero me inscrever em eventos"
+  - Card 2: 🎯 ORGANIZADOR — "Quero criar e gerenciar eventos"  
+  - Card 3: ⚙️ ADMINISTRADOR — "Acesso administrativo"
+- Ao selecionar card o formulário de email/senha aparece abaixo
+- Após login redirecionar automaticamente para o painel correto conforme role do usuário:
+  - admin → /admin
+  - organizer → /organizador
+  - athlete → /atleta
+- Botão "Entrar com Google" visível
+- Link "Criar conta" bem visível
+
+## TAREFA 2 — Redirecionamento automático pós login
+No src/contexts/AuthContext.tsx após loadUserProfile:
+- Se role = admin → redirecionar para /admin
+- Se role = organizer → redirecionar para /organizador  
+- Se role = athlete → redirecionar para /atleta
+Garantir que esse redirecionamento funciona em todos os casos
+
+## TAREFA 3 — Menu do header por perfil
+No src/components/Header.tsx quando logado mostrar links diferentes por role:
+- Admin: Home | Eventos | Admin | Painel | [nome] | Sair
+- Organizador: Home | Eventos | Meu Painel | Criar Evento | [nome] | Sair
+- Atleta: Home | Eventos | Minhas Inscrições | Ranking | [nome] | Sair
+
+## TAREFA 4 — Página inicial de seleção de perfil
+Criar src/pages/SelectProfilePage.tsx:
+- Página bonita com 3 opções grandes: Atleta, Organizador, Admin
+- Cada opção tem ícone grande, descrição e botão
+- Atleta e Organizador vão para /cadastro com role pré-selecionado
+- Admin vai para /login direto
+- Adicionar rota /perfil-inicio no App.tsx
+
+## TAREFA 5 — Build e push
+npm run build
+git add -A
+git commit -m "Login claro por perfil, redirecionamento automático, menu por role"
+git push origin main

@@ -5,7 +5,7 @@ import { LogOut, LayoutDashboard, Menu, X, Search } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
 export function Header() {
-  const { user, isAuthenticated, isAdmin, isOrganizer, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isOrganizer, isAthlete, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -87,11 +87,25 @@ export function Header() {
 
           {isAuthenticated ? (
             <>
-              <NavLink to={painelLink}>
-                <span className="flex items-center gap-1.5">
-                  <LayoutDashboard size={14} /> Painel
-                </span>
-              </NavLink>
+              {/* Links por role */}
+              {isAdmin && (
+                <>
+                  <NavLink to="/admin"><span className="flex items-center gap-1"><LayoutDashboard size={13} /> Admin</span></NavLink>
+                  <NavLink to="/organizador">Painel</NavLink>
+                </>
+              )}
+              {isOrganizer && !isAdmin && (
+                <>
+                  <NavLink to="/organizador"><span className="flex items-center gap-1"><LayoutDashboard size={13} /> Meu Painel</span></NavLink>
+                  <NavLink to="/organizador">Criar Evento</NavLink>
+                </>
+              )}
+              {isAthlete && (
+                <>
+                  <NavLink to="/atleta">Minhas Inscrições</NavLink>
+                  <NavLink to="/ranking">Ranking</NavLink>
+                </>
+              )}
               <NotificationBell />
               <Link to="/perfil" style={{ color: '#555555', fontSize: '14px' }}>{user?.name}</Link>
               <button
@@ -131,9 +145,10 @@ export function Header() {
 
           {isAuthenticated ? (
             <>
-              <MobileLink to={painelLink} onClick={() => setMobileOpen(false)}>
-                <span className="flex items-center gap-2"><LayoutDashboard size={14} /> Painel</span>
-              </MobileLink>
+              {isAdmin && <MobileLink to="/admin" onClick={() => setMobileOpen(false)}><span className="flex items-center gap-2"><LayoutDashboard size={14} /> Admin</span></MobileLink>}
+              {(isAdmin || isOrganizer) && <MobileLink to="/organizador" onClick={() => setMobileOpen(false)}><span className="flex items-center gap-2"><LayoutDashboard size={14} /> Painel Organizador</span></MobileLink>}
+              {isAthlete && <MobileLink to="/atleta" onClick={() => setMobileOpen(false)}>Minhas Inscrições</MobileLink>}
+              <MobileLink to="/perfil" onClick={() => setMobileOpen(false)}>Meu Perfil</MobileLink>
               <div className="px-4 py-3 flex items-center justify-between">
                 <span style={{ color: '#555555', fontSize: '13px' }}>{user?.name}</span>
                 <button
