@@ -43,35 +43,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
-      const { data } = await supabase
+      // maybeSingle() não lança erro se não encontrar — retorna data: null
+      const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, name, email, role, phone, city')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
+
+      if (error) console.error('loadUserProfile error:', error.message);
 
       if (data) {
-        // Perfil encontrado — usar EXATAMENTE o role do banco, sem alterar nada
+        // Perfil encontrado — usar EXATAMENTE o role do banco
         setUser({
           id: data.id,
-          name: data.name,
-          email: data.email,
-          role: data.role,
+          name: data.name || 'Usuário',
+          email: data.email || '',
+          role: data.role || 'athlete',
           phone: data.phone,
         });
       } else {
-        // Nenhum perfil no banco — usuário novo (ex: Google OAuth sem perfil criado ainda)
-        const { data: authData } = await supabase.auth.getUser();
-        if (authData?.user) {
+        // Perfil não encontrado — usuário novo sem cadastro na tabela users ainda
+        const { data: authUser } = await supabase.auth.getUser();
+        if (authUser?.user) {
           setUser({
-            id: authData.user.id,
-            name: authData.user.email?.split('@')[0] || 'Usuário',
-            email: authData.user.email || '',
-            role: 'athlete',
+            id: authUser.user.id,
+            name: authUser.user.email?.split('@')[0] || 'Usuário',
+            email: authUser.user.email || '',
+            role: 'athlete', // fallback apenas se perfil não existir no banco
           });
         }
       }
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error('loadUserProfile error:', err);
     } finally {
       setIsInitialized(true);
     }

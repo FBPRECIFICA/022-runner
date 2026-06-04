@@ -1,0 +1,72 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — CORREÇÃO CRÍTICA DO ROLE
+O bug: AuthContext está usando role padrão 'athlete' quando não encontra perfil, MAS o problema real é que a política RLS está bloqueando a leitura do perfil do usuário na tabela users após o login.
+
+Solução — no src/contexts/AuthContext.tsx substituir TODA a função loadUserProfile por esta versão que usa a service role para buscar o perfil:
+
+const loadUserProfile = async (userId: string) => {
+  try {
+    // Tentar buscar perfil com RLS normal
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, email, role, phone, city')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (data) {
+      setUser({
+        id: data.id,
+        name: data.name || 'Usuário',
+        email: data.email || '',
+        role: data.role || 'athlete',
+        phone: data.phone,
+      });
+    } else {
+      // Perfil não encontrado — buscar email do auth e setar sem role definido
+      const { data: authUser } = await supabase.auth.getUser();
+      if (authUser?.user) {
+        // NÃO definir role aqui — deixar sem role até próximo login
+        setUser({
+          id: authUser.user.id,
+          name: authUser.user.email?.split('@')[0] || 'Usuário',
+          email: authUser.user.email || '',
+          role: 'athlete', // fallback apenas se perfil não existir
+        });
+      }
+    }
+  } catch (err) {
+    console.error('loadUserProfile error:', err);
+  } finally {
+    setIsInitialized(true);
+  }
+};
+
+## TAREFA 2 — Corrigir políticas RLS da tabela users
+Rodar SQL no Supabase — as políticas atuais estão bloqueando leitura:
+
+DROP POLICY IF EXISTS "Usuários veem próprio perfil" ON users;
+DROP POLICY IF EXISTS "Admin vê todos usuários" ON users;
+DROP POLICY IF EXISTS "Usuários inserem próprio perfil" ON users;
+DROP POLICY IF EXISTS "Usuários atualizam próprio perfil" ON users;
+
+-- Política permissiva: usuário autenticado pode ver qualquer perfil
+CREATE POLICY "Usuários autenticados leem perfis" ON users
+FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Usuários inserem próprio perfil" ON users
+FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Usuários atualizam próprio perfil" ON users
+FOR UPDATE USING (auth.uid() = id);
+
+## TAREFA 3 — Build e push
+npm run build
+git add -A
+git commit -m "Fix crítico RLS: usuários autenticados podem ler perfis corretamente"
+git push origin main
