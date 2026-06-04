@@ -1,0 +1,68 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Corrigir bug crítico de role
+No src/contexts/AuthContext.tsx função loadUserProfile():
+O problema é que está criando um novo perfil com role athlete mesmo quando o usuário já existe no banco.
+
+Corrigir assim — NUNCA sobrescrever role existente:
+
+const loadUserProfile = async (userId: string) => {
+  try {
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (data) {
+      setUser({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        phone: data.phone,
+      });
+    } else {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user) {
+        setUser({
+          id: authData.user.id,
+          name: authData.user.email?.split('@')[0] || 'Usuário',
+          email: authData.user.email || '',
+          role: 'athlete',
+        });
+      }
+    }
+  } catch {
+    // silently fail
+  } finally {
+    setIsInitialized(true);
+  }
+};
+
+Na função login() REMOVER qualquer código que cria ou atualiza perfil com upsert.
+O login() deve APENAS fazer signInWithPassword e retornar true/false.
+O loadUserProfile() já vai buscar o role correto do banco automaticamente.
+
+No src/pages/LoginPage.tsx:
+- Remover qualquer passagem de selectedRole para o login
+- O redirecionamento deve ser baseado no user.role que vem do banco
+- useEffect assim:
+useEffect(() => {
+  if (user && isAuthenticated) {
+    if (user.role === 'admin') navigate('/admin');
+    else if (user.role === 'organizer') navigate('/organizador');
+    else navigate('/atleta');
+  }
+}, [user, isAuthenticated]);
+
+## TAREFA 2 — Build e push
+npm run build
+git add -A
+git commit -m "Fix crítico: login nunca sobrescreve role do banco"
+git push origin main

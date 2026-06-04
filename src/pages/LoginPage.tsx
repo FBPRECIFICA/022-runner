@@ -28,10 +28,12 @@ export function LoginPage() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
-  // Redirecionar automaticamente quando user carregar após login
+  // Redirecionar automaticamente quando user.role carregar do banco após login
   useEffect(() => {
     if (user && isAuthenticated) {
-      navigate(roleToPath(user.role), { replace: true });
+      if (user.role === 'admin')     navigate('/admin',       { replace: true });
+      else if (user.role === 'organizer') navigate('/organizador', { replace: true });
+      else                           navigate('/atleta',      { replace: true });
     }
   }, [user, isAuthenticated]);
 
@@ -40,14 +42,12 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      // Passa o perfil selecionado na tela para criar conta se não existir
-      const result = await login(email, password, selectedProfile || undefined);
-      if (!result.success) {
+      // login() apenas autentica — o role vem do banco via loadUserProfile
+      const success = await login(email, password);
+      if (!success) {
         setError('E-mail ou senha incorretos. Verifique suas credenciais.');
-        return;
       }
-      // Redirecionar com base no role retornado do banco
-      navigate(roleToPath(result.role), { replace: true });
+      // O useEffect acima cuida do redirect quando user carregar
     } catch {
       setError('Ocorreu um erro ao fazer login. Tente novamente.');
     } finally {
@@ -161,7 +161,7 @@ export function LoginPage() {
                     className="w-full font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-60 transition-all"
                     style={{ backgroundColor: '#C9A84C', color: '#000' }}
                   >
-                    {loading ? <><Loader2 size={16} className="animate-spin" /> Entrando...</> : `Entrar como ${PROFILES.find(p => p.key === selectedProfile)?.label}`}
+                    {loading ? <><Loader2 size={16} className="animate-spin" /> Entrando...</> : 'Entrar'}
                   </button>
                 </form>
               </>
