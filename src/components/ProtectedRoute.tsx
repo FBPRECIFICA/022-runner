@@ -5,34 +5,28 @@ import type { ReactNode } from 'react';
 interface ProtectedRouteProps {
   children: ReactNode;
   allowedRoles?: ('admin' | 'organizer' | 'athlete')[];
-  redirectTo?: string;
 }
 
-// Regras de acesso:
-// /admin           → apenas admin
-// /organizador     → organizer + admin
-// /atleta          → athlete + organizer + admin
-// Qualquer outra   → conforme allowedRoles passado
+// Regras estritas:
+// /atleta      → apenas athlete
+// /organizador → organizer ou admin
+// /admin       → apenas admin
+// Acesso negado → redireciona para /login
 
-export function ProtectedRoute({ children, allowedRoles, redirectTo = '/login' }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, user } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to={redirectTo} state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location, denied: false }} replace />;
   }
 
   if (allowedRoles && user) {
     const role = user.role as string;
-    // Admin sempre tem acesso a tudo
-    if (role === 'admin') return <>{children}</>;
-    // Verificar se o role está na lista permitida
+
     if (!allowedRoles.includes(role as any)) {
-      // Redirecionar para o painel correto em vez de / genérico
-      const fallback = role === 'organizer' ? '/organizador'
-                     : role === 'athlete'   ? '/atleta'
-                     : '/login';
-      return <Navigate to={fallback} replace />;
+      // Acesso negado — redirecionar para /login com mensagem
+      return <Navigate to="/login" state={{ from: location, denied: true, message: 'Acesso negado para este perfil.' }} replace />;
     }
   }
 

@@ -8,7 +8,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isOrganizer: boolean;
   isAthlete: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, role?: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
   register: (name: string, email: string, password: string, role?: string) => Promise<boolean>;
   logout: () => void;
@@ -19,6 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [roleOverride, setRoleOverride] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -53,23 +54,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) console.error('loadUserProfile error:', error.message);
 
       if (data) {
-        // Perfil encontrado — usar EXATAMENTE o role do banco
+        // Se existe roleOverride (perfil selecionado na tela de login), usar ele
+        // Caso contrário, usar o role exato do banco
+        const finalRole = roleOverride || data.role || 'athlete';
+        setRoleOverride(null); // limpar após uso
         setUser({
           id: data.id,
           name: data.name || 'Usuário',
           email: data.email || '',
-          role: data.role || 'athlete',
+          role: finalRole,
           phone: data.phone,
         });
       } else {
-        // Perfil não encontrado — usuário novo sem cadastro na tabela users ainda
+        // Perfil não encontrado — usar roleOverride se disponível, senão athlete
         const { data: authUser } = await supabase.auth.getUser();
         if (authUser?.user) {
+          const finalRole = roleOverride || 'athlete';
+          setRoleOverride(null);
           setUser({
             id: authUser.user.id,
             name: authUser.user.email?.split('@')[0] || 'Usuário',
             email: authUser.user.email || '',
-            role: 'athlete', // fallback apenas se perfil não existir no banco
+            role: finalRole,
           });
         }
       }
@@ -80,10 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // login() APENAS autentica — NÃO cria nem altera perfil
-  // O loadUserProfile() via onAuthStateChange já busca o role correto do banco
-  const login = async (email: string, password: string): Promise<boolean> => {
+  // login() autentica e salva o role selecionado na tela para uso em loadUserProfile
+  const login = async (email: string, password: string, role?: string): Promise<boolean> => {
+    if (role) setRoleOverride(role);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setRoleOverride(null); // limpar se falhou
     return !error;
   };
 

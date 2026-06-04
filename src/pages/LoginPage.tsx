@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
@@ -20,6 +20,8 @@ function roleToPath(role?: string): string {
 export function LoginPage() {
   const { login, loginWithGoogle, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const deniedMessage = (location.state as any)?.message || '';
 
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [email, setEmail]       = useState('');
@@ -39,15 +41,19 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedProfile) {
+      setError('Selecione um perfil primeiro.');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
-      // login() apenas autentica — o role vem do banco via loadUserProfile
-      const success = await login(email, password);
+      // Passa o perfil selecionado — usado como roleOverride em loadUserProfile
+      const success = await login(email, password, selectedProfile);
       if (!success) {
         setError('E-mail ou senha incorretos. Verifique suas credenciais.');
       }
-      // O useEffect acima cuida do redirect quando user carregar
+      // O useEffect cuida do redirect quando user.role carregar
     } catch {
       setError('Ocorreu um erro ao fazer login. Tente novamente.');
     } finally {
@@ -68,7 +74,13 @@ export function LoginPage() {
 
           <div className="p-8">
             <h1 className="text-2xl font-bold text-gray-900 text-center mb-1">Entrar na plataforma</h1>
-            <p className="text-gray-500 text-center text-sm mb-6">Selecione seu perfil para continuar</p>
+            <p className="text-gray-500 text-center text-sm mb-4">Selecione seu perfil para continuar</p>
+
+            {deniedMessage && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm text-center mb-4 font-medium">
+                🔒 {deniedMessage}
+              </div>
+            )}
 
             {/* Cards de perfil */}
             <div className="grid grid-cols-3 gap-3 mb-6">

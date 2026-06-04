@@ -56,7 +56,7 @@ function App() {
                 <Route path="ranking" element={<RankingPage />} />
                 <Route path="atleta/:userId" element={<AthleteProfilePage />} />
                 <Route path="atleta" element={
-                  <ProtectedRoute allowedRoles={['athlete', 'admin']}>
+                  <ProtectedRoute allowedRoles={['athlete']}>
                     <AthleteDashboard />
                   </ProtectedRoute>
                 } />

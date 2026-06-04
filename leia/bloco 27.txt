@@ -1,0 +1,17 @@
+No src/contexts/AuthContext.tsx:
+- Adicionar estado roleOverride: string | null
+- Na função login() receber parâmetro role e salvar no estado
+- No loadUserProfile() se roleOverride existir usar ele em vez do banco
+- Após setar o user limpar o roleOverride
+
+No src/pages/LoginPage.tsx:
+- Passar o perfil selecionado (selectedProfile) para a função login()
+- Se nenhum perfil selecionado mostrar mensagem "Selecione um perfil primeiro"
+
+No src/components/ProtectedRoute.tsx:
+- /atleta: só aceita role athlete
+- /organizador: só aceita role organizer ou admin
+- /admin: só aceita role admin
+- Se role errado redirecionar para /login com mensagem "Acesso negado para este perfil"
+
+Depois build e push main.
