@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { X, Send } from 'lucide-react';
 
 const AI_FUNCTION_URL = 'https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/ai-assistant';
 const ANON_KEY = 'sb_publishable_b098wEy_wai6_RWuR5pV7g_IAw-x86p';
@@ -65,14 +65,58 @@ export function ChatBot() {
 
   return (
     <>
-      {/* Botão flutuante */}
+      {/* Botão flutuante — número de peito LEO */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110"
-        style={{ backgroundColor: '#C9A84C' }}
+        className="fixed z-50 bottom-20 md:bottom-5 right-5 transition-all duration-200"
+        style={{
+          width: '60px',
+          height: '70px',
+          backgroundColor: '#fff',
+          border: '3px solid #C9A84C',
+          borderRadius: '8px',
+          boxShadow: '0 4px 16px rgba(201,168,76,0.35), 0 2px 6px rgba(0,0,0,0.12)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '1px',
+          cursor: 'pointer',
+          padding: '4px 2px',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+          e.currentTarget.style.boxShadow = '0 6px 24px rgba(201,168,76,0.55), 0 2px 8px rgba(0,0,0,0.15)';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(201,168,76,0.35), 0 2px 6px rgba(0,0,0,0.12)';
+        }}
         aria-label="LEO 022RUNNER"
       >
-        {open ? <X size={24} color="#000" /> : <MessageCircle size={26} color="#000" />}
+        {open ? (
+          <X size={22} color="#000" />
+        ) : (
+          <>
+            {/* Bonequinho corredor SVG */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+              <circle cx="14" cy="4" r="2" fill="#C9A84C" />
+              <path d="M12 7l-2 5 3 1-1 5" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              <path d="M10 12l-3 4" stroke="#000" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+              <path d="M15 8l2 3-2 1" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+            {/* LEO */}
+            <span style={{ fontWeight: 900, fontSize: '14px', color: '#000', letterSpacing: '1.5px', lineHeight: 1 }}>
+              LEO
+            </span>
+            {/* Linha dourada */}
+            <div style={{ width: '80%', height: '1.5px', backgroundColor: '#C9A84C', margin: '2px 0' }} />
+            {/* 022 */}
+            <span style={{ fontWeight: 700, fontSize: '11px', color: '#C9A84C', letterSpacing: '2px', lineHeight: 1 }}>
+              022
+            </span>
+          </>
+        )}
       </button>
 
       {/* Janela de chat */}
