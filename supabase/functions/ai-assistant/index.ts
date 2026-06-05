@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const apiKey = Deno.env.get('ANTHROPIC_API_KEY') || 'sk-ant-api03-V8ribE7dSrefpfF89Yf13YAli4zE8WlnMoi9ZQPAQE71EwAWQF7h8ZHwef8bODauE26CSkb2QqaXxE1mmji7MQ-hFhizAAA'
+const apiKey = Deno.env.get('ANTHROPIC_API_KEY') || ''
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
