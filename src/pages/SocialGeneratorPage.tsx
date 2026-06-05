@@ -94,7 +94,7 @@ export function SocialGeneratorPage() {
     if (saved) setHistory(JSON.parse(saved));
   }, [user]);
 
-  const generatePostImage = useCallback(async (text: string, event: any) => {
+  const generatePostImage = useCallback(async (_text: string, event: any) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -105,7 +105,7 @@ export function SocialGeneratorPage() {
     canvas.width = W;
     canvas.height = H;
 
-    // Background — foto ou gradiente
+    // 1 — Background: foto do evento cobrindo 100% ou gradiente fallback
     let bgLoaded = false;
     if (event.banner_url) {
       try {
@@ -113,10 +113,9 @@ export function SocialGeneratorPage() {
         img.crossOrigin = 'anonymous';
         await new Promise<void>((resolve, reject) => {
           img.onload = () => resolve();
-          img.onerror = () => reject(new Error('img error'));
+          img.onerror = () => reject(new Error('cors'));
           img.src = event.banner_url;
         });
-        // escalar para cobrir o quadrado
         const scale = Math.max(W / img.width, H / img.height);
         const sw = img.width * scale, sh = img.height * scale;
         ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
@@ -127,78 +126,117 @@ export function SocialGeneratorPage() {
     }
     if (!bgLoaded) drawGradientBg(ctx, W, H);
 
-    // Overlay escuro
-    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+    // 2 — Overlay base: transparente no topo, preto 80% na metade inferior
+    const baseOverlay = ctx.createLinearGradient(0, 0, 0, H);
+    baseOverlay.addColorStop(0,    'rgba(0,0,0,0.05)');
+    baseOverlay.addColorStop(0.35, 'rgba(0,0,0,0.05)');
+    baseOverlay.addColorStop(0.65, 'rgba(0,0,0,0.55)');
+    baseOverlay.addColorStop(1,    'rgba(0,0,0,0.88)');
+    ctx.fillStyle = baseOverlay;
     ctx.fillRect(0, 0, W, H);
 
-    // Gradiente extra no topo e base para legibilidade
-    const topGrad = ctx.createLinearGradient(0, 0, 0, 200);
-    topGrad.addColorStop(0, 'rgba(0,0,0,0.7)');
-    topGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = topGrad;
-    ctx.fillRect(0, 0, W, 200);
+    // 3 — Variação aleatória do overlay (direção e intensidade)
+    const intensity = 0.5 + Math.random() * 0.3;
+    const varType = Math.floor(Math.random() * 3);
+    if (varType === 0) {
+      // Gradiente lateral (esquerda)
+      const g = ctx.createLinearGradient(0, 0, W * 0.65, 0);
+      g.addColorStop(0, `rgba(0,0,0,${intensity})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    } else if (varType === 1) {
+      // Diagonal
+      const g = ctx.createLinearGradient(0, H, W, 0);
+      g.addColorStop(0,   `rgba(0,0,0,${intensity})`);
+      g.addColorStop(0.5, 'rgba(0,0,0,0)');
+      g.addColorStop(1,   `rgba(0,0,0,${intensity * 0.5})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    } else {
+      // Topo escuro
+      const g = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+      g.addColorStop(0, `rgba(0,0,0,${intensity * 0.8})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
 
-    const botGrad = ctx.createLinearGradient(0, H - 200, 0, H);
-    botGrad.addColorStop(0, 'rgba(0,0,0,0)');
-    botGrad.addColorStop(1, 'rgba(0,0,0,0.8)');
-    ctx.fillStyle = botGrad;
-    ctx.fillRect(0, H - 200, W, 200);
+    // 4 — Elemento decorativo aleatório em dourado
+    ctx.save();
+    ctx.strokeStyle = GOLD;
+    ctx.globalAlpha = 0.65;
+    const decType = Math.floor(Math.random() * 3);
+    if (decType === 0) {
+      // Linha diagonal no canto superior direito
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(W - 260, 0);
+      ctx.lineTo(W, 260);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(W - 200, 0);
+      ctx.lineTo(W, 200);
+      ctx.stroke();
+    } else if (decType === 1) {
+      // Círculo no canto superior direito
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(W - 90, 90, 70, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(W - 90, 90, 50, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      // Moldura fina interna
+      ctx.lineWidth = 3;
+      ctx.strokeRect(24, 24, W - 48, H - 48);
+    }
+    ctx.restore();
 
-    ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
 
-    // Logo "022 RUNNER"
-    ctx.font = 'bold 60px Arial, sans-serif';
-    ctx.fillStyle = GOLD;
-    ctx.fillText('022 RUNNER', W / 2, 100);
-
-    // Linha dourada sob o logo
-    ctx.fillStyle = GOLD;
-    ctx.fillRect(W / 2 - 130, 116, 260, 4);
-
-    // Nome do evento — branco bold, centralizado, até 2 linhas
-    ctx.font = 'bold 74px Arial, sans-serif';
+    // 5 — Logo "022 RUNNER" topo esquerdo, branco
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 40px Arial, sans-serif';
     ctx.fillStyle = '#ffffff';
-    wrapText(ctx, event.title.toUpperCase(), W / 2, 290, W - 140, 88, 2);
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 12;
+    ctx.fillText('022 RUNNER', 60, 82);
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
 
-    // Data e cidade — dourado
+    // Linha dourada fina sob o logo
+    ctx.fillStyle = GOLD;
+    ctx.fillRect(60, 92, 170, 3);
+
+    // 6 — Nome do evento: centro inferior, branco bold grande, máx 2 linhas
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 72px Arial, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 4;
+    wrapText(ctx, event.title.toUpperCase(), W / 2, H - 280, W - 120, 86, 2);
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowColor = 'transparent';
+
+    // 7 — Data e cidade em dourado
     const date = new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-    ctx.font = '40px Arial, sans-serif';
-    ctx.fillStyle = GOLD;
-    ctx.fillText(`${date}  ·  ${event.city}`, W / 2, 510);
-
-    // Linha separadora fina
-    ctx.strokeStyle = 'rgba(201,168,76,0.4)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(W / 2 - 200, 538);
-    ctx.lineTo(W / 2 + 200, 538);
-    ctx.stroke();
-
-    // Texto IA — máximo 3 linhas, limpar markdown e emojis longos
-    const cleanText = text
-      .replace(/\*\*/g, '')
-      .replace(/#{1,3}\s?/g, '')
-      .split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 0)
-      .slice(0, 3)
-      .map(l => l.length > 60 ? l.slice(0, 58) + '…' : l);
-
     ctx.font = '36px Arial, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.88)';
-    cleanText.forEach((line, i) => {
-      ctx.fillText(line, W / 2, 600 + i * 54);
-    });
-
-    // Barra dourada decorativa no rodapé
     ctx.fillStyle = GOLD;
-    ctx.fillRect(0, H - 72, W, 6);
+    ctx.fillText(`${date}  ·  ${event.city}`, W / 2, H - 170);
 
-    // Rodapé
-    ctx.font = '32px Arial, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.65)';
-    ctx.fillText('022runner.com.br', W / 2, H - 28);
+    // 8 — Barra dourada 4px na parte inferior
+    ctx.fillStyle = GOLD;
+    ctx.fillRect(0, H - 4, W, 4);
+
+    // 9 — URL no canto inferior direito
+    ctx.textAlign = 'right';
+    ctx.font = '26px Arial, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText('022runner.com.br', W - 40, H - 16);
 
     setImageDataUrl(canvas.toDataURL('image/png'));
     setGeneratingImage(false);
