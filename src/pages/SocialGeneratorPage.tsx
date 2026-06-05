@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Sparkles, Copy, Share2, RefreshCw, Clock, Download, Image } from 'lucide-react';
+import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 
 const AI_FUNCTION_URL = 'https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/ai-assistant';
 const ANON_KEY = 'sb_publishable_b098wEy_wai6_RWuR5pV7g_IAw-x86p';
@@ -259,8 +260,8 @@ export function SocialGeneratorPage() {
 
       <div className="bg-white border-b py-8">
         <div className="max-w-5xl mx-auto px-4">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <Sparkles size={28} style={{ color: GOLD }} /> Gerador de Posts com IA
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <RunnerPostsIcon /> Gerador de Posts com IA
           </h1>
           <p className="text-gray-500 mt-1">Posts e imagens criados pela IA especialmente para seus eventos</p>
         </div>

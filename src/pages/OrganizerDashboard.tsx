@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
 import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload } from 'lucide-react';
+import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import * as XLSX from 'xlsx';
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
@@ -368,7 +369,7 @@ export function OrganizerDashboard() {
         <div className="rounded-xl p-4 mb-6 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4"
           style={{ backgroundColor: '#C9A84C' }}>
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🤖</span>
+            <RunnerPostsIcon />
             <div>
               <p className="font-bold text-black text-base">Gerar Posts com IA</p>
               <p className="text-xs text-black/70">Crie posts automáticos para Instagram, WhatsApp e Facebook</p>
