@@ -8,7 +8,7 @@ import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import * as XLSX from 'xlsx';
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
-const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Mochila', 'Outros'];
+const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Bag', 'Squeeze (Garrafinha de água)', 'Outros'];
 
 interface Lot { price: string; qty: string; }
 interface DistanceWithLots { name: string; lots: Lot[]; }

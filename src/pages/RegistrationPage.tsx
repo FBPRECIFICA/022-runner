@@ -25,6 +25,17 @@ function formatPhone(v: string) {
     ? d.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d{4})$/, '$1-$2')
     : d.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d{4})$/, '$1-$2');
 }
+function formatBirthdate(v: string): string {
+  const d = v.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+function birthdateToISO(v: string): string | null {
+  const p = v.split('/');
+  if (p.length !== 3 || p[2].length !== 4) return null;
+  return `${p[2]}-${p[1]}-${p[0]}`;
+}
 function generateRegistrationNumber() {
   return `022-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
@@ -100,7 +111,7 @@ export function RegistrationPage() {
         registration_number: regNumber,
         name: form.name,
         cpf: form.cpf.replace(/\D/g, ''),
-        birth_date: form.birthdate || null,
+        birth_date: birthdateToISO(form.birthdate) || null,
         phone: form.phone.replace(/\D/g, ''),
         email: form.email,
         city: form.city,
@@ -187,7 +198,7 @@ export function RegistrationPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <Field label="CPF *"><input className={inp} value={form.cpf} onChange={e => set('cpf', formatCPF(e.target.value))} placeholder="000.000.000-00" /></Field>
-              <Field label="Data de Nascimento *"><input type="date" className={inp} value={form.birthdate} onChange={e => set('birthdate', e.target.value)} /></Field>
+              <Field label="Data de Nascimento *"><input type="text" className={inp} value={form.birthdate} onChange={e => set('birthdate', formatBirthdate(e.target.value))} placeholder="DD/MM/AAAA" maxLength={10} /></Field>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
