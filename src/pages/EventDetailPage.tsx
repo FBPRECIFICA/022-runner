@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle, Star, Timer } from 'lucide-react';
@@ -84,15 +84,23 @@ export function EventDetailPage() {
   const maxP = event.max_participants || 0;
   const currentP = event.current_participants || 0;
   const progressPct = maxP > 0 ? Math.min(Math.round((currentP / maxP) * 100), 100) : 0;
+  const progressColor = progressPct >= 80 ? '#ef4444' : progressPct >= 50 ? '#f59e0b' : '#22c55e';
   const daysLeft = deadline ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000)) : null;
   const score = event.quality_score || 0;
   const isPast = eventDate.getTime() < Date.now();
-
   const sponsors: { name: string; logo_url: string }[] = event.sponsors || [];
+  const kitItems: string[] = event.kit_items || [];
   const metaDesc = event.description ? event.description.slice(0, 160) : `${event.title} — ${event.city}`;
 
+  const mapsUrl = event.latitude && event.longitude
+    ? `https://www.google.com/maps?q=${event.latitude},${event.longitude}`
+    : `https://www.google.com/maps/search/${encodeURIComponent(event.location + ' ' + event.city)}`;
+  const wazeUrl = event.latitude && event.longitude
+    ? `https://waze.com/ul?ll=${event.latitude},${event.longitude}&navigate=yes`
+    : `https://waze.com/ul?q=${encodeURIComponent(event.location + ' ' + event.city)}`;
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-24 md:pb-0">
       <Helmet>
         <title>{event.title} — 022 RUNNER</title>
         <meta name="description" content={metaDesc} />
@@ -105,38 +113,40 @@ export function EventDetailPage() {
         <meta name="twitter:image" content={event.banner_url || '/images/hero-bg.jpg'} />
       </Helmet>
 
-      {/* Banner */}
-      <div className="relative w-full bg-gray-900" style={{ height: '400px' }}>
+      {/* Hero Banner — 500px */}
+      <div className="relative w-full bg-gray-900" style={{ height: '500px' }}>
         {event.banner_url
           ? <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover" />
           : <div className="w-full h-full bg-gradient-to-br from-blue-800 to-[#C9A84C]" />
         }
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.80) 40%, rgba(0,0,0,0.25) 100%)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.20) 100%)' }} />
         <div className="absolute top-4 left-4">
           <Link to="/" className="inline-flex items-center gap-1 text-white/80 hover:text-white text-sm bg-black/30 px-3 py-1.5 rounded-full backdrop-blur-sm">
             <ChevronLeft size={16} /> Voltar
           </Link>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
           <div className="flex flex-wrap gap-2 mb-3">
             {event.status === 'published' && (
-              <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">INSCRIÇÕES ABERTAS</span>
+              <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">INSCRIÇÕES ABERTAS</span>
             )}
             {score > 0 && (() => {
               const b = scoreBadge(score);
               return (
                 <span className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1"
                   style={{ backgroundColor: b.bg, color: b.color }}>
-                  {b.label}
+                  <Star size={11} fill="currentColor" /> {b.label}
                 </span>
               );
             })()}
             {event.event_type && (
-              <span className="bg-[#C9A84C]/80 text-white text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-sm">{event.event_type}</span>
+              <span className="bg-[#C9A84C]/90 text-white text-xs font-semibold px-3 py-1 rounded-full">{event.event_type}</span>
             )}
           </div>
-          <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight drop-shadow-lg">{event.title}</h1>
-          <p className="text-white/80 mt-2 text-base md:text-lg">{event.city} — RJ</p>
+          <h1 className="text-3xl md:text-5xl font-black text-white leading-tight drop-shadow-xl">{event.title}</h1>
+          <p className="text-white/75 mt-2 text-base md:text-lg flex items-center gap-1.5">
+            <MapPin size={16} /> {event.city} — RJ
+          </p>
         </div>
       </div>
 
@@ -162,7 +172,7 @@ export function EventDetailPage() {
 
             {/* Local */}
             <div className="bg-white rounded-xl border p-5 shadow-sm">
-              <h2 className="font-bold text-gray-900 mb-1 flex items-center gap-2 text-sm uppercase tracking-wide text-gray-500">
+              <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-1 flex items-center gap-2">
                 <MapPin size={15} /> Local de Largada
               </h2>
               <p className="text-gray-800 font-medium mt-1">{event.location}</p>
@@ -170,11 +180,13 @@ export function EventDetailPage() {
 
             {/* Countdown */}
             {!isPast && (
-              <div className="bg-white rounded-xl border p-5 shadow-sm">
-                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
-                  <Timer size={15} /> Contagem Regressiva
-                </h2>
-                <div className="grid grid-cols-4 gap-3">
+              <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)', border: '1px solid #C9A84C33' }}>
+                <div className="px-5 pt-5 pb-2">
+                  <h2 className="font-bold text-xs uppercase tracking-widest flex items-center gap-2" style={{ color: '#C9A84C' }}>
+                    <Timer size={14} /> Contagem Regressiva
+                  </h2>
+                </div>
+                <div className="grid grid-cols-4 gap-3 px-5 pb-5">
                   {[
                     { value: countdown.days, label: 'Dias' },
                     { value: countdown.hours, label: 'Horas' },
@@ -182,11 +194,11 @@ export function EventDetailPage() {
                     { value: countdown.seconds, label: 'Seg' },
                   ].map((item, i) => (
                     <div key={i} className="flex flex-col items-center justify-center rounded-xl py-4"
-                      style={{ backgroundColor: '#000', color: '#C9A84C' }}>
-                      <span className="text-3xl font-bold tabular-nums" style={{ color: '#C9A84C' }}>
+                      style={{ backgroundColor: '#111', border: '1px solid #C9A84C44' }}>
+                      <span className="text-4xl font-black tabular-nums" style={{ color: '#C9A84C' }}>
                         {String(item.value).padStart(2, '0')}
                       </span>
-                      <span className="text-xs font-semibold mt-1" style={{ color: '#ffffff99' }}>{item.label}</span>
+                      <span className="text-xs font-semibold mt-1 uppercase tracking-wide" style={{ color: '#ffffff55' }}>{item.label}</span>
                     </div>
                   ))}
                 </div>
@@ -209,32 +221,38 @@ export function EventDetailPage() {
               </div>
             )}
 
-            {/* Distâncias */}
+            {/* Distâncias — cards premium */}
             {distances.length > 0 && (
               <div className="bg-white rounded-xl border p-5 shadow-sm">
                 <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4">Distâncias e Preços</h2>
-                <div className="space-y-2">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {distances.map((d, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-amber-200 hover:bg-amber-50/30 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold text-xs">{d.name}</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">{d.name}</span>
-                      </div>
-                      <span className="text-[#C9A84C] font-bold text-xl">R$ {Number(d.price).toFixed(2).replace('.', ',')}</span>
+                    <div key={i}
+                      className="rounded-xl p-4 flex flex-col gap-2 cursor-pointer transition-all hover:shadow-md"
+                      style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 100%)', border: '1px solid #C9A84C44' }}
+                    >
+                      <span className="text-2xl font-black" style={{ color: '#C9A84C' }}>{d.name}</span>
+                      <span className="text-white/60 text-xs uppercase tracking-widest">Inscrição</span>
+                      <span className="text-2xl font-black text-white">R$ {Number(d.price).toFixed(2).replace('.', ',')}</span>
+                      <button
+                        onClick={() => navigate(`/inscricao/${event.slug}`)}
+                        className="w-full py-2 rounded-lg text-xs font-bold mt-1 transition-all hover:opacity-90"
+                        style={{ backgroundColor: '#C9A84C', color: '#000' }}
+                      >
+                        INSCREVER
+                      </button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Kit */}
-            {event.kit_items && event.kit_items.length > 0 && (
+            {/* Kit do evento */}
+            {kitItems.length > 0 && (
               <div className="bg-white rounded-xl border p-5 shadow-sm">
                 <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Kit do Evento</h2>
                 <div className="flex flex-wrap gap-2">
-                  {event.kit_items.map((item: string, i: number) => (
+                  {kitItems.map((item: string, i: number) => (
                     <span key={i} className="flex items-center gap-1.5 bg-green-50 text-green-700 border border-green-200 text-sm font-medium px-3 py-1.5 rounded-full">
                       <CheckCircle size={13} /> {item}
                     </span>
@@ -242,6 +260,34 @@ export function EventDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Como chegar */}
+            <div className="bg-white rounded-xl border p-5 shadow-sm">
+              <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-2">
+                <MapPin size={15} /> Como Chegar
+              </h2>
+              <p className="text-gray-700 text-sm mb-4">{event.location} — {event.city}</p>
+              <div className="flex gap-3">
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: '#4285f4' }}
+                >
+                  <MapPin size={16} /> Google Maps
+                </a>
+                <a
+                  href={wazeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: '#33ccff' }}
+                >
+                  <MapPin size={16} /> Waze
+                </a>
+              </div>
+            </div>
 
             {/* Patrocinadores */}
             {sponsors.length > 0 && (
@@ -288,10 +334,10 @@ export function EventDetailPage() {
               <div className="bg-white rounded-xl border p-5 shadow-sm">
                 <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide mb-3">Vagas Preenchidas</h3>
                 <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
-                  <div className="h-3 rounded-full transition-all bg-[#C9A84C]" style={{ width: `${progressPct}%` }} />
+                  <div className="h-3 rounded-full transition-all" style={{ width: `${progressPct}%`, backgroundColor: progressColor }} />
                 </div>
                 <div className="flex justify-between text-xs text-gray-500">
-                  <span className="font-semibold text-[#C9A84C]">{progressPct}%</span>
+                  <span className="font-bold" style={{ color: progressColor }}>{progressPct}%</span>
                   <span>{maxP - currentP} restantes</span>
                 </div>
               </div>
@@ -312,11 +358,11 @@ export function EventDetailPage() {
               </div>
             )}
 
-            {/* Botão Inscrever */}
+            {/* Botão Inscrever — desktop */}
             <button
               onClick={() => navigate(`/inscricao/${event.slug}`)}
-              className="w-full font-bold py-5 rounded-xl text-lg transition-all duration-200 shadow-lg text-white"
-              style={{ backgroundColor: '#C9A84C', boxShadow: '0 4px 20px rgba(37,99,235,0.4)' }}
+              className="w-full font-bold py-5 rounded-xl text-lg transition-all duration-200 shadow-lg"
+              style={{ backgroundColor: '#C9A84C', color: '#000', boxShadow: '0 4px 20px rgba(201,168,76,0.4)' }}
               onMouseOver={e => (e.currentTarget.style.backgroundColor = '#B8962E')}
               onMouseOut={e => (e.currentTarget.style.backgroundColor = '#C9A84C')}
             >
@@ -360,6 +406,17 @@ export function EventDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Botão flutuante mobile — INSCREVER-SE AGORA */}
+      <div className="md:hidden fixed bottom-16 left-4 right-20 z-30">
+        <button
+          onClick={() => navigate(`/inscricao/${event.slug}`)}
+          className="w-full font-black py-4 rounded-xl text-base shadow-2xl transition-all active:scale-95"
+          style={{ backgroundColor: '#C9A84C', color: '#000', boxShadow: '0 4px 24px rgba(201,168,76,0.5)' }}
+        >
+          INSCREVER-SE AGORA
+        </button>
       </div>
     </div>
   );

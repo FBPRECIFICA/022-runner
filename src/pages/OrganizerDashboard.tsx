@@ -1,8 +1,8 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
-import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download } from 'lucide-react';
+import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
@@ -63,7 +63,7 @@ function calcScore(form: EventForm, hasPhotos: boolean): number {
 function generateSlug(title: string) {
   return title
     .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
@@ -78,6 +78,7 @@ export function OrganizerDashboard() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [sponsorUploading, setSponsorUploading] = useState<boolean[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -111,6 +112,29 @@ export function OrganizerDashboard() {
   const removePhoto = (index: number) => {
     setPhotos(prev => prev.filter((_, i) => i !== index));
     setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSponsorLogoUpload = async (index: number, file: File) => {
+    setSponsorUploading(prev => { const next = [...prev]; next[index] = true; return next; });
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `sponsor-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('event-photos').upload(fileName, file);
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from('event-photos').getPublicUrl(fileName);
+        setForm(p => {
+          const sp = [...p.sponsors];
+          sp[index] = { ...sp[index], logo_url: urlData.publicUrl };
+          return { ...p, sponsors: sp };
+        });
+      } else {
+        setError('Erro ao enviar logo do patrocinador.');
+      }
+    } catch {
+      setError('Erro ao enviar logo do patrocinador.');
+    } finally {
+      setSponsorUploading(prev => { const next = [...prev]; next[index] = false; return next; });
+    }
   };
 
   const addDistance = () => {
@@ -209,6 +233,7 @@ export function OrganizerDashboard() {
     setEditingEventId(event.id);
     setPhotos([]);
     setPhotoPreviews([]);
+    setSponsorUploading([]);
     setSuccess('');
     setError('');
     setTab('criar');
@@ -287,6 +312,7 @@ export function OrganizerDashboard() {
       setForm(emptyForm);
       setPhotos([]);
       setPhotoPreviews([]);
+      setSponsorUploading([]);
       setEditingEventId(null);
       loadEvents();
       setTab('eventos');
@@ -316,7 +342,7 @@ export function OrganizerDashboard() {
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 border">
             <div className="flex items-center gap-3">
               <div className="bg-amber-100 p-2 rounded-lg"><Calendar className="text-[#C9A84C]" size={20} /></div>
@@ -345,7 +371,7 @@ export function OrganizerDashboard() {
 
         {/* Lista de Eventos */}
         {tab === 'eventos' && (
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-x-auto">
             {events.length === 0 ? (
               <div className="bg-white rounded-xl border p-12 text-center">
                 <Calendar size={48} className="mx-auto text-gray-300 mb-4" />
@@ -353,14 +379,14 @@ export function OrganizerDashboard() {
                 <button onClick={() => setTab('criar')} className="mt-4 bg-[#C9A84C] text-white px-6 py-2 rounded-lg hover:bg-[#B8962E]">Criar primeiro evento</button>
               </div>
             ) : events.map(event => (
-              <div key={event.id} className="bg-white rounded-xl border p-4 flex items-center gap-4">
-                {event.banner_url && <img src={event.banner_url} alt="" className="w-20 h-16 object-cover rounded-lg" />}
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900">{event.title}</h3>
+              <div key={event.id} className="bg-white rounded-xl border p-4 flex flex-wrap sm:flex-nowrap items-center gap-4">
+                {event.banner_url && <img src={event.banner_url} alt="" className="w-20 h-16 object-cover rounded-lg flex-shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-gray-900 truncate">{event.title}</h3>
                   <p className="text-sm text-gray-500">{event.city} · {new Date(event.date).toLocaleDateString('pt-BR')}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${event.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{event.status === 'published' ? 'Publicado' : 'Rascunho'}</span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                   <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Visualizar"><Eye size={18} /></a>
                   <button onClick={() => openEdit(event)} className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Editar"><Edit size={18} /></button>
                   <button onClick={() => exportExcel(event)} className="p-2 text-gray-500 hover:text-green-600 border rounded-lg" title="Exportar Excel"><Download size={18} /></button>
@@ -473,23 +499,61 @@ export function OrganizerDashboard() {
                   placeholder="Regras, percurso detalhado, informações de kit, etc..." />
               </div>
 
-              {/* Patrocinadores */}
+              {/* Patrocinadores com upload */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Patrocinadores (máx. 3)</label>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {form.sponsors.map((s, i) => (
-                    <div key={i} className="flex gap-2">
-                      <input value={s.name} onChange={e => setForm(p => { const sp = [...p.sponsors]; sp[i] = { ...sp[i], name: e.target.value }; return { ...p, sponsors: sp }; })}
-                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" placeholder="Nome do patrocinador" />
-                      <input value={s.logo_url} onChange={e => setForm(p => { const sp = [...p.sponsors]; sp[i] = { ...sp[i], logo_url: e.target.value }; return { ...p, sponsors: sp }; })}
-                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" placeholder="URL do logo" />
-                      <button onClick={() => setForm(p => ({ ...p, sponsors: p.sponsors.filter((_, j) => j !== i) }))}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                    <div key={i} className="flex flex-wrap sm:flex-nowrap items-center gap-3 p-3 border rounded-xl bg-gray-50">
+                      {/* Preview ou placeholder do logo */}
+                      <div className="flex-shrink-0">
+                        {s.logo_url ? (
+                          <img src={s.logo_url} alt={s.name} className="h-14 w-20 object-contain rounded-lg border bg-white" />
+                        ) : (
+                          <div className="h-14 w-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                            <Image size={20} className="text-gray-300" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Nome */}
+                      <input
+                        value={s.name}
+                        onChange={e => setForm(p => { const sp = [...p.sponsors]; sp[i] = { ...sp[i], name: e.target.value }; return { ...p, sponsors: sp }; })}
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
+                        placeholder="Nome do patrocinador"
+                      />
+
+                      {/* Upload de logo */}
+                      <label className="cursor-pointer flex-shrink-0">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) handleSponsorLogoUpload(i, f); }}
+                        />
+                        <span className={`flex items-center gap-1.5 text-xs font-medium border rounded-lg px-3 py-2 transition-colors ${sponsorUploading[i] ? 'border-gray-300 text-gray-400 cursor-not-allowed' : 'border-[#C9A84C] text-[#C9A84C] hover:bg-amber-50 cursor-pointer'}`}>
+                          <Upload size={13} />
+                          {sponsorUploading[i] ? 'Enviando...' : 'Upload logo'}
+                        </span>
+                      </label>
+
+                      {/* Remover */}
+                      <button
+                        onClick={() => setForm(p => ({ ...p, sponsors: p.sponsors.filter((_, j) => j !== i) }))}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   ))}
                   {form.sponsors.length < 3 && (
-                    <button onClick={() => setForm(p => ({ ...p, sponsors: [...p.sponsors, { name: '', logo_url: '' }] }))}
-                      className="text-[#C9A84C] text-sm hover:underline">+ Adicionar patrocinador</button>
+                    <button
+                      onClick={() => setForm(p => ({ ...p, sponsors: [...p.sponsors, { name: '', logo_url: '' }] }))}
+                      className="text-[#C9A84C] text-sm hover:underline"
+                    >
+                      + Adicionar patrocinador
+                    </button>
                   )}
                 </div>
               </div>
@@ -579,7 +643,7 @@ export function OrganizerDashboard() {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button onClick={() => { setTab('eventos'); setEditingEventId(null); setForm(emptyForm); }} className="flex-1 border text-gray-600 py-3 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
+              <button onClick={() => { setTab('eventos'); setEditingEventId(null); setForm(emptyForm); setSponsorUploading([]); }} className="flex-1 border text-gray-600 py-3 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
               <button onClick={handleSubmit} disabled={loading}
                 className="flex-1 bg-[#C9A84C] text-white py-3 rounded-lg hover:bg-[#B8962E] font-medium disabled:opacity-50">
                 {loading ? 'Salvando...' : editingEventId ? '💾 Salvar Alterações' : '🚀 Publicar Evento'}
