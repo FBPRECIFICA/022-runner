@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send } from 'lucide-react';
 
 const AI_FUNCTION_URL = 'https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/ai-assistant';
@@ -34,15 +34,40 @@ async function askAI(question: string): Promise<string> {
 export function ChatBot() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', text: 'Olá! Sou o LEO 022RUNNER 🏃 Seu assistente virtual de corridas. Como posso te ajudar hoje?' },
+    { role: 'assistant', text: 'Eai povo! 🏃 Sou o LEO 022RUNNER! Na pista ou na dúvida, tô aqui! Como posso ajudar?' },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const typingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, open]);
+
+  useEffect(() => {
+    return () => { if (typingRef.current) clearInterval(typingRef.current); };
+  }, []);
+
+  const typeMessage = useCallback((text: string): Promise<void> => {
+    return new Promise(resolve => {
+      setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
+      let i = 0;
+      typingRef.current = setInterval(() => {
+        i++;
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'assistant', text: text.slice(0, i) };
+          return updated;
+        });
+        if (i >= text.length) {
+          if (typingRef.current) clearInterval(typingRef.current);
+          typingRef.current = null;
+          resolve();
+        }
+      }, 30);
+    });
+  }, []);
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
@@ -51,21 +76,20 @@ export function ChatBot() {
     setLoading(true);
     try {
       const reply = await askAI(text);
-      setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
+      await new Promise(r => setTimeout(r, 800));
+      setLoading(false);
+      await typeMessage(reply);
     } catch (err: any) {
       const detail = err?.message ? ` (${err.message})` : '';
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        text: `Não consegui processar sua pergunta${detail}. Tente novamente ou fale pelo WhatsApp com o organizador.`,
-      }]);
-    } finally {
+      await new Promise(r => setTimeout(r, 800));
       setLoading(false);
+      await typeMessage(`Povo... não consegui processar sua pergunta${detail}. Tente novamente ou fale pelo WhatsApp com o organizador!`);
     }
   };
 
   return (
     <>
-      {/* CSS keyframes para o corredor animado */}
+      {/* CSS keyframes — corredor animado + pontos de digitação */}
       <style>{`
         @keyframes leo-arm-l {
           0%, 100% { transform: rotate(-30deg); }
@@ -99,6 +123,13 @@ export function ChatBot() {
           transform-origin: 15px 18px;
           animation: leo-leg-r 0.6s linear infinite;
         }
+        @keyframes leo-dot {
+          0%, 60%, 100% { opacity: 0.2; }
+          30%           { opacity: 1;   }
+        }
+        .leo-dot-1 { display: inline-block; animation: leo-dot 1.2s ease-in-out infinite 0s;   }
+        .leo-dot-2 { display: inline-block; animation: leo-dot 1.2s ease-in-out infinite 0.2s; }
+        .leo-dot-3 { display: inline-block; animation: leo-dot 1.2s ease-in-out infinite 0.4s; }
         .leo-bib-btn { bottom: 80px; right: 20px; }
         @media (min-width: 768px) { .leo-bib-btn { bottom: 20px; } }
       `}</style>
@@ -136,31 +167,17 @@ export function ChatBot() {
           <X size={22} color="#000" />
         ) : (
           <>
-            {/* Corredor animado com CSS @keyframes */}
             <svg width="30" height="30" viewBox="0 0 30 30" fill="none" overflow="visible" style={{ flexShrink: 0 }}>
-              {/* Cabeça dourada */}
               <circle cx="15" cy="4" r="2.5" fill="#C9A84C" />
-              {/* Corpo */}
               <line x1="15" y1="6.5" x2="15" y2="18" stroke="#111" strokeWidth="2" strokeLinecap="round" />
-              {/* Braço esquerdo — animado */}
               <line className="leo-run-arm-l" x1="15" y1="9" x2="9" y2="15" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
-              {/* Braço direito — animado */}
               <line className="leo-run-arm-r" x1="15" y1="9" x2="21" y2="15" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
-              {/* Perna esquerda — animada */}
               <line className="leo-run-leg-l" x1="15" y1="18" x2="10" y2="26" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
-              {/* Perna direita — animada */}
               <line className="leo-run-leg-r" x1="15" y1="18" x2="20" y2="26" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-            {/* LEO */}
-            <span style={{ fontWeight: 900, fontSize: '14px', color: '#000', letterSpacing: '1.5px', lineHeight: 1 }}>
-              LEO
-            </span>
-            {/* Linha dourada */}
+            <span style={{ fontWeight: 900, fontSize: '14px', color: '#000', letterSpacing: '1.5px', lineHeight: 1 }}>LEO</span>
             <div style={{ width: '80%', height: '1.5px', backgroundColor: '#C9A84C', margin: '2px 0' }} />
-            {/* 022 */}
-            <span style={{ fontWeight: 700, fontSize: '11px', color: '#C9A84C', letterSpacing: '2px', lineHeight: 1 }}>
-              022
-            </span>
+            <span style={{ fontWeight: 700, fontSize: '11px', color: '#C9A84C', letterSpacing: '2px', lineHeight: 1 }}>022</span>
           </>
         )}
       </button>
@@ -198,16 +215,22 @@ export function ChatBot() {
                     color: m.role === 'user' ? '#000' : '#e5e7eb',
                     fontWeight: m.role === 'user' ? 600 : 400,
                     border: m.role === 'assistant' ? '1px solid #333' : 'none',
+                    whiteSpace: 'pre-wrap',
                   }}
                 >
                   {m.text}
                 </div>
               </div>
             ))}
+
+            {/* Bolha de digitação com 3 pontos animados */}
             {loading && (
               <div className="flex justify-start">
                 <div className="px-3 py-2 rounded-xl text-sm" style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', color: '#9ca3af' }}>
-                  <span className="animate-pulse">LEO está digitando...</span>
+                  LEO está digitando
+                  <span className="leo-dot-1">.</span>
+                  <span className="leo-dot-2">.</span>
+                  <span className="leo-dot-3">.</span>
                 </div>
               </div>
             )}
