@@ -65,13 +65,51 @@ export function ChatBot() {
 
   return (
     <>
-      {/* Botão flutuante — número de peito LEO */}
+      {/* CSS keyframes para o corredor animado */}
+      <style>{`
+        @keyframes leo-arm-l {
+          0%, 100% { transform: rotate(-30deg); }
+          50%       { transform: rotate(30deg);  }
+        }
+        @keyframes leo-arm-r {
+          0%, 100% { transform: rotate(30deg);  }
+          50%       { transform: rotate(-30deg); }
+        }
+        @keyframes leo-leg-l {
+          0%, 100% { transform: rotate(40deg);  }
+          50%       { transform: rotate(-40deg); }
+        }
+        @keyframes leo-leg-r {
+          0%, 100% { transform: rotate(-40deg); }
+          50%       { transform: rotate(40deg);  }
+        }
+        .leo-run-arm-l {
+          transform-origin: 15px 9px;
+          animation: leo-arm-l 0.6s linear infinite;
+        }
+        .leo-run-arm-r {
+          transform-origin: 15px 9px;
+          animation: leo-arm-r 0.6s linear infinite;
+        }
+        .leo-run-leg-l {
+          transform-origin: 15px 18px;
+          animation: leo-leg-l 0.6s linear infinite;
+        }
+        .leo-run-leg-r {
+          transform-origin: 15px 18px;
+          animation: leo-leg-r 0.6s linear infinite;
+        }
+        .leo-bib-btn { bottom: 80px; right: 20px; }
+        @media (min-width: 768px) { .leo-bib-btn { bottom: 20px; } }
+      `}</style>
+
+      {/* Botão flutuante — número de peito LEO com corredor animado */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="fixed z-50 bottom-20 md:bottom-5 right-5 transition-all duration-200"
+        className="leo-bib-btn fixed z-50 transition-all duration-200"
         style={{
-          width: '60px',
-          height: '70px',
+          width: '65px',
+          height: '80px',
           backgroundColor: '#fff',
           border: '3px solid #C9A84C',
           borderRadius: '8px',
@@ -80,9 +118,9 @@ export function ChatBot() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '1px',
+          gap: '2px',
           cursor: 'pointer',
-          padding: '4px 2px',
+          padding: '6px 4px',
         }}
         onMouseEnter={e => {
           e.currentTarget.style.transform = 'scale(1.05)';
@@ -98,12 +136,20 @@ export function ChatBot() {
           <X size={22} color="#000" />
         ) : (
           <>
-            {/* Bonequinho corredor SVG */}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-              <circle cx="14" cy="4" r="2" fill="#C9A84C" />
-              <path d="M12 7l-2 5 3 1-1 5" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <path d="M10 12l-3 4" stroke="#000" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-              <path d="M15 8l2 3-2 1" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            {/* Corredor animado com CSS @keyframes */}
+            <svg width="30" height="30" viewBox="0 0 30 30" fill="none" overflow="visible" style={{ flexShrink: 0 }}>
+              {/* Cabeça dourada */}
+              <circle cx="15" cy="4" r="2.5" fill="#C9A84C" />
+              {/* Corpo */}
+              <line x1="15" y1="6.5" x2="15" y2="18" stroke="#111" strokeWidth="2" strokeLinecap="round" />
+              {/* Braço esquerdo — animado */}
+              <line className="leo-run-arm-l" x1="15" y1="9" x2="9" y2="15" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
+              {/* Braço direito — animado */}
+              <line className="leo-run-arm-r" x1="15" y1="9" x2="21" y2="15" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
+              {/* Perna esquerda — animada */}
+              <line className="leo-run-leg-l" x1="15" y1="18" x2="10" y2="26" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
+              {/* Perna direita — animada */}
+              <line className="leo-run-leg-r" x1="15" y1="18" x2="20" y2="26" stroke="#111" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
             {/* LEO */}
             <span style={{ fontWeight: 900, fontSize: '14px', color: '#000', letterSpacing: '1.5px', lineHeight: 1 }}>
