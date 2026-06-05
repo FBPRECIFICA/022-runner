@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -18,7 +18,7 @@ function roleToPath(role?: string): string {
 }
 
 export function LoginPage() {
-  const { login, loginWithGoogle, user, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, logout, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const deniedMessage = (location.state as any)?.message || '';
@@ -30,12 +30,33 @@ export function LoginPage() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
-  // Redirecionar automaticamente quando user.role carregar do banco após login
+  const loginProfileRef = useRef<Profile | null>(null);
+
   useEffect(() => {
     if (user && isAuthenticated) {
-      if (user.role === 'admin')     navigate('/admin',       { replace: true });
-      else if (user.role === 'organizer') navigate('/organizador', { replace: true });
-      else                           navigate('/atleta',      { replace: true });
+      const attemptedProfile = loginProfileRef.current;
+
+      if (attemptedProfile) {
+        loginProfileRef.current = null;
+
+        const roleMatch =
+          (attemptedProfile === 'athlete'   && user.role === 'athlete') ||
+          (attemptedProfile === 'organizer' && (user.role === 'organizer' || user.role === 'admin')) ||
+          (attemptedProfile === 'admin'     && user.role === 'admin');
+
+        if (!roleMatch) {
+          const msgs: Record<Profile, string> = {
+            athlete:   'Esta conta não é de atleta',
+            organizer: 'Esta conta não é de organizador',
+            admin:     'Esta conta não é de administrador',
+          };
+          setError(msgs[attemptedProfile]);
+          logout();
+          return;
+        }
+      }
+
+      navigate(roleToPath(user.role), { replace: true });
     }
   }, [user, isAuthenticated]);
 
@@ -48,13 +69,14 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      // Passa o perfil selecionado — usado como roleOverride em loadUserProfile
-      const success = await login(email, password, selectedProfile);
+      loginProfileRef.current = selectedProfile;
+      const success = await login(email, password);
       if (!success) {
+        loginProfileRef.current = null;
         setError('E-mail ou senha incorretos. Verifique suas credenciais.');
       }
-      // O useEffect cuida do redirect quando user.role carregar
     } catch {
+      loginProfileRef.current = null;
       setError('Ocorreu um erro ao fazer login. Tente novamente.');
     } finally {
       setLoading(false);

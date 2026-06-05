@@ -8,7 +8,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isOrganizer: boolean;
   isAthlete: boolean;
-  login: (email: string, password: string, role?: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
   register: (name: string, email: string, password: string, role?: string) => Promise<boolean>;
   logout: () => void;
@@ -19,63 +19,33 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [roleOverride, setRoleOverride] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setTimeout(() => loadUserProfile(session.user.id), 500);
-      } else {
-        setIsInitialized(true);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setTimeout(() => loadUserProfile(session.user.id), 500);
-      } else {
-        setUser(null);
-        setIsInitialized(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const loadUserProfile = async (userId: string) => {
     try {
-      // maybeSingle() não lança erro se não encontrar — retorna data: null
       const { data, error } = await supabase
         .from('users')
         .select('id, name, email, role, phone, city')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
 
-      if (error) console.error('loadUserProfile error:', error.message);
+      console.log('Profile data:', data, 'Error:', error);
 
       if (data) {
-        // Se existe roleOverride (perfil selecionado na tela de login), usar ele
-        // Caso contrário, usar o role exato do banco
-        const finalRole = roleOverride || data.role || 'athlete';
-        setRoleOverride(null); // limpar após uso
         setUser({
           id: data.id,
           name: data.name || 'Usuário',
           email: data.email || '',
-          role: finalRole,
+          role: data.role,
           phone: data.phone,
         });
-      } else {
-        // Perfil não encontrado — usar roleOverride se disponível, senão athlete
+      } else if (error) {
         const { data: authUser } = await supabase.auth.getUser();
         if (authUser?.user) {
-          const finalRole = roleOverride || 'athlete';
-          setRoleOverride(null);
           setUser({
             id: authUser.user.id,
             name: authUser.user.email?.split('@')[0] || 'Usuário',
             email: authUser.user.email || '',
-            role: finalRole,
+            role: 'athlete',
           });
         }
       }
@@ -86,11 +56,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // login() autentica e salva o role selecionado na tela para uso em loadUserProfile
-  const login = async (email: string, password: string, role?: string): Promise<boolean> => {
-    if (role) setRoleOverride(role);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setIsInitialized(true);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setIsInitialized(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setRoleOverride(null); // limpar se falhou
     return !error;
   };
 
