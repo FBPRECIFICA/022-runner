@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
@@ -361,6 +362,24 @@ export function OrganizerDashboard() {
               <div><p className="text-2xl font-bold">R$ 0</p><p className="text-sm text-gray-500">Receita</p></div>
             </div>
           </div>
+        </div>
+
+        {/* Card destaque — Gerar Posts com IA */}
+        <div className="rounded-xl p-4 mb-6 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4"
+          style={{ backgroundColor: '#C9A84C' }}>
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🤖</span>
+            <div>
+              <p className="font-bold text-black text-base">Gerar Posts com IA</p>
+              <p className="text-xs text-black/70">Crie posts automáticos para Instagram, WhatsApp e Facebook</p>
+            </div>
+          </div>
+          <Link
+            to="/gerador-social"
+            className="flex-shrink-0 bg-black text-white text-sm font-bold px-5 py-2.5 rounded-lg hover:bg-gray-900 transition-colors"
+          >
+            Abrir gerador
+          </Link>
         </div>
 
         {/* Tabs */}

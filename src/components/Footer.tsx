@@ -30,7 +30,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li><Link to="/cadastro" className="hover:text-white transition-colors">Criar conta</Link></li>
               <li><Link to="/organizador" className="hover:text-white transition-colors">Painel</Link></li>
-              <li><Link to="/contato" className="hover:text-white transition-colors">Falar com suporte</Link></li>
+              <li><a href="https://wa.me/5522974044125" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">Falar com suporte</a></li>
             </ul>
           </div>
 
@@ -40,7 +40,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li><a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">Instagram</a></li>
               <li><a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">Facebook</a></li>
-              <li><a href="https://wa.me/5522999999999" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">WhatsApp</a></li>
+              <li><a href="https://wa.me/5522974044125" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">WhatsApp</a></li>
             </ul>
           </div>
         </div>

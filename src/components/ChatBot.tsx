@@ -83,7 +83,7 @@ export function ChatBot() {
       const detail = err?.message ? ` (${err.message})` : '';
       await new Promise(r => setTimeout(r, 800));
       setLoading(false);
-      await typeMessage(`Povo... não consegui processar sua pergunta${detail}. Tente novamente ou fale pelo WhatsApp com o organizador!`);
+      await typeMessage(`Não consegui processar sua pergunta${detail}. Fala direto com o Leandro: https://wa.me/5522974044125 😄`);
     }
   };
 
