@@ -18,7 +18,30 @@ const PLATFORMS = ['Instagram', 'WhatsApp', 'Facebook'];
 const HISTORY_KEY = 'social_post_history';
 const GOLD = '#C9A84C';
 
-async function callAIAssistant(type: string, eventData: any, platform: string): Promise<string> {
+const FORMATS = [
+  { key: 'feed', label: 'Feed Instagram', w: 1080, h: 1080 },
+  { key: 'stories', label: 'Stories', w: 1080, h: 1920 },
+  { key: 'whatsapp', label: 'WhatsApp', w: 800, h: 800 },
+];
+
+const TEMPLATES = [
+  { key: 'A', label: 'Template A', desc: 'Centralizado · faixa dourada' },
+  { key: 'B', label: 'Template B', desc: 'À esquerda · bloco lateral' },
+  { key: 'C', label: 'Template C', desc: 'Topo + ícone do esporte' },
+];
+
+type Palette = { from: string; to: string; accent: string };
+
+function getAccentByType(sportType: string): Palette {
+  const t = (sportType || '').toLowerCase();
+  if (t.includes('corrida') || t.includes('run')) return { from: '#000000', to: '#1a0a00', accent: '#C9A84C' };
+  if (t.includes('trilha') || t.includes('trail')) return { from: '#000000', to: '#0a1500', accent: '#2d6a1a' };
+  if (t.includes('cicli') || t.includes('bike')) return { from: '#000000', to: '#00101a', accent: '#0a4a7a' };
+  if (t.includes('tri')) return { from: '#000000', to: '#1a001a', accent: '#5a0a7a' };
+  return { from: '#000000', to: '#1a1500', accent: '#C9A84C' };
+}
+
+async function callAIAssistant(type: string, eventData: Record<string, unknown>, platform: string): Promise<string> {
   const res = await fetch(AI_FUNCTION_URL, {
     method: 'POST',
     headers: {
@@ -27,18 +50,9 @@ async function callAIAssistant(type: string, eventData: any, platform: string): 
     },
     body: JSON.stringify({ type: 'post', eventData: { ...eventData, postType: type }, platform }),
   });
-  const data = await res.json();
+  const data = await res.json() as { error?: string; text?: string };
   if (data.error) throw new Error(data.error);
-  return data.text;
-}
-
-function drawGradientBg(ctx: CanvasRenderingContext2D, W: number, H: number) {
-  const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, '#050505');
-  grad.addColorStop(0.6, '#111111');
-  grad.addColorStop(1, '#1a0d00');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
+  return data.text ?? '';
 }
 
 function wrapText(
@@ -73,12 +87,257 @@ function wrapText(
   return y;
 }
 
+function drawBase(ctx: CanvasRenderingContext2D, W: number, H: number, palette: Palette) {
+  // Gradiente diagonal baseado no tipo do evento
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, palette.from);
+  grad.addColorStop(1, palette.to);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Linhas diagonais decorativas finas (acento, 0.15 opacidade)
+  ctx.save();
+  ctx.strokeStyle = palette.accent;
+  ctx.globalAlpha = 0.15;
+  ctx.lineWidth = 1.5;
+  const step = Math.round(W / 13);
+  for (let i = -H; i < W + H; i += step) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i + H, H);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Retângulo lateral esquerdo 6px
+  ctx.fillStyle = palette.accent;
+  ctx.fillRect(0, 0, 6, H);
+
+  // Círculo decorativo canto superior direito (0.05 opacidade)
+  ctx.save();
+  ctx.fillStyle = palette.accent;
+  ctx.globalAlpha = 0.05;
+  ctx.beginPath();
+  ctx.arc(W - 80, 80, 200, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawLogoAndFooter(ctx: CanvasRenderingContext2D, W: number, H: number, fs: number) {
+  ctx.textBaseline = 'alphabetic';
+
+  // Logo "022 RUNNER" topo centro
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.round(48 * fs)}px Arial Black, Arial, sans-serif`;
+  ctx.fillStyle = GOLD;
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 12;
+  ctx.fillText('022 RUNNER', W / 2, Math.round(75 * fs));
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+
+  // Linha dourada horizontal no rodapé (y=980 relativo a 1080)
+  const footerLineY = H - Math.round((H / 1080) * 100);
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, footerLineY, W, 4);
+
+  // URL rodapé
+  ctx.textAlign = 'right';
+  ctx.font = `${Math.round(24 * fs)}px Arial, sans-serif`;
+  ctx.fillStyle = '#666666';
+  ctx.fillText('022runner.com.br', W - Math.round(40 * fs), H - Math.round(14 * fs));
+}
+
+function drawTemplateA(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  event: Record<string, unknown>,
+  palette: Palette,
+  dateStr: string,
+  fs: number,
+) {
+  drawBase(ctx, W, H, palette);
+  drawLogoAndFooter(ctx, W, H, fs);
+
+  ctx.textBaseline = 'alphabetic';
+  const cx = W / 2;
+
+  // Nome do evento — centralizado, grande
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.round(72 * fs)}px Arial Black, Arial, sans-serif`;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 4;
+  const nameY = H * 0.48;
+  const endY = wrapText(ctx, String(event.title ?? '').toUpperCase(), cx, nameY, W - Math.round(120 * fs), Math.round(86 * fs), 2);
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.shadowColor = 'transparent';
+
+  // Faixa dourada abaixo do título
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(W * 0.2, endY + Math.round(8 * fs), W * 0.6, Math.round(4 * fs));
+
+  // Data
+  ctx.textAlign = 'center';
+  ctx.font = `${Math.round(36 * fs)}px Arial, sans-serif`;
+  ctx.fillStyle = GOLD;
+  ctx.fillText(dateStr, cx, endY + Math.round(58 * fs));
+
+  // Local com ícone
+  ctx.font = `${Math.round(32 * fs)}px Arial, sans-serif`;
+  ctx.fillStyle = '#CCCCCC';
+  ctx.fillText(`📍 ${String(event.city ?? '')}`, cx, endY + Math.round(104 * fs));
+
+  // Distância / modalidade
+  const modality = String(event.distance ?? event.category ?? event.sport_type ?? '');
+  if (modality) {
+    ctx.font = `${Math.round(28 * fs)}px Arial, sans-serif`;
+    ctx.fillStyle = '#AAAAAA';
+    ctx.fillText(modality, cx, endY + Math.round(148 * fs));
+  }
+
+  // Preço
+  if (event.price) {
+    ctx.font = `bold ${Math.round(40 * fs)}px Arial, sans-serif`;
+    ctx.fillStyle = GOLD;
+    ctx.fillText(`A partir de R$ ${event.price}`, cx, endY + Math.round(205 * fs));
+  }
+}
+
+function drawTemplateB(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  event: Record<string, unknown>,
+  palette: Palette,
+  dateStr: string,
+  fs: number,
+) {
+  drawBase(ctx, W, H, palette);
+  drawLogoAndFooter(ctx, W, H, fs);
+
+  ctx.textBaseline = 'alphabetic';
+  const lx = Math.round(60 * fs);
+
+  // Bloco lateral dourado espessado
+  ctx.fillStyle = palette.accent;
+  ctx.fillRect(0, H * 0.33, Math.round(12 * fs), H * 0.52);
+
+  // Nome do evento — alinhado à esquerda
+  ctx.textAlign = 'left';
+  ctx.font = `bold ${Math.round(72 * fs)}px Arial Black, Arial, sans-serif`;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 4;
+  const nameY = H * 0.47;
+  const endY = wrapText(ctx, String(event.title ?? '').toUpperCase(), lx, nameY, W - Math.round(120 * fs), Math.round(86 * fs), 2);
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.shadowColor = 'transparent';
+
+  // Data
+  ctx.textAlign = 'left';
+  ctx.font = `${Math.round(36 * fs)}px Arial, sans-serif`;
+  ctx.fillStyle = GOLD;
+  ctx.fillText(dateStr, lx, endY + Math.round(54 * fs));
+
+  // Local
+  ctx.font = `${Math.round(32 * fs)}px Arial, sans-serif`;
+  ctx.fillStyle = '#CCCCCC';
+  ctx.fillText(`📍 ${String(event.city ?? '')}`, lx, endY + Math.round(98 * fs));
+
+  // Distância / modalidade
+  const modality = String(event.distance ?? event.category ?? event.sport_type ?? '');
+  if (modality) {
+    ctx.font = `${Math.round(28 * fs)}px Arial, sans-serif`;
+    ctx.fillStyle = '#AAAAAA';
+    ctx.fillText(modality, lx, endY + Math.round(140 * fs));
+  }
+
+  // Preço
+  if (event.price) {
+    ctx.font = `bold ${Math.round(40 * fs)}px Arial, sans-serif`;
+    ctx.fillStyle = GOLD;
+    ctx.fillText(`A partir de R$ ${event.price}`, lx, endY + Math.round(196 * fs));
+  }
+}
+
+function drawTemplateC(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  event: Record<string, unknown>,
+  palette: Palette,
+  dateStr: string,
+  fs: number,
+) {
+  drawBase(ctx, W, H, palette);
+  drawLogoAndFooter(ctx, W, H, fs);
+
+  ctx.textBaseline = 'alphabetic';
+  const cx = W / 2;
+
+  // Nome do evento — topo
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.round(64 * fs)}px Arial Black, Arial, sans-serif`;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 4;
+  wrapText(ctx, String(event.title ?? '').toUpperCase(), cx, H * 0.2, W - Math.round(120 * fs), Math.round(78 * fs), 2);
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.shadowColor = 'transparent';
+
+  // Ícone do esporte — centro
+  const st = String(event.sport_type ?? '').toLowerCase();
+  let icon = '🏃';
+  if (st.includes('bike') || st.includes('cicl')) icon = '🚴';
+  else if (st.includes('tri')) icon = '🏊';
+  else if (st.includes('trail') || st.includes('trilha')) icon = '🥾';
+  ctx.font = `${Math.round(130 * fs)}px serif`;
+  ctx.fillText(icon, cx, H * 0.55);
+
+  // Dados abaixo do ícone
+  let by = H * 0.66;
+
+  ctx.font = `${Math.round(36 * fs)}px Arial, sans-serif`;
+  ctx.fillStyle = GOLD;
+  ctx.fillText(dateStr, cx, by);
+  by += Math.round(50 * fs);
+
+  ctx.font = `${Math.round(32 * fs)}px Arial, sans-serif`;
+  ctx.fillStyle = '#CCCCCC';
+  ctx.fillText(`📍 ${String(event.city ?? '')}`, cx, by);
+  by += Math.round(46 * fs);
+
+  const modality = String(event.distance ?? event.category ?? event.sport_type ?? '');
+  if (modality) {
+    ctx.font = `${Math.round(28 * fs)}px Arial, sans-serif`;
+    ctx.fillStyle = '#AAAAAA';
+    ctx.fillText(modality, cx, by);
+    by += Math.round(42 * fs);
+  }
+
+  if (event.price) {
+    ctx.font = `bold ${Math.round(40 * fs)}px Arial, sans-serif`;
+    ctx.fillStyle = GOLD;
+    ctx.fillText(`A partir de R$ ${event.price}`, cx, by);
+  }
+}
+
 export function SocialGeneratorPage() {
   const { user } = useAuth();
-  const [events, setEvents] = useState<any[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [events, setEvents] = useState<Record<string, unknown>[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<Record<string, unknown> | null>(null);
   const [postType, setPostType] = useState('abertura_inscricoes');
   const [platform, setPlatform] = useState('Instagram');
+  const [format, setFormat] = useState('feed');
+  const [template, setTemplate] = useState('A');
   const [generatedText, setGeneratedText] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
@@ -89,154 +348,37 @@ export function SocialGeneratorPage() {
   useEffect(() => {
     if (!user) return;
     supabase.from('events').select('*').eq('organizer_id', user.id).eq('status', 'published')
-      .then(({ data }) => { setEvents(data || []); if (data?.[0]) setSelectedEvent(data[0]); });
+      .then(({ data }) => {
+        const rows = (data ?? []) as Record<string, unknown>[];
+        setEvents(rows);
+        if (rows[0]) setSelectedEvent(rows[0]);
+      });
     const saved = localStorage.getItem(HISTORY_KEY);
-    if (saved) setHistory(JSON.parse(saved));
+    if (saved) setHistory(JSON.parse(saved) as typeof history);
   }, [user]);
 
-  const generatePostImage = useCallback(async (_text: string, event: any) => {
+  const generateCanvas = useCallback(async (event: Record<string, unknown>, fmt: string, tpl: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     setGeneratingImage(true);
-    const W = 1080, H = 1080;
+    const fmtDef = FORMATS.find(f => f.key === fmt) ?? FORMATS[0];
+    const W = fmtDef.w;
+    const H = fmtDef.h;
     canvas.width = W;
     canvas.height = H;
 
-    // 1 — Background: foto do evento cobrindo 100% ou gradiente fallback
-    let bgLoaded = false;
-    if (event.banner_url) {
-      try {
-        const img = new window.Image();
-        img.crossOrigin = 'anonymous';
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error('cors'));
-          img.src = event.banner_url;
-        });
-        const scale = Math.max(W / img.width, H / img.height);
-        const sw = img.width * scale, sh = img.height * scale;
-        ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
-        bgLoaded = true;
-      } catch {
-        bgLoaded = false;
-      }
-    }
-    if (!bgLoaded) drawGradientBg(ctx, W, H);
+    const palette = getAccentByType(String(event.sport_type ?? ''));
+    const fs = W / 1080; // font scale
+    const dateStr = event.date
+      ? new Date(String(event.date)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+      : '';
 
-    // 2 — Overlay base: transparente no topo, preto 80% na metade inferior
-    const baseOverlay = ctx.createLinearGradient(0, 0, 0, H);
-    baseOverlay.addColorStop(0,    'rgba(0,0,0,0.05)');
-    baseOverlay.addColorStop(0.35, 'rgba(0,0,0,0.05)');
-    baseOverlay.addColorStop(0.65, 'rgba(0,0,0,0.55)');
-    baseOverlay.addColorStop(1,    'rgba(0,0,0,0.88)');
-    ctx.fillStyle = baseOverlay;
-    ctx.fillRect(0, 0, W, H);
-
-    // 3 — Variação aleatória do overlay (direção e intensidade)
-    const intensity = 0.5 + Math.random() * 0.3;
-    const varType = Math.floor(Math.random() * 3);
-    if (varType === 0) {
-      // Gradiente lateral (esquerda)
-      const g = ctx.createLinearGradient(0, 0, W * 0.65, 0);
-      g.addColorStop(0, `rgba(0,0,0,${intensity})`);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-    } else if (varType === 1) {
-      // Diagonal
-      const g = ctx.createLinearGradient(0, H, W, 0);
-      g.addColorStop(0,   `rgba(0,0,0,${intensity})`);
-      g.addColorStop(0.5, 'rgba(0,0,0,0)');
-      g.addColorStop(1,   `rgba(0,0,0,${intensity * 0.5})`);
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-    } else {
-      // Topo escuro
-      const g = ctx.createLinearGradient(0, 0, 0, H * 0.55);
-      g.addColorStop(0, `rgba(0,0,0,${intensity * 0.8})`);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-    }
-
-    // 4 — Elemento decorativo aleatório em dourado
-    ctx.save();
-    ctx.strokeStyle = GOLD;
-    ctx.globalAlpha = 0.65;
-    const decType = Math.floor(Math.random() * 3);
-    if (decType === 0) {
-      // Linha diagonal no canto superior direito
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(W - 260, 0);
-      ctx.lineTo(W, 260);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(W - 200, 0);
-      ctx.lineTo(W, 200);
-      ctx.stroke();
-    } else if (decType === 1) {
-      // Círculo no canto superior direito
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(W - 90, 90, 70, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(W - 90, 90, 50, 0, Math.PI * 2);
-      ctx.stroke();
-    } else {
-      // Moldura fina interna
-      ctx.lineWidth = 3;
-      ctx.strokeRect(24, 24, W - 48, H - 48);
-    }
-    ctx.restore();
-
-    ctx.textBaseline = 'alphabetic';
-
-    // 5 — Logo "022 RUNNER" topo esquerdo, branco
-    ctx.textAlign = 'left';
-    ctx.font = 'bold 40px Arial, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 12;
-    ctx.fillText('022 RUNNER', 60, 82);
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
-
-    // Linha dourada fina sob o logo
-    ctx.fillStyle = GOLD;
-    ctx.fillRect(60, 92, 170, 3);
-
-    // 6 — Nome do evento: centro inferior, branco bold grande, máx 2 linhas
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 72px Arial, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,0,0,0.9)';
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 4;
-    wrapText(ctx, event.title.toUpperCase(), W / 2, H - 280, W - 120, 86, 2);
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    ctx.shadowColor = 'transparent';
-
-    // 7 — Data e cidade em dourado
-    const date = new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-    ctx.font = '36px Arial, sans-serif';
-    ctx.fillStyle = GOLD;
-    ctx.fillText(`${date}  ·  ${event.city}`, W / 2, H - 170);
-
-    // 8 — Barra dourada 4px na parte inferior
-    ctx.fillStyle = GOLD;
-    ctx.fillRect(0, H - 4, W, 4);
-
-    // 9 — URL no canto inferior direito
-    ctx.textAlign = 'right';
-    ctx.font = '26px Arial, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.fillText('022runner.com.br', W - 40, H - 16);
+    if (tpl === 'A') drawTemplateA(ctx, W, H, event, palette, dateStr, fs);
+    else if (tpl === 'B') drawTemplateB(ctx, W, H, event, palette, dateStr, fs);
+    else drawTemplateC(ctx, W, H, event, palette, dateStr, fs);
 
     setImageDataUrl(canvas.toDataURL('image/png'));
     setGeneratingImage(false);
@@ -247,8 +389,11 @@ export function SocialGeneratorPage() {
     setLoading(true);
     setImageDataUrl('');
     try {
-      const distances = (selectedEvent.distances || []).map((d: any) => d.name).join(', ');
-      const date = new Date(selectedEvent.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+      const distances = (Array.isArray(selectedEvent.distances) ? selectedEvent.distances : [])
+        .map((d: Record<string, unknown>) => String(d.name ?? '')).join(', ');
+      const date = selectedEvent.date
+        ? new Date(String(selectedEvent.date)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+        : '';
       const text = await callAIAssistant(postType, {
         title: selectedEvent.title,
         city: selectedEvent.city,
@@ -257,18 +402,22 @@ export function SocialGeneratorPage() {
         slug: selectedEvent.slug,
       }, platform);
       setGeneratedText(text);
-      const entry = { text, event: selectedEvent.title, type: postType, platform, ts: Date.now() };
+      const entry = { text, event: String(selectedEvent.title ?? ''), type: postType, platform, ts: Date.now() };
       const newHistory = [entry, ...history].slice(0, 10);
       setHistory(newHistory);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
       toast.success('Post gerado com IA!');
-      // Gerar imagem automaticamente
-      await generatePostImage(text, selectedEvent);
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao gerar post.');
+      await generateCanvas(selectedEvent, format, template);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao gerar post.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRegenerateImage = async () => {
+    if (!selectedEvent) return;
+    await generateCanvas(selectedEvent, format, template);
   };
 
   const handleCopy = () => {
@@ -278,8 +427,9 @@ export function SocialGeneratorPage() {
 
   const handleDownloadImage = () => {
     if (!imageDataUrl) return;
+    const fmtDef = FORMATS.find(f => f.key === format) ?? FORMATS[0];
     const link = document.createElement('a');
-    link.download = `post-${selectedEvent?.slug || 'evento'}-1080x1080.png`;
+    link.download = `post-${String(selectedEvent?.slug ?? 'evento')}-${fmtDef.w}x${fmtDef.h}.png`;
     link.href = imageDataUrl;
     link.click();
     toast.success('Imagem baixada!');
@@ -291,9 +441,20 @@ export function SocialGeneratorPage() {
     else { handleCopy(); toast.success('Texto copiado — cole no Instagram!'); }
   };
 
+  const handleFormatChange = (fmt: string) => {
+    setFormat(fmt);
+    if (selectedEvent && imageDataUrl) generateCanvas(selectedEvent, fmt, template);
+  };
+
+  const handleTemplateChange = (tpl: string) => {
+    setTemplate(tpl);
+    if (selectedEvent && imageDataUrl) generateCanvas(selectedEvent, format, tpl);
+  };
+
+  const currentFmt = FORMATS.find(f => f.key === format) ?? FORMATS[0];
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Canvas oculto — usado apenas para geração */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       <div className="bg-white border-b py-8">
@@ -312,9 +473,12 @@ export function SocialGeneratorPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="text-xs text-gray-500 font-medium block mb-1">Evento</label>
-              <select value={selectedEvent?.id || ''} onChange={e => setSelectedEvent(events.find(ev => ev.id === e.target.value))}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
-                {events.map(ev => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+              <select
+                value={String(selectedEvent?.id ?? '')}
+                onChange={e => setSelectedEvent(events.find(ev => ev.id === e.target.value) ?? null)}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"
+              >
+                {events.map(ev => <option key={String(ev.id)} value={String(ev.id)}>{String(ev.title)}</option>)}
               </select>
             </div>
             <div>
@@ -343,7 +507,51 @@ export function SocialGeneratorPage() {
           </button>
         </div>
 
-        {/* Resultado — texto + imagem lado a lado */}
+        {/* Seletor de Formato e Template */}
+        {(generatedText || imageDataUrl) && (
+          <div className="bg-white rounded-xl border shadow-sm p-5">
+            <div className="grid sm:grid-cols-2 gap-5">
+              {/* Formato */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Formato da Imagem</h3>
+                <div className="flex gap-2 flex-wrap">
+                  {FORMATS.map(f => (
+                    <button
+                      key={f.key}
+                      onClick={() => handleFormatChange(f.key)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
+                      style={format === f.key
+                        ? { backgroundColor: GOLD, color: '#000', borderColor: GOLD }
+                        : { borderColor: '#d1d5db', color: '#6b7280' }}>
+                      {f.label}
+                      <span className="ml-1 opacity-60">{f.w}×{f.h}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Template */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Layout</h3>
+                <div className="flex gap-2 flex-wrap">
+                  {TEMPLATES.map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => handleTemplateChange(t.key)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
+                      style={template === t.key
+                        ? { backgroundColor: GOLD, color: '#000', borderColor: GOLD }
+                        : { borderColor: '#d1d5db', color: '#6b7280' }}>
+                      {t.label}
+                      <span className="block text-[10px] opacity-60">{t.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Resultado — texto + imagem */}
         {generatedText && (
           <div className="bg-white rounded-xl border shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
@@ -368,7 +576,7 @@ export function SocialGeneratorPage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-5">
-              {/* Coluna esquerda — texto */}
+              {/* Texto */}
               <div>
                 <textarea value={generatedText} onChange={e => setGeneratedText(e.target.value)}
                   rows={14} className="w-full border rounded-xl px-4 py-3 text-sm focus:outline-none resize-none font-mono"
@@ -376,16 +584,19 @@ export function SocialGeneratorPage() {
                 <p className="text-xs text-gray-400 mt-1">{generatedText.length} caracteres · Edite acima se quiser personalizar</p>
               </div>
 
-              {/* Coluna direita — preview da imagem */}
+              {/* Preview da imagem */}
               <div className="flex flex-col items-center gap-3">
                 {generatingImage ? (
                   <div className="w-full aspect-square rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400">
                     <Image size={32} className="animate-pulse" style={{ color: GOLD }} />
-                    <p className="text-sm">Gerando imagem 1080×1080…</p>
+                    <p className="text-sm">Gerando {currentFmt.w}×{currentFmt.h}…</p>
                   </div>
                 ) : imageDataUrl ? (
                   <>
-                    <div className="w-full rounded-xl overflow-hidden shadow-lg border" style={{ aspectRatio: '1/1' }}>
+                    <div
+                      className="w-full rounded-xl overflow-hidden shadow-lg border"
+                      style={{ aspectRatio: `${currentFmt.w}/${currentFmt.h}` }}
+                    >
                       <img src={imageDataUrl} alt="Post gerado" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex gap-2 w-full">
@@ -394,13 +605,13 @@ export function SocialGeneratorPage() {
                         style={{ backgroundColor: GOLD, color: '#000' }}>
                         <Download size={15} /> Baixar imagem
                       </button>
-                      <button onClick={() => generatePostImage(generatedText, selectedEvent)}
+                      <button onClick={handleRegenerateImage} disabled={generatingImage}
                         className="px-4 py-2.5 rounded-xl border text-sm font-medium"
                         style={{ borderColor: GOLD, color: GOLD }}>
                         <RefreshCw size={14} />
                       </button>
                     </div>
-                    <p className="text-xs text-gray-400">PNG 1080×1080px — pronto para Instagram</p>
+                    <p className="text-xs text-gray-400">PNG {currentFmt.w}×{currentFmt.h}px</p>
                   </>
                 ) : (
                   <div className="w-full aspect-square rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400">
