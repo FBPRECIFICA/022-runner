@@ -1,0 +1,30 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Corrigir link suporte e WhatsApp
+Em TODOS os arquivos do projeto:
+- Substituir qualquer link de suporte/contato/whatsapp quebrado pelo link correto:
+  https://wa.me/5522974044125
+- Buscar por: "suporte", "contato", "whatsapp", "fale conosco", "falar com", links 404
+- Corrigir em: Footer, Header, ChatBot (LEO quando não souber responder), páginas de erro, ConfirmationPage, NotFoundPage
+
+## TAREFA 2 — LEO redireciona para Leandro
+No supabase/functions/ai-assistant/index.ts adicionar no systemPrompt:
+- Quando não souber responder algo específico dizer: "Não tenho essa info aqui não. Fala direto com o Leandro: https://wa.me/5522974044125 😄"
+
+Fazer redeploy da Edge Function.
+
+## TAREFA 3 — Gerar Posts IA em destaque no painel
+No src/pages/OrganizerDashboard.tsx:
+- Adicionar card de destaque "🤖 Gerar Posts com IA" com botão que redireciona para /gerador-social
+- Colocar na área de estatísticas do painel com fundo dourado
+
+## TAREFA 4 — Build e push
+npm run build
+git add -A
+git commit -m "Fix: suporte WhatsApp Leandro, LEO redireciona, Posts IA no painel"
+git push origin main

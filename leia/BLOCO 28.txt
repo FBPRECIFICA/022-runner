@@ -1,0 +1,28 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Substituir AuthContext completo
+Substituir COMPLETAMENTE o arquivo src/contexts/AuthContext.tsx por uma versão limpa que:
+- Na função loadUserProfile usar .single() em vez de .maybeSingle()
+- Logar no console o resultado da busca: console.log('Profile data:', data, 'Error:', error)
+- Se data existir setar o user com o role exato do banco SEM fallback
+- Só usar fallback athlete se data for null E error existir
+- Remover qualquer setTimeout ou delay
+- Função login() apenas faz signInWithPassword sem criar ou atualizar perfil
+
+## TAREFA 2 — Corrigir LoginPage para restringir por perfil selecionado
+No src/pages/LoginPage.tsx:
+- Quando usuário seleciona ATLETA e loga, após carregar o user verificar se user.role === 'athlete', se não for mostrar erro "Esta conta não é de atleta"
+- Quando seleciona ORGANIZADOR verificar se user.role === 'organizer' ou 'admin'
+- Quando seleciona ADMIN verificar se user.role === 'admin'
+- Só redirecionar se o role bater com o perfil selecionado
+
+## TAREFA 3 — Build e push
+npm run build
+git add -A
+git commit -m "Fix definitivo: AuthContext limpo, login restrito por perfil selecionado"
+git push origin main

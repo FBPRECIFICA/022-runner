@@ -1,0 +1,28 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Corrigir coluna distance_name na tabela registrations
+Rodar SQL no Supabase:
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS distance_name TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS distance_price DECIMAL(10,2);
+
+## TAREFA 2 — Corrigir data invertida no cadastro
+No src/pages/RegistrationPage.tsx corrigir campo de data de nascimento:
+- Formato correto: DD/MM/YYYY
+- Ao salvar no Supabase converter para YYYY-MM-DD
+- Ao exibir converter de volta para DD/MM/YYYY
+
+## TAREFA 3 — Atualizar itens do kit
+Em todos os arquivos que listam itens do kit (OrganizerDashboard.tsx, EventDetailPage.tsx, tipos):
+- Substituir "Mochila" por "Bag"
+- Adicionar "Squeeze (Garrafinha de água)" na lista de itens do kit
+
+## TAREFA 4 — Build e push
+npm run build
+git add -A
+git commit -m "Fix: distance_name, data invertida, kit com Squeeze e Bag"
+git push origin main

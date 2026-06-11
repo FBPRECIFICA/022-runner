@@ -1,0 +1,95 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+- Verificar .gitignore antes de cada push
+
+## TAREFA 1 — Corrigir coluna additional_info
+Rodar SQL no Supabase:
+ALTER TABLE events ADD COLUMN IF NOT EXISTS additional_info TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS sponsors JSONB DEFAULT '[]';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS route_coordinates JSONB;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS latitude FLOAT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS longitude FLOAT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS kit_items JSONB DEFAULT '[]';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_type TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS regulations TEXT;
+
+## TAREFA 2 — Patrocinador com upload de imagem
+No src/pages/OrganizerDashboard.tsx na seção de patrocinadores:
+- Substituir campo "URL da logo" por upload de imagem direto
+- Upload vai para Supabase Storage bucket event-photos
+- Mostrar preview da logo após upload
+- Máximo 3 patrocinadores por evento
+
+## TAREFA 3 — Corrigir chatbot LEO 022RUNNER
+No src/components/ChatBot.tsx:
+- Renomear assistente para "LEO 022RUNNER"
+- Avatar: emoji corredor 🏃 grande em círculo dourado
+- Corrigir chamada para Edge Function — verificar URL e headers corretos
+- URL correta: https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/ai-assistant
+- Headers necessários: Content-Type: application/json + Authorization: Bearer [SUPABASE_ANON_KEY]
+- Anon key: sb_publishable_b098wEy_wai6_RWuR5pV7g_IAw-x86p
+- Adicionar mensagens de erro mais claras
+- Sugestões rápidas: "Como me inscrever?", "Qual o percurso?", "Onde retirar o kit?", "Como funciona o pagamento?"
+
+## TAREFA 4 — Landing page premium redesign
+No src/pages/EventDetailPage.tsx redesenhar completamente para nível premium:
+- Hero section: foto do evento ocupando 100% largura, altura 500px, overlay gradiente preto/transparente
+- Título grande e bold em branco sobre a foto
+- Badge "INSCRIÇÕES ABERTAS" em verde + badge score dourado
+- Countdown elegante em 4 blocos (dias/horas/min/seg) com fundo preto e números dourados
+- Cards de info (data, hora, local, cidade) em linha com ícones dourados
+- Seção distâncias: cards premium com nome da distância grande, preço em dourado, botão inscrever
+- Barra de progresso de vagas com percentual e cores (verde/amarelo/vermelho conforme lotação)
+- Seção "Sobre o evento" com descrição completa
+- Seção "Percurso" com mapa se tiver coordenadas
+- Seção "Kit do evento" com ícones dos itens incluídos
+- Seção "Patrocinadores" com logos
+- Seção "Como chegar" com mapa e botões Google Maps/Waze
+- Seção "Avaliações" com estrelas
+- Botão flutuante fixo no bottom mobile "INSCREVER-SE AGORA" em dourado
+- Design geral: fundo branco limpo, detalhes dourados, tipografia forte, sombras suaves
+
+## TAREFA 5 — Corrigir mobile geral
+Verificar e corrigir responsividade:
+- Header mobile com hamburguer funcional
+- Bottom nav mobile funcionando
+- Formulário de inscrição usável no mobile
+- Painel do organizador com scroll horizontal nas tabelas
+
+## TAREFA 6 — Popular banco com evento demo completo
+Rodar SQL para criar evento de demonstração com dados completos:
+INSERT INTO events (slug, title, description, date, city, location, organizer_id, distances, prices, photos, status, plan, quality_score, max_participants, current_participants, registration_deadline, event_type, additional_info, latitude, longitude)
+VALUES (
+  'corrida-sao-pedro-2026',
+  'Corrida do Padroeiro — São Pedro da Aldeia 2026',
+  'A corrida mais tradicional da Região dos Lagos! Em homenagem ao padroeiro da cidade, o evento reúne atletas de toda a região em um percurso histórico pelas ruas de São Pedro da Aldeia. Com largada na Praça da Paz e chegada na orla, os participantes poderão apreciar a beleza natural da cidade enquanto competem em um dos eventos mais aguardados do ano.',
+  '2026-08-29T07:00:00',
+  'São Pedro da Aldeia',
+  'Praça da Paz — São Pedro da Aldeia RJ',
+  (SELECT id FROM users WHERE email = 'admin.testeleandro@022runner.com.br'),
+  '[{"name":"5km","price":80},{"name":"10km","price":100},{"name":"21km","price":140}]',
+  '[80,100,140]',
+  ARRAY['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200','https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800'],
+  'published',
+  'premium',
+  92,
+  1000,
+  347,
+  '2026-08-20T23:59:00',
+  'Corrida de Rua',
+  'Kit inclui camiseta técnica, medalha finisher e número de peito. Retirada do kit: 28/08 das 14h às 20h no Ginásio Municipal.',
+  -22.8368,
+  -42.1026
+);
+
+## TAREFA 7 — Build e push
+npm install
+npm run build
+Corrigir TODOS os erros TypeScript
+git add -A
+git commit -m "BLOCO25: correções bugs, LEO chatbot, landing page premium, evento demo"
+git push origin main

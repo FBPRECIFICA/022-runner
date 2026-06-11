@@ -1,0 +1,118 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+- Verificar .gitignore antes de cada push
+
+TAREFA: Reconstruir completamente o SocialGeneratorPage.tsx com gerador de posts profissional usando Canvas HTML5.
+
+REFERÊNCIA VISUAL: Posts estilo eventos esportivos profissionais — fundo dramático com foto real ou gradiente premium, pincelada dourada atrás do título, tipografia bold e impactante, logo 022Runners no rodapé, layout denso sem espaço vazio.
+
+1. Abrir src/pages/SocialGeneratorPage.tsx e substituir TODO o conteúdo pelo seguinte:
+
+O componente deve ter:
+
+SEÇÃO 1 — SELETOR DE EVENTO
+- Dropdown para selecionar evento cadastrado na plataforma
+- Carrega automaticamente: nome, data, local, distância, categoria, preço
+
+SEÇÃO 2 — TIPO DE POST (2 botões grandes)
+- "DIVULGAÇÃO" — post para antes do evento (inscrições abertas)
+- "RESULTADO" — post para após o evento (parabéns corredores)
+
+SEÇÃO 3 — ORIGEM DO FUNDO (modal ao clicar em "Gerar Post")
+- Opção A: "Usar foto do evento" → input file para upload de imagem
+- Opção B: "Gerar fundo premium" → gera automaticamente sem foto
+
+SEÇÃO 4 — FORMATO
+- Feed Instagram (1080x1080)
+- Stories Instagram (1080x1920)
+- WhatsApp (800x800)
+
+SEÇÃO 5 — PREVIEW + DOWNLOAD
+- Canvas renderizado em tempo real
+- Botão "Baixar PNG" usando canvas.toDataURL('image/png')
+
+2. LÓGICA DO CANVAS — TIPO DIVULGAÇÃO:
+
+Com foto real (Opção A):
+- Desenha foto como fundo cobrindo 100% do canvas
+- Aplica overlay gradiente: linear de baixo para cima rgba(0,0,0,0.2) → rgba(0,0,0,0.85)
+- Aplica overlay lateral esquerdo: rgba(0,0,0,0.3) na metade esquerda
+- Desenha pincelada dourada (retângulo irregular simulado) atrás do nome do evento
+- Cor pincelada: #C9A84C com opacidade 0.9
+- Pincelada tem leve rotação (-1.5 graus) e bordas irregulares simuladas
+
+Com fundo premium (Opção B):
+- Fundo: gradiente radial de #1a0800 no centro para #000000 nas bordas
+- Adicionar textura: 200 linhas diagonais finas (1px, opacidade 0.04, cor #C9A84C) espaçadas 12px
+- Círculo grande decorativo canto superior direito: raio 300px, cor #C9A84C opacidade 0.04
+- Círculo médio canto inferior esquerdo: raio 200px, cor #C9A84C opacidade 0.06
+- Retângulo lateral esquerdo: 8px largura, altura total, cor #C9A84C
+- Pincelada dourada atrás do título (igual opção A)
+
+ELEMENTOS COMUNS (ambas as opções) para DIVULGAÇÃO:
+- Topo centro: logo 022Runners PNG (base64 embutido) — largura 320px, altura proporcional, y=40px
+- Linha dourada horizontal: y=120px, largura 80%, cor #C9A84C, espessura 2px
+- Pincelada dourada: retângulo #C9A84C opacidade 0.85, y entre 380-520px, largura 90%, altura 140px, rotação -1.5deg
+- Nome do evento: fonte Arial Black / sans-serif bold, tamanho dinâmico (72px se até 20 chars, 56px se até 35 chars, 44px se mais), cor #FFFFFF, sombra preta 3px, centralizado sobre a pincelada, quebra de linha automática
+- Distância/modalidade: fonte bold 48px, cor #C9A84C, y=560px
+- Ícone 📅 + data formatada PT-BR: fonte 36px, cor #FFFFFF, y=630px
+- Ícone 📍 + local/cidade: fonte 34px, cor #CCCCCC, y=680px
+- Linha dourada horizontal: y=740px
+- Preço "INSCRIÇÕES ABERTAS • R$ XX": fonte bold 32px, cor #C9A84C, y=790px
+- Rodapé faixa preta: retângulo #000000 opacidade 0.8, y=960px, altura 120px
+- Texto rodapé: "022runners.com.br" fonte 28px cor #C9A84C + "RUNNING COMMUNITY" fonte 20px cor #888888
+
+3. LÓGICA DO CANVAS — TIPO RESULTADO:
+
+Fundo igual ao de divulgação (foto ou premium) porém com overlay mais escuro.
+
+Elementos específicos resultado:
+- Topo: logo 022Runners PNG, y=40px
+- Faixa dourada topo: retângulo #C9A84C opacidade 0.15, y=0, altura 180px
+- Texto "RESULTADOS" fonte Arial Black 96px cor #C9A84C com sombra, y=100px, centralizado
+- Nome do evento: fonte bold 56px cor #FFFFFF, y=200px
+- Texto motivacional: "QUE ENERGIA FOI ESSA, GALERA!" fonte 32px cor #FFFFFF opacidade 0.9, y=300px
+- Linha dourada: y=360px
+- Distância: "5KM | 2KM" (ou distância do evento) fonte Arial Black 80px cor #C9A84C, y=450px
+- Texto "UM DIA INESQUECÍVEL": fonte bold 36px cor #FFFFFF, y=520px
+- Ícone 📅 + data: fonte 32px cor #CCCCCC, y=590px
+- Ícone 📍 + local: fonte 30px cor #CCCCCC, y=640px
+- Linha dourada: y=700px
+- "CONFIRMA PRESENÇA NO PRÓXIMO!" fonte bold 28px cor #FFFFFF, y=760px
+- "Veja resultados em 022runners.com.br" fonte 26px cor #C9A84C, y=810px
+- Rodapé igual ao divulgação
+- Ícones corredor 🏃 nos cantos superiores (fonte 48px)
+
+4. LOGO BASE64:
+- Criar arquivo src/assets/logo022runners.ts com o logo em base64
+- Exportar como: export const LOGO_022RUNNERS = 'data:image/png;base64,...'
+- O Claude Code deve copiar o arquivo logo_tamanho_certo.png da pasta public/ ou assets/ do projeto e converter para base64
+- Se não encontrar o arquivo PNG no projeto, usar texto fallback desenhado no canvas: "022RUNNERS" fonte Arial Black 42px cor #FFFFFF com outline branco
+
+5. MODAL DE SELEÇÃO DE FUNDO:
+- Abre quando clica em "Gerar Post"
+- Design escuro com borda dourada
+- Duas opções grandes com ícone:
+  📷 "USAR FOTO DO EVENTO" — subtítulo "Faça upload de uma foto real"
+  ✨ "GERAR FUNDO PREMIUM" — subtítulo "Criamos um visual profissional"
+- Botão cancelar
+- Ao escolher foto: abre input file imediatamente
+- Ao escolher premium: fecha modal e renderiza canvas
+
+6. ESTILO GERAL DO COMPONENTE:
+- Fundo da página: #000000
+- Título da seção: "GERADOR DE POSTS" fonte bold cor #C9A84C
+- Todos os botões de seleção: borda dourada, fundo preto, texto dourado
+- Botão ativo/selecionado: fundo #C9A84C, texto #000000
+- Botão "Gerar Post": grande, fundo #C9A84C, texto #000000, font-weight 700
+- Botão "Baixar PNG": fundo #000, borda #C9A84C, texto #C9A84C
+- Preview do canvas: centralizado, max-width 100%, border 2px solid #C9A84C
+
+7. Corrigir todos os erros TypeScript
+
+8. npm run build
+
+9. Push para main com mensagem: "feat: gerador de posts profissional com canvas, foto real e fundo premium"

@@ -1,0 +1,29 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Gerador de posts com imagem via Canvas
+No src/pages/SocialGeneratorPage.tsx adicionar geração de imagem junto com o texto:
+
+Após a IA gerar o texto do post, gerar automaticamente uma imagem usando Canvas API:
+- Tamanho: 1080x1080px (quadrado Instagram)
+- Fundo: foto do evento se disponível, senão gradiente preto/dourado
+- Logo 022RUNNERS no topo centralizado (texto estilizado se não tiver imagem)
+- Sobreposição escura sobre a foto (opacity 0.6) para o texto ficar legível
+- Nome do evento em branco bold grande no centro
+- Data e cidade em dourado abaixo do nome
+- Texto gerado pela IA (resumido, máximo 3 linhas) abaixo
+- Barra dourada decorativa na parte inferior
+- "022runner.com.br" em branco pequeno no rodapé
+- Botão "Baixar Imagem" que faz download do canvas como PNG
+- Botão "Copiar Texto" para copiar o texto do post separadamente
+- Preview da imagem gerada ao lado do texto
+
+## TAREFA 2 — Build e push
+npm run build
+git add -A
+git commit -m "Gerador posts: imagem Canvas 1080x1080 com foto evento e logo"
+git push origin main

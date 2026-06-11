@@ -1,0 +1,22 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Nunca commitar chaves de API
+
+## TAREFA 1 — Atualizar chave na Edge Function
+No arquivo supabase/functions/ai-assistant/index.ts substituir a chave antiga pela nova:
+Substituir: [CHAVE_ANTIGA_REDACTED]
+Por: [CHAVE_NOVA_REDACTED]
+
+## TAREFA 2 — Redeploy da Edge Function
+Usar MCP Supabase para fazer deploy da Edge Function ai-assistant no projeto adorzqjhazsfvbttlfht
+
+## TAREFA 3 — Testar se está funcionando
+Fazer chamada de teste para confirmar resposta da IA
+
+## TAREFA 4 — Push
+git add supabase/functions/ai-assistant/index.ts
+git commit -m "Fix: nova API key Anthropic na Edge Function"
+git push origin main

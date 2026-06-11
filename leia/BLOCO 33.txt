@@ -1,0 +1,22 @@
+## TAREFA 1 — Botão número de peito com corredor animado
+No src/components/ChatBot.tsx substituir o botão flutuante por número de peito com corredor animado:
+
+Criar SVG de bonequinho correndo com animação CSS:
+- Cabeça: círculo dourado
+- Corpo: linha vertical
+- Braços: animados alternando frente/trás com keyframes (rotação ±30 graus, ciclo 0.6s)
+- Pernas: animadas alternando frente/trás com keyframes (rotação ±40 graus, ciclo 0.6s)
+- Usar CSS @keyframes com transform-origin no ombro para braços e quadril para pernas
+- Animação: infinite, linear, alternating
+
+Botão completo:
+- Fundo branco, borda dourada #C9A84C 3px, border-radius 8px
+- Bonequinho animado no topo (30x30px)
+- Texto "LEO" bold preto centralizado
+- Linha dourada fina
+- "022" dourado menor
+- Tamanho total: 65x80px
+- Sombra elegante
+- Posição fixa canto inferior direito 20px
+- Hover: scale(1.05)
+- Ao clicar abre o chat normalmente

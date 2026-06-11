@@ -1,0 +1,28 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+- Verificar .gitignore antes de cada push
+
+TAREFA: Criar backup completo do projeto atual.
+
+1. Verificar se o build está funcionando:
+   npm run build
+
+2. Garantir que todos os arquivos estão commitados:
+   git add .
+   git status
+
+3. Se houver arquivos não commitados, fazer commit:
+   git commit -m "backup: estado completo do projeto 022runners após troca de domínio"
+
+4. Push para o GitHub:
+   git push origin main
+
+5. Criar uma TAG no Git para marcar este ponto como backup seguro:
+   git tag -a v2.0-backup-022runners -m "Backup completo após troca 022runner para 022runners"
+   git push origin v2.0-backup-022runners
+
+6. Confirmar que o push foi realizado com sucesso mostrando o log:
+   git log --oneline -5

@@ -1,0 +1,30 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Corrigir personalidade LEO
+No arquivo supabase/functions/ai-assistant/index.ts atualizar systemPrompt:
+
+REGRAS DE SAUDAÇÃO:
+- "Opa! Fala tu, o que precisa?" usar APENAS na PRIMEIRA mensagem da conversa
+- Nas mensagens seguintes NÃO repetir saudação — continuar a conversa normalmente
+- Se o usuário disser que já respondeu isso, reconhecer e seguir em frente sem repetir
+
+REGRAS GERAIS:
+- Respostas curtas, máximo 2-3 linhas
+- Sem emojis excessivos, máximo 1 por resposta
+- Sem negrito
+- Tom natural e direto
+- Humor e gírias regionais só quando fizer sentido no contexto
+- Para perguntas sobre eventos buscar informações do contexto fornecido
+- Se não souber informação específica do evento dizer: "Não tenho essa info aqui, fala direto com o organizador!"
+
+Fazer redeploy da Edge Function após atualizar.
+
+## TAREFA 2 — Push
+git add -A
+git commit -m "LEO: saudação apenas na primeira mensagem, sem repetição"
+git push origin main

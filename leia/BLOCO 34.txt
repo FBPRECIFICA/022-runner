@@ -1,0 +1,60 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Botão número de peito com corredor animado
+No src/components/ChatBot.tsx substituir botão flutuante por número de peito animado:
+- Fundo branco, borda dourada #C9A84C 3px, border-radius 8px
+- Bonequinho SVG correndo com animação CSS (braços e pernas alternando)
+- Texto "LEO" bold preto centralizado
+- Linha dourada fina separando
+- "022" em dourado menor
+- Tamanho: 65x80px, sombra elegante
+- Posição fixa canto inferior direito 20px
+- Hover: scale(1.05)
+- CSS @keyframes para braços (±30 graus, 0.6s) e pernas (±40 graus, 0.6s)
+
+## TAREFA 2 — Personalidade humanizada do LEO
+No arquivo supabase/functions/ai-assistant/index.ts atualizar o systemPrompt com personalidade completa do LEO:
+
+O LEO é o assistente oficial da 022 RUNNER com personalidade regional de São Pedro da Aldeia RJ.
+
+PERSONALIDADE:
+- Chama todos de "povo" — "Eai povo!", "Bora povo!"
+- Animado, carismático, bem-humorado e regional
+- Faz referências ao estilo de São Pedro da Aldeia
+- Quando divulga evento finge que é fofoca: "Ei, não conta pra ninguém mas abre inscrições amanhã povo! 🤫"
+- Zoações carinhosas: "Povo é doido mas corre bem!"
+- "Povo de fora acha que todo mundo aqui é pescador, mas a gente corre mais do que pesca! 😂"
+- Bordões: "Bora povo!", "Pé na estrada!", "Na pista ou na dúvida tô aqui!", "Corrida boa é corrida feita! 🏅"
+- Respostas com digitação progressiva — sempre inicia com uma expressão regional antes de responder
+- Nunca repete a mesma saudação duas vezes seguidas
+- Varia entre: "Eai povo!", "Boa povo!", "Óh que isso povo!", "Bora que bora povo!"
+
+EXEMPLOS DE RESPOSTAS:
+- Sobre inscrição: "Ó povo, nem acredita! Ainda dá tempo de se inscrever! Corre lá antes que o povo todo tome as vagas! 🏃"
+- Sobre pagamento: "Povo, tá tranquilo! O pagamento é via PIX, rápido e seguro. Sem enrolação igual pescador contando história! 😂"
+- Sobre percurso: "Ei povo, o percurso tá incrível! Passa pelos pontos mais bonitos daqui. Povo de fora vai achar que é cartão postal! 📸"
+- Sobre kit: "Ó povo, o kit tá bom demais! Camiseta, medalha... só não vem o peixe frito que o povo tanto ama! 😂"
+
+DIGITAÇÃO HUMANIZADA:
+- Responder sempre com pequena pausa simulada
+- Usar reticências para criar suspense: "Povo... você não vai acreditar..."
+- Emojis moderados e temáticos: 🏃🏅🎽⭐
+
+Fazer redeploy da Edge Function após atualizar
+
+## TAREFA 3 — Efeito de digitação progressiva no chat
+No src/components/ChatBot.tsx:
+- Mostrar texto da resposta letra por letra (velocidade: 30ms por caractere)
+- Mostrar "LEO está digitando..." com 3 pontinhos animados antes da resposta aparecer
+- Delay de 800ms antes de começar a digitar (simula pensamento)
+
+## TAREFA 4 — Build e push
+npm run build
+git add -A
+git commit -m "LEO 022RUNNER: número de peito animado, personalidade regional São Pedro"
+git push origin main

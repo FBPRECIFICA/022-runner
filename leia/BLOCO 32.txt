@@ -1,0 +1,20 @@
+## TAREFA 1 — Botão flutuante número de peito
+No src/components/ChatBot.tsx substituir o botão flutuante circular por um número de peito estilizado:
+- Formato retangular com cantos levemente arredondados (border-radius: 8px)
+- Fundo branco com borda dourada #C9A84C espessa (3px)
+- Texto "LEO" em preto bold grande centralizado
+- Abaixo do LEO uma linha fina dourada
+- Abaixo da linha número "022" em dourado menor
+- Sombra elegante box-shadow
+- Tamanho: 60x70px
+- Ao hover: leve scale(1.05) e brilho dourado
+- Posição: fixo canto inferior direito, 20px das bordas
+- SVG do bonequinho corredor pequeno no topo do número de peito
+
+Exemplo visual:
+┌─────────┐
+│  🏃     │
+│  LEO    │
+│ ─────── │
+│   022   │
+└─────────┘

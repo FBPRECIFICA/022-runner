@@ -1,0 +1,31 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Redesign da imagem gerada pelo Canvas
+No src/pages/SocialGeneratorPage.tsx corrigir geração de imagem Canvas 1080x1080:
+
+LAYOUT LIMPO E PROFISSIONAL:
+- Foto do evento como fundo ocupando 100%
+- Overlay gradiente: transparente no topo, preto 80% na metade inferior
+- Topo esquerdo: logo "022 RUNNER" pequeno em branco (texto simples, sem imagem)
+- Centro inferior: apenas o NOME DO EVENTO em branco bold grande (máximo 2 linhas, fonte 72px)
+- Abaixo do nome: data e cidade em dourado #C9A84C (fonte 36px)
+- Barra dourada 4px na parte inferior
+- "022runner.com.br" em branco pequeno no canto inferior direito
+- NÃO colocar o texto do post na imagem — imagem limpa só com nome, data, cidade e logo
+- O texto do post fica separado ao lado para copiar
+
+VARIAÇÃO DE IMAGEM:
+- Cada vez que gerar novo post embaralhar posição do overlay (gradiente pode vir do lado, de cima, diagonal)
+- Variar intensidade do overlay aleatoriamente entre 0.5 e 0.8
+- Adicionar elemento decorativo aleatório: linha dourada diagonal, círculo dourado no canto, ou moldura dourada fina
+
+## TAREFA 2 — Build e push
+npm run build
+git add -A
+git commit -m "Canvas: layout limpo profissional, variação entre gerações"
+git push origin main

@@ -1,0 +1,24 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Remover "Opa! Fala tu" do LEO
+No supabase/functions/ai-assistant/index.ts:
+- Remover COMPLETAMENTE qualquer menção a "Opa! Fala tu, o que precisa?" do systemPrompt
+- Substituir por saudações variadas e naturais conforme horário ou contexto:
+  - "Oi! Como posso ajudar?"
+  - "Olá! O que precisa?"
+  - "Boa noite! Em que posso ajudar?"
+  - "Oi! Tô aqui, pode falar."
+- LEO deve responder "boa noite" com "Boa noite! Em que posso ajudar?" e não repetir na próxima mensagem
+- Nas mensagens seguintes responder diretamente sem saudação
+
+Fazer redeploy da Edge Function após atualizar.
+
+## TAREFA 2 — Push
+git add -A
+git commit -m "LEO: remove fala tu, saudações naturais variadas"
+git push origin main

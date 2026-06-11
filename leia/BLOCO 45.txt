@@ -1,0 +1,52 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+- Verificar .gitignore antes de cada push
+
+TAREFA: Trocar o nome do domínio/marca de 022runner para 022runners em todo o projeto.
+
+1. Fazer busca global no projeto por todas as ocorrências de:
+   - "022runner.com.br" → trocar por "022runners.com.br"
+   - "022runner" (sem o s) → trocar por "022runners"
+   - "022Runner" → trocar por "022Runners"
+   - "022RUNNER" → trocar por "022RUNNERS"
+   Atenção: NÃO alterar variáveis de ambiente, IDs do Supabase, tokens ou chaves de API
+
+2. Arquivos prioritários para verificar e corrigir:
+   - src/pages/HomePage.tsx
+   - src/pages/EventsPage.tsx
+   - src/pages/LoginPage.tsx
+   - src/pages/RegisterPage.tsx
+   - src/components/Header.tsx
+   - src/components/ChatBot.tsx
+   - src/components/Footer.tsx (se existir)
+   - src/lib/resend.ts (se existir)
+   - src/lib/email.ts (se existir)
+   - public/manifest.json
+   - public/index.html ou index.html
+   - index.html
+   - package.json (campo name e description apenas)
+   - vite.config.ts
+   - README.md
+   - Todos os arquivos em src/emails/ (templates de email)
+   - Todos os arquivos em src/pages/
+   - Todos os arquivos em src/components/
+
+3. Verificar também:
+   - Meta tags SEO (og:title, og:url, og:site_name, twitter:site)
+   - Canonical URLs
+   - sitemap.xml se existir
+   - robots.txt se existir
+
+4. Após as trocas, atualizar o arquivo .env.example se existir:
+   - Trocar qualquer referência a 022runner.com.br por 022runners.com.br
+
+5. Corrigir TypeScript sem exceção
+
+6. Testar build: npm run build
+
+7. Push para main
+
+OBSERVAÇÃO: O domínio 022runners.com.br já foi comprado. O Vercel e o Supabase serão atualizados manualmente pelo Senhor Fábio após o push.

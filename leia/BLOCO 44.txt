@@ -1,0 +1,34 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+
+## TAREFA 1 — Adicionar TODAS as colunas faltantes na tabela registrations
+Rodar SQL no Supabase de uma vez só:
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS distance_name TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS distance_price DECIMAL(10,2);
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS full_name TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS document TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS birth_date DATE;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS gender TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS shirt_size TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS team_name TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS emergency_contact TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS blood_type TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS medical_condition TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS amount DECIMAL(10,2);
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_id TEXT;
+
+## TAREFA 2 — Verificar e corrigir RegistrationPage
+No src/pages/RegistrationPage.tsx verificar TODOS os campos que estão sendo salvos no Supabase e garantir que batem com as colunas da tabela.
+
+## TAREFA 3 — Build e push
+npm run build
+git add -A
+git commit -m "Fix: todas colunas faltantes em registrations"
+git push origin main

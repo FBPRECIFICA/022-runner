@@ -1,0 +1,7 @@
+## TAREFA 3 — Ícone gerador de posts
+No src/pages/SocialGeneratorPage.tsx e onde aparecer o ícone do gerador:
+- Substituir ícone de robô por SVG animado de corredor com trilha de posts saindo atrás
+- Corredor SVG dourado correndo para direita
+- Atrás dele saindo: ícones pequenos animados do Instagram, WhatsApp, Facebook flutuando para cima e desaparecendo
+- Animação CSS: corredor com pernas/braços alternando, ícones de redes sociais subindo com fade out
+- Cores: corredor dourado #C9A84C, ícones nas cores originais das redes (Instagram roxo, WhatsApp verde, Facebook azul)
