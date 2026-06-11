@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, LayoutDashboard, Menu, X, Search } from 'lucide-react';
@@ -29,7 +29,7 @@ export function Header() {
       <div style={{ backgroundColor: '#000', width: '100%', padding: 0, margin: 0, overflow: 'hidden', position: 'relative' }}>
         <Link to="/" onClick={() => setMobileOpen(false)} style={{ display: 'block', lineHeight: 0 }}>
           <img
-            src="/images/logo-022runner.png"
+            src="/images/logo-022runners.png"
             alt="022 RUNNERS"
             style={{
               width: '100%',

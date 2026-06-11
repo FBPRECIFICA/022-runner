@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -308,7 +308,7 @@ export function OrganizerDashboard() {
           plan: 'free',
         });
         if (insertError) throw insertError;
-        setSuccess(`✅ Evento criado! Link: https://022runner.com.br/evento/${slug}`);
+        setSuccess(`✅ Evento criado! Link: https://022runners.com.br/evento/${slug}`);
       }
 
       setForm(emptyForm);
@@ -430,7 +430,7 @@ export function OrganizerDashboard() {
                 <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
                   className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   placeholder="Ex: Corrida da Praia 2027" />
-                {form.title && <p className="text-xs text-gray-400 mt-1">Link: 022runner.com.br/evento/{generateSlug(form.title)}</p>}
+                {form.title && <p className="text-xs text-gray-400 mt-1">Link: 022runners.com.br/evento/{generateSlug(form.title)}</p>}
               </div>
 
               <div>

@@ -64,7 +64,7 @@ export function CertificatePage() {
 
           <div className="p-10 text-center">
             {/* Logo */}
-            <img src="/images/logo-022runner.png" alt="022 RUNNER" className="h-16 w-auto mx-auto mb-6 object-contain" />
+            <img src="/images/logo-022runners.png" alt="022 RUNNER" className="h-16 w-auto mx-auto mb-6 object-contain" />
 
             {/* Título */}
             <p className="text-sm font-semibold tracking-widest mb-2" style={{ color: '#C9A84C' }}>CERTIFICADO DE PARTICIPAÇÃO</p>

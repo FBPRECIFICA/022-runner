@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+﻿import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Shield, CheckCircle } from 'lucide-react';
 
@@ -86,7 +86,7 @@ export function TermoResponsabilidade({ registration, event, userId, onAccepted 
 
         <p className="mt-3">Declaro ter lido e concordado com o regulamento completo do evento disponível na plataforma 022 RUNNER.</p>
 
-        <p className="mt-4 text-xs text-gray-400">Assinado digitalmente em: {now} — Plataforma: 022runner.com.br</p>
+        <p className="mt-4 text-xs text-gray-400">Assinado digitalmente em: {now} — Plataforma: 022runners.com.br</p>
       </div>
 
       {!scrolledToBottom && (

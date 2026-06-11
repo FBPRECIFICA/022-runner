@@ -69,7 +69,7 @@ export function AdminDashboard() {
       {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 hidden md:flex flex-col" style={{ backgroundColor: '#1e293b', borderRight: '1px solid #334155' }}>
         <div className="p-5 border-b" style={{ borderColor: '#334155' }}>
-          <img src="/images/logo-022runner.png" alt="022 RUNNER" className="h-10 w-auto object-contain" />
+          <img src="/images/logo-022runners.png" alt="022 RUNNER" className="h-10 w-auto object-contain" />
           <p className="text-xs mt-2" style={{ color: '#94a3b8' }}>Painel Admin</p>
         </div>
         <nav className="p-3 flex-1 space-y-1">

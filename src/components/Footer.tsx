@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 
 export function Footer() {
   return (
@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Logo + info */}
           <div className="md:col-span-1">
-            <img src="/images/logo-022runner.png" alt="022 RUNNER" className="h-12 w-auto mb-3 object-contain" />
+            <img src="/images/logo-022runners.png" alt="022 RUNNER" className="h-12 w-auto mb-3 object-contain" />
             <p className="text-sm leading-relaxed">A plataforma de eventos esportivos da Região dos Lagos — RJ.</p>
             <p className="text-sm mt-2">(22) 97404-4125</p>
             <p className="text-sm">São Pedro da Aldeia - RJ</p>

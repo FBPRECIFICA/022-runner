@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send } from 'lucide-react';
 
 const AI_FUNCTION_URL = 'https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/ai-assistant';
@@ -34,7 +34,7 @@ async function askAI(question: string): Promise<string> {
 export function ChatBot() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', text: 'Eai povo! 🏃 Sou o LEO 022RUNNER! Na pista ou na dúvida, tô aqui! Como posso ajudar?' },
+    { role: 'assistant', text: 'Eai povo! 🏃 Sou o LEO 022RUNNERS! Na pista ou na dúvida, tô aqui! Como posso ajudar?' },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -161,7 +161,7 @@ export function ChatBot() {
           e.currentTarget.style.transform = 'scale(1)';
           e.currentTarget.style.boxShadow = '0 4px 16px rgba(201,168,76,0.35), 0 2px 6px rgba(0,0,0,0.12)';
         }}
-        aria-label="LEO 022RUNNER"
+        aria-label="LEO 022RUNNERS"
       >
         {open ? (
           <X size={22} color="#000" />
@@ -195,7 +195,7 @@ export function ChatBot() {
               🏃
             </div>
             <div>
-              <p className="font-bold text-white text-sm">LEO 022RUNNER</p>
+              <p className="font-bold text-white text-sm">LEO 022RUNNERS</p>
               <p className="text-xs" style={{ color: '#9ca3af' }}>Assistente virtual corredor</p>
             </div>
             <div className="ml-auto flex items-center gap-1">

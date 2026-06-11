@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -90,7 +90,7 @@ export function LoginPage() {
 
           {/* Topo preto com logo */}
           <div style={{ backgroundColor: '#000', padding: '24px', textAlign: 'center', borderBottom: '3px solid #C9A84C' }}>
-            <img src="/images/logo-022runner.png" alt="022 RUNNER"
+            <img src="/images/logo-022runners.png" alt="022 RUNNER"
               style={{ height: '56px', width: 'auto', objectFit: 'contain', margin: '0 auto' }} />
           </div>
 

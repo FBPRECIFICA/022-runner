@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -145,7 +145,7 @@ function drawLogoAndFooter(ctx: CanvasRenderingContext2D, W: number, H: number, 
   ctx.textAlign = 'right';
   ctx.font = `${Math.round(24 * fs)}px Arial, sans-serif`;
   ctx.fillStyle = '#666666';
-  ctx.fillText('022runner.com.br', W - Math.round(40 * fs), H - Math.round(14 * fs));
+  ctx.fillText('022runners.com.br', W - Math.round(40 * fs), H - Math.round(14 * fs));
 }
 
 function drawTemplateA(

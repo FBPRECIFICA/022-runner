@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+﻿import { useNavigate } from 'react-router-dom';
 
 const OPTIONS = [
   {
@@ -40,7 +40,7 @@ export function SelectProfilePage() {
     <div className="min-h-screen" style={{ backgroundColor: '#111111' }}>
       {/* Header */}
       <div style={{ backgroundColor: '#000', borderBottom: '3px solid #C9A84C', padding: '20px', textAlign: 'center' }}>
-        <img src="/images/logo-022runner.png" alt="022 RUNNER"
+        <img src="/images/logo-022runners.png" alt="022 RUNNER"
           style={{ height: '56px', width: 'auto', objectFit: 'contain', margin: '0 auto' }} />
       </div>
 

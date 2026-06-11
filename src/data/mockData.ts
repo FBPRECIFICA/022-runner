@@ -1,4 +1,4 @@
-import type { Event } from '../types';
+﻿import type { Event } from '../types';
 
 export const events: Event[] = [
   {
@@ -14,7 +14,7 @@ export const events: Event[] = [
     maxParticipants: 2000,
     currentParticipants: 850,
     banner: '/images/event-banner-praia.jpg',
-    logo: '/images/logo-022runner.png',
+    logo: '/images/logo-022runners.png',
     distances: [
       { id: 'd1', name: '5km', distanceKm: 5, price: 50 },
       { id: 'd2', name: '10km', distanceKm: 10, price: 80 },
@@ -39,7 +39,7 @@ export const events: Event[] = [
     maxParticipants: 500,
     currentParticipants: 230,
     banner: '/images/event-banner-buziostrail.jpg',
-    logo: '/images/logo-022runner.png',
+    logo: '/images/logo-022runners.png',
     distances: [
       { id: 'd1', name: '10km', distanceKm: 10, price: 80 },
       { id: 'd2', name: '21km', distanceKm: 21, price: 120 },
@@ -63,7 +63,7 @@ export const events: Event[] = [
     maxParticipants: 1000,
     currentParticipants: 450,
     banner: '/images/event-banner-cabofrio.jpg',
-    logo: '/images/logo-022runner.png',
+    logo: '/images/logo-022runners.png',
     distances: [
       { id: 'd1', name: '21km', distanceKm: 21, price: 120 },
     ],

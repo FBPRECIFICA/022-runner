@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle, Star, Timer } from 'lucide-react';
@@ -107,7 +107,7 @@ export function EventDetailPage() {
         <meta property="og:title" content={`${event.title} — 022 RUNNER`} />
         <meta property="og:description" content={metaDesc} />
         <meta property="og:image" content={event.banner_url || '/images/hero-bg.jpg'} />
-        <meta property="og:url" content={`https://022runner.com.br/evento/${event.slug}`} />
+        <meta property="og:url" content={`https://022runners.com.br/evento/${event.slug}`} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={event.title} />
         <meta name="twitter:image" content={event.banner_url || '/images/hero-bg.jpg'} />
@@ -402,7 +402,7 @@ export function EventDetailPage() {
             {/* Link direto */}
             <div className="bg-gray-50 rounded-xl p-3 border">
               <p className="text-xs text-gray-400 mb-1">Link do evento</p>
-              <p className="text-xs text-[#C9A84C] font-mono break-all">022runner.com.br/evento/{event.slug}</p>
+              <p className="text-xs text-[#C9A84C] font-mono break-all">022runners.com.br/evento/{event.slug}</p>
             </div>
           </div>
         </div>

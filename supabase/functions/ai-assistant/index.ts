@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+﻿import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,7 +57,7 @@ TIPOS DE POST (quando type === 'post'):
 Instagram: máx 2200 chars, emojis, hashtags no final
 WhatsApp: direto, sem hashtags, máx 500 chars
 Facebook: formal, completo
-Hashtags: #022runner #regiãodoslagos #corridaderua #cabofrio #buzios #saopedrodaaldeia`
+Hashtags: #022runners #regiãodoslagos #corridaderua #cabofrio #buzios #saopedrodaaldeia`
 
     const userPrompt = type === 'post'
       ? `Crie um post de ${eventData.postType} para o evento "${eventData.title}" em ${eventData.city} no dia ${eventData.date} para ${platform}. Distâncias: ${eventData.distances}. ${eventData.extraInfo || ''}`

@@ -54,7 +54,7 @@ export function RegisterPage() {
               <ArrowLeft className="w-4 h-4" /> Voltar
             </Link>
             <div className="text-center">
-              <img src="/images/logo-022runner.png" alt="022 RUNNER" className="h-14 w-auto mx-auto mb-4 object-contain" />
+              <img src="/images/logo-022runners.png" alt="022 RUNNER" className="h-14 w-auto mx-auto mb-4 object-contain" />
               <h1 className="text-2xl font-bold text-gray-900">Crie sua conta</h1>
               <p className="text-gray-500 mt-1 text-sm">Junte-se à plataforma de eventos da Região dos Lagos</p>
             </div>

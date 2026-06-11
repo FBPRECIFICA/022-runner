@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { QRCodeSVG } from 'qrcode.react';
 import { CheckCircle, Clock, Copy } from 'lucide-react';
 
-const PIX_KEY = '022runner@pagamentos.com.br';
+const PIX_KEY = '022runners@pagamentos.com.br';
 const EXPIRY_SECONDS = 30 * 60;
 
 export function PaymentPage() {

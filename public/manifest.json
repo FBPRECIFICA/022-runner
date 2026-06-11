@@ -1,13 +1,13 @@
-{
+﻿{
   "name": "022 RUNNER",
-  "short_name": "022Runner",
+  "short_name": "022Runners",
   "description": "Plataforma de Eventos Esportivos da Região dos Lagos",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#2563EB",
   "icons": [
-    {"src": "/images/logo-022runner.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "/images/logo-022runner.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "/images/logo-022runners.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/images/logo-022runners.png", "sizes": "512x512", "type": "image/png"}
   ]
 }
