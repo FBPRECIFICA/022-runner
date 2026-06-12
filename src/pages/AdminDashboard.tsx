@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Users, Calendar, TrendingUp, Award, Star, Shield, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2 } from 'lucide-react';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 
@@ -16,6 +17,7 @@ export function AdminDashboard() {
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [cityData, setCityData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -50,6 +52,15 @@ export function AdminDashboard() {
   const updateEventPlan = async (id: string, plan: string) => {
     await supabase.from('events').update({ plan }).eq('id', id);
     setEvents(prev => prev.map(e => e.id === id ? { ...e, plan } : e));
+  };
+
+  const deleteEvent = async (id: string) => {
+    const { error } = await supabase.from('events').delete().eq('id', id);
+    if (error) { toast.error('Erro ao excluir evento.'); return; }
+    setEvents(prev => prev.filter(e => e.id !== id));
+    setStats(prev => ({ ...prev, events: prev.events - 1 }));
+    toast.success('Evento excluído com sucesso');
+    setConfirmDelete(null);
   };
 
   const updateUserRole = async (id: string, role: string) => {
@@ -175,6 +186,7 @@ export function AdminDashboard() {
                               <div className="flex gap-2">
                                 <button onClick={() => updateEventPlan(e.id, 'featured')} className="text-xs px-2 py-1 rounded bg-yellow-700 text-white hover:bg-yellow-600" title="Destacar"><Star size={12} /></button>
                                 <button onClick={() => updateEventPlan(e.id, 'premium')} className="text-xs px-2 py-1 rounded bg-purple-700 text-white hover:bg-purple-600" title="Premium"><Award size={12} /></button>
+                                <button onClick={() => setConfirmDelete({ id: e.id, title: e.title })} className="text-xs px-2 py-1 rounded bg-red-800 text-white hover:bg-red-700" title="Excluir"><Trash2 size={12} /></button>
                               </div>
                             </td>
                           </tr>
@@ -249,6 +261,34 @@ export function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {/* Modal confirmação exclusão */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 space-y-4" style={{ backgroundColor: '#1e293b', border: '1px solid #dc2626' }}>
+            <h3 className="text-lg font-bold text-white">Excluir Evento</h3>
+            <p className="text-sm" style={{ color: '#94a3b8' }}>
+              Tem certeza que deseja excluir o evento <span className="text-white font-medium">"{confirmDelete.title}"</span>? Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                style={{ backgroundColor: '#334155', color: '#94a3b8' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => deleteEvent(confirmDelete.id)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                style={{ backgroundColor: '#dc2626', color: '#fff' }}
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

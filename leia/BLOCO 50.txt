@@ -1,0 +1,32 @@
+Para esta sessão não faça perguntas, execute tudo automaticamente, responda sim para todas as confirmações.
+REGRAS FIXAS:
+- Nunca commitar node_modules ou dist
+- Sempre push para branch main
+- Corrigir erros TypeScript sem exceção
+- Verificar .gitignore antes de cada push
+
+TAREFA 1 — Deploy da Edge Function generate-post:
+supabase login
+supabase functions deploy generate-post --project-ref adorzqjhazsfvbttlfht
+
+TAREFA 2 — LEO buscando dados dos eventos automaticamente:
+Abrir supabase/functions/ai-assistant/index.ts
+Antes de chamar a Claude API, buscar dados do evento no Supabase:
+- Se a mensagem do usuário mencionar nome de evento, buscar na tabela events
+- Injetar os dados do evento no system prompt do LEO automaticamente
+- Campos: title, date, location, distance, price, description, schedule, regulations
+- System prompt atualizado: "Você é LEO, assistente da 022Runners. Dados dos eventos disponíveis: [JSON dos eventos ativos]"
+- Buscar todos os eventos ativos com status = 'active' ou 'published'
+- Fazer deploy da função atualizada
+
+TAREFA 3 — Admin excluir eventos:
+Abrir src/pages/AdminDashboard.tsx
+Adicionar botão "Excluir" vermelho em cada evento listado
+Ao clicar: modal de confirmação "Tem certeza que deseja excluir este evento?"
+Confirmar: deleta da tabela events no Supabase
+Feedback: toast "Evento excluído com sucesso"
+Corrigir TypeScript
+
+TAREFA 4 — Build e push:
+npm run build
+git push origin main

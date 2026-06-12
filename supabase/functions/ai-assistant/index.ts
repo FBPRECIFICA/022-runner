@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,6 +6,29 @@ const corsHeaders = {
 }
 
 const apiKey = Deno.env.get('ANTHROPIC_API_KEY') || ''
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://adorzqjhazsfvbttlfht.supabase.co'
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'sb_publishable_b098wEy_wai6_RWuR5pV7g_IAw-x86p'
+
+async function fetchActiveEvents(): Promise<string> {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/events?select=title,date,city,state,description,slug&or=(status.eq.active,status.eq.published)&order=date.asc&limit=30`
+    const res = await fetch(url, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    })
+    const data = await res.json()
+    if (Array.isArray(data) && data.length > 0) {
+      return data.map((e: Record<string, unknown>) =>
+        `• ${e.title} | ${e.city}${e.state ? '/' + e.state : ''} | ${e.date ? new Date(String(e.date)).toLocaleDateString('pt-BR') : 'data a confirmar'} | 022runners.com.br/evento/${e.slug}`
+      ).join('\n')
+    }
+    return 'Nenhum evento ativo no momento.'
+  } catch {
+    return 'Não foi possível carregar os eventos agora.'
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -13,7 +36,12 @@ serve(async (req) => {
   try {
     const { type, eventData, platform, question } = await req.json()
 
-    const systemPrompt = `Você é o assistente da plataforma 022 RUNNER, plataforma de eventos esportivos da Região dos Lagos, Rio de Janeiro.
+    const eventsInfo = await fetchActiveEvents()
+
+    const systemPrompt = `Você é LEO, assistente oficial da 022Runners, plataforma de eventos esportivos da Região dos Lagos, Rio de Janeiro.
+
+EVENTOS ATIVOS NA PLATAFORMA (use estes dados para responder perguntas sobre eventos):
+${eventsInfo}
 
 TOM E ESTILO:
 - Respostas CURTAS e diretas — máximo 2-3 linhas
@@ -44,7 +72,7 @@ EXEMPLOS CORRETOS:
 - usuário: "obrigado" → "Boa! Qualquer coisa tô aqui 🏃"
 
 SOBRE A PLATAFORMA:
-- 022 RUNNER conecta organizadores e atletas de corrida, trail, ciclismo, triathlon e caminhada
+- 022Runners conecta organizadores e atletas de corrida, trail, ciclismo, triathlon e caminhada
 - Cidades: Cabo Frio, Arraial do Cabo, Búzios, São Pedro da Aldeia, Iguaba Grande, Araruama, Saquarema
 - Foco em eventos regionais com qualidade premium
 
@@ -61,7 +89,7 @@ Hashtags: #022runners #regiãodoslagos #corridaderua #cabofrio #buzios #saopedro
 
     const userPrompt = type === 'post'
       ? `Crie um post de ${eventData.postType} para o evento "${eventData.title}" em ${eventData.city} no dia ${eventData.date} para ${platform}. Distâncias: ${eventData.distances}. ${eventData.extraInfo || ''}`
-      : `Responda essa dúvida sobre eventos esportivos da 022 RUNNER: ${question || eventData?.question || ''}`
+      : `Responda essa dúvida sobre eventos esportivos da 022Runners: ${question || eventData?.question || ''}`
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
