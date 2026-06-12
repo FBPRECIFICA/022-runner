@@ -1,107 +1,117 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Sparkles, Copy, Share2, RefreshCw, Clock, Download, Image } from 'lucide-react';
-import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
+import { Download, X } from 'lucide-react';
+import { LOGO_022RUNNERS } from '../assets/logo022runners';
 
-const AI_FUNCTION_URL = 'https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/ai-assistant';
-const ANON_KEY = 'sb_publishable_b098wEy_wai6_RWuR5pV7g_IAw-x86p';
-
-const POST_TYPES = [
-  { key: 'abertura_inscricoes', label: '🚀 Abertura de Inscrições' },
-  { key: 'ultimas_vagas', label: '⚡ Últimas Vagas' },
-  { key: 'dia_evento', label: '🏁 Dia do Evento' },
-  { key: 'resultados', label: '🏆 Resultados' },
-];
-const PLATFORMS = ['Instagram', 'WhatsApp', 'Facebook'];
-const HISTORY_KEY = 'social_post_history';
 const GOLD = '#C9A84C';
 
 const FORMATS = [
   { key: 'feed', label: 'Feed Instagram', w: 1080, h: 1080 },
-  { key: 'stories', label: 'Stories', w: 1080, h: 1920 },
+  { key: 'stories', label: 'Stories Instagram', w: 1080, h: 1920 },
   { key: 'whatsapp', label: 'WhatsApp', w: 800, h: 800 },
 ];
 
-const TEMPLATES = [
-  { key: 'A', label: 'Template A', desc: 'Centralizado · faixa dourada' },
-  { key: 'B', label: 'Template B', desc: 'À esquerda · bloco lateral' },
-  { key: 'C', label: 'Template C', desc: 'Topo + ícone do esporte' },
-];
+type PostType = 'divulgacao' | 'resultado';
+type FormatKey = 'feed' | 'stories' | 'whatsapp';
 
-type Palette = { from: string; to: string; accent: string };
-
-function getAccentByType(sportType: string): Palette {
-  const t = (sportType || '').toLowerCase();
-  if (t.includes('corrida') || t.includes('run')) return { from: '#000000', to: '#1a0a00', accent: '#C9A84C' };
-  if (t.includes('trilha') || t.includes('trail')) return { from: '#000000', to: '#0a1500', accent: '#2d6a1a' };
-  if (t.includes('cicli') || t.includes('bike')) return { from: '#000000', to: '#00101a', accent: '#0a4a7a' };
-  if (t.includes('tri')) return { from: '#000000', to: '#1a001a', accent: '#5a0a7a' };
-  return { from: '#000000', to: '#1a1500', accent: '#C9A84C' };
+interface EventRow {
+  id: string;
+  title: string;
+  date?: string;
+  city?: string;
+  state?: string;
+  distance?: string;
+  category?: string;
+  sport_type?: string;
+  price?: number | string;
+  slug?: string;
 }
 
-async function callAIAssistant(type: string, eventData: Record<string, unknown>, platform: string): Promise<string> {
-  const res = await fetch(AI_FUNCTION_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ANON_KEY}`,
-    },
-    body: JSON.stringify({ type: 'post', eventData: { ...eventData, postType: type }, platform }),
-  });
-  const data = await res.json() as { error?: string; text?: string };
-  if (data.error) throw new Error(data.error);
-  return data.text ?? '';
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function fmtDate(dateStr?: string): string {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-function wrapText(
+function eventName(ev: EventRow): string {
+  return String(ev.title ?? '').toUpperCase();
+}
+
+function eventDistance(ev: EventRow): string {
+  return String(ev.distance ?? ev.category ?? ev.sport_type ?? '');
+}
+
+function eventLocation(ev: EventRow): string {
+  const parts = [ev.city, ev.state].filter(Boolean);
+  return parts.join(' - ');
+}
+
+function eventPrice(ev: EventRow): string {
+  if (!ev.price) return '';
+  return `R$ ${Number(ev.price).toFixed(2).replace('.', ',')}`;
+}
+
+function wrapLines(
   ctx: CanvasRenderingContext2D,
   text: string,
-  x: number,
-  startY: number,
   maxWidth: number,
-  lineHeight: number,
-  maxLines: number,
-): number {
+): string[] {
   const words = text.split(' ');
-  let line = '';
-  let y = startY;
-  let linesDrawn = 0;
+  const lines: string[] = [];
+  let current = '';
   for (const word of words) {
-    if (linesDrawn >= maxLines) break;
-    const test = line + word + ' ';
-    if (ctx.measureText(test).width > maxWidth && line !== '') {
-      ctx.fillText(line.trim(), x, y);
-      line = word + ' ';
-      y += lineHeight;
-      linesDrawn++;
+    const test = current ? current + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
     } else {
-      line = test;
+      current = test;
     }
   }
-  if (line.trim() && linesDrawn < maxLines) {
-    ctx.fillText(line.trim(), x, y);
-    y += lineHeight;
-  }
-  return y;
+  if (current) lines.push(current);
+  return lines;
 }
 
-function drawBase(ctx: CanvasRenderingContext2D, W: number, H: number, palette: Palette) {
-  // Gradiente diagonal baseado no tipo do evento
-  const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, palette.from);
-  grad.addColorStop(1, palette.to);
+function dynamicFontSize(text: string): number {
+  if (text.length <= 20) return 72;
+  if (text.length <= 35) return 56;
+  return 44;
+}
+
+// ── canvas drawing ────────────────────────────────────────────────────────────
+
+function drawOverlay(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  // Bottom-to-top gradient overlay
+  const grad = ctx.createLinearGradient(0, H, 0, 0);
+  grad.addColorStop(0, 'rgba(0,0,0,0.85)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.2)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
+  // Left side overlay
+  const left = ctx.createLinearGradient(0, 0, W * 0.5, 0);
+  left.addColorStop(0, 'rgba(0,0,0,0.3)');
+  left.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = left;
+  ctx.fillRect(0, 0, W, H);
+}
 
-  // Linhas diagonais decorativas finas (acento, 0.15 opacidade)
+function drawPremiumBg(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  // Radial gradient background
+  const radial = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.8);
+  radial.addColorStop(0, '#1a0800');
+  radial.addColorStop(1, '#000000');
+  ctx.fillStyle = radial;
+  ctx.fillRect(0, 0, W, H);
+
+  // Diagonal texture lines
   ctx.save();
-  ctx.strokeStyle = palette.accent;
-  ctx.globalAlpha = 0.15;
-  ctx.lineWidth = 1.5;
-  const step = Math.round(W / 13);
-  for (let i = -H; i < W + H; i += step) {
+  ctx.strokeStyle = GOLD;
+  ctx.globalAlpha = 0.04;
+  ctx.lineWidth = 1;
+  for (let i = -H; i < W + H; i += 12) {
     ctx.beginPath();
     ctx.moveTo(i, 0);
     ctx.lineTo(i + H, H);
@@ -109,543 +119,555 @@ function drawBase(ctx: CanvasRenderingContext2D, W: number, H: number, palette: 
   }
   ctx.restore();
 
-  // Retângulo lateral esquerdo 6px
-  ctx.fillStyle = palette.accent;
-  ctx.fillRect(0, 0, 6, H);
-
-  // Círculo decorativo canto superior direito (0.05 opacidade)
+  // Decorative circle top-right
   ctx.save();
-  ctx.fillStyle = palette.accent;
-  ctx.globalAlpha = 0.05;
+  ctx.fillStyle = GOLD;
+  ctx.globalAlpha = 0.04;
   ctx.beginPath();
-  ctx.arc(W - 80, 80, 200, 0, Math.PI * 2);
+  ctx.arc(W, 0, 300, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Decorative circle bottom-left
+  ctx.save();
+  ctx.fillStyle = GOLD;
+  ctx.globalAlpha = 0.06;
+  ctx.beginPath();
+  ctx.arc(0, H, 200, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Left accent bar
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, 0, 8, H);
+}
+
+function drawBrushstroke(ctx: CanvasRenderingContext2D, W: number, H: number, scale: number) {
+  const bx = W * 0.05;
+  const bw = W * 0.90;
+  const by = Math.round(380 * scale);
+  const bh = Math.round(140 * scale);
+  ctx.save();
+  ctx.translate(W / 2, by + bh / 2);
+  ctx.rotate((-1.5 * Math.PI) / 180);
+  ctx.fillStyle = GOLD;
+  ctx.globalAlpha = 0.85;
+  ctx.beginPath();
+  // irregular brushstroke shape
+  ctx.moveTo(-bw / 2 + 10, -bh / 2 + 5);
+  ctx.lineTo(bw / 2 - 8, -bh / 2);
+  ctx.lineTo(bw / 2 - bx / 2, bh / 2 - 3);
+  ctx.lineTo(-bw / 2 + 5, bh / 2 + 4);
+  ctx.closePath();
   ctx.fill();
   ctx.restore();
 }
 
-function drawLogoAndFooter(ctx: CanvasRenderingContext2D, W: number, H: number, fs: number) {
-  ctx.textBaseline = 'alphabetic';
-
-  // Logo "022 RUNNER" topo centro
-  ctx.textAlign = 'center';
-  ctx.font = `bold ${Math.round(48 * fs)}px Arial Black, Arial, sans-serif`;
+function drawHorizontalLine(ctx: CanvasRenderingContext2D, W: number, y: number) {
   ctx.fillStyle = GOLD;
-  ctx.shadowColor = 'rgba(0,0,0,0.6)';
-  ctx.shadowBlur = 12;
-  ctx.fillText('022 RUNNER', W / 2, Math.round(75 * fs));
+  ctx.fillRect(W * 0.1, y, W * 0.8, 2);
+}
+
+async function drawLogo(ctx: CanvasRenderingContext2D, W: number, y: number): Promise<void> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const logoW = Math.round(320 * (W / 1080));
+      const logoH = Math.round((img.height / img.width) * logoW);
+      ctx.drawImage(img, (W - logoW) / 2, y, logoW, logoH);
+      resolve();
+    };
+    img.onerror = () => {
+      // fallback text
+      ctx.textAlign = 'center';
+      ctx.font = `bold ${Math.round(42 * (W / 1080))}px Arial Black, Arial, sans-serif`;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.strokeText('022RUNNERS', W / 2, y + 40);
+      ctx.fillText('022RUNNERS', W / 2, y + 40);
+      resolve();
+    };
+    img.src = LOGO_022RUNNERS;
+  });
+}
+
+function drawFooter(ctx: CanvasRenderingContext2D, W: number, H: number, scale: number) {
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fillRect(0, Math.round(960 * scale), W, Math.round(120 * scale));
+
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.round(28 * scale)}px Arial, sans-serif`;
+  ctx.fillStyle = GOLD;
+  ctx.fillText('022runners.com.br', W / 2, Math.round(1012 * scale));
+
+  ctx.font = `${Math.round(20 * scale)}px Arial, sans-serif`;
+  ctx.fillStyle = '#888888';
+  ctx.fillText('RUNNING COMMUNITY', W / 2, Math.round(1048 * scale));
+}
+
+async function renderDivulgacao(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  ev: EventRow,
+  bgImage: HTMLImageElement | null,
+) {
+  const scale = W / 1080;
+
+  // Background
+  if (bgImage) {
+    ctx.drawImage(bgImage, 0, 0, W, H);
+    drawOverlay(ctx, W, H);
+  } else {
+    drawPremiumBg(ctx, W, H);
+  }
+
+  // Logo
+  await drawLogo(ctx, W, Math.round(40 * scale));
+
+  // Top horizontal line
+  drawHorizontalLine(ctx, W, Math.round(120 * scale));
+
+  // Brushstroke
+  drawBrushstroke(ctx, W, H, scale);
+
+  // Event name over brushstroke
+  const name = eventName(ev);
+  const fontSize = Math.round(dynamicFontSize(name) * scale);
+  ctx.font = `bold ${fontSize}px Arial Black, Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.shadowColor = 'rgba(0,0,0,1)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 3;
+
+  const lines = wrapLines(ctx, name, W * 0.88);
+  const lineH = fontSize * 1.2;
+  const blockH = lines.length * lineH;
+  const brushCenterY = Math.round((380 + 70) * scale); // center of brushstroke
+  let textY = brushCenterY - blockH / 2 + fontSize * 0.8;
+  for (const line of lines) {
+    ctx.fillText(line, W / 2, textY);
+    textY += lineH;
+  }
   ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
   ctx.shadowColor = 'transparent';
 
-  // Linha dourada horizontal no rodapé (y=980 relativo a 1080)
-  const footerLineY = H - Math.round((H / 1080) * 100);
+  // Distance / modality
+  ctx.font = `bold ${Math.round(48 * scale)}px Arial Black, Arial, sans-serif`;
   ctx.fillStyle = GOLD;
-  ctx.fillRect(0, footerLineY, W, 4);
+  ctx.fillText(eventDistance(ev), W / 2, Math.round(560 * scale));
 
-  // URL rodapé
+  // Date
+  ctx.font = `${Math.round(36 * scale)}px Arial, sans-serif`;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText(`📅 ${fmtDate(ev.date)}`, W / 2, Math.round(630 * scale));
+
+  // Location
+  ctx.font = `${Math.round(34 * scale)}px Arial, sans-serif`;
+  ctx.fillStyle = '#CCCCCC';
+  ctx.fillText(`📍 ${eventLocation(ev)}`, W / 2, Math.round(680 * scale));
+
+  // Bottom horizontal line
+  drawHorizontalLine(ctx, W, Math.round(740 * scale));
+
+  // Price / open inscriptions
+  ctx.font = `bold ${Math.round(32 * scale)}px Arial, sans-serif`;
+  ctx.fillStyle = GOLD;
+  const priceText = ev.price
+    ? `INSCRIÇÕES ABERTAS • ${eventPrice(ev)}`
+    : 'INSCRIÇÕES ABERTAS';
+  ctx.fillText(priceText, W / 2, Math.round(790 * scale));
+
+  // Footer
+  drawFooter(ctx, W, H, scale);
+}
+
+async function renderResultado(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  ev: EventRow,
+  bgImage: HTMLImageElement | null,
+) {
+  const scale = W / 1080;
+
+  // Background (darker overlay)
+  if (bgImage) {
+    ctx.drawImage(bgImage, 0, 0, W, H);
+    const grad = ctx.createLinearGradient(0, H, 0, 0);
+    grad.addColorStop(0, 'rgba(0,0,0,0.92)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    drawPremiumBg(ctx, W, H);
+  }
+
+  // Runner icons top corners
+  ctx.font = `${Math.round(48 * scale)}px serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('🏃', Math.round(30 * scale), Math.round(80 * scale));
   ctx.textAlign = 'right';
-  ctx.font = `${Math.round(24 * fs)}px Arial, sans-serif`;
-  ctx.fillStyle = '#666666';
-  ctx.fillText('022runners.com.br', W - Math.round(40 * fs), H - Math.round(14 * fs));
-}
+  ctx.fillText('🏃', W - Math.round(30 * scale), Math.round(80 * scale));
 
-function drawTemplateA(
-  ctx: CanvasRenderingContext2D,
-  W: number,
-  H: number,
-  event: Record<string, unknown>,
-  palette: Palette,
-  dateStr: string,
-  fs: number,
-) {
-  drawBase(ctx, W, H, palette);
-  drawLogoAndFooter(ctx, W, H, fs);
+  // Logo
+  await drawLogo(ctx, W, Math.round(40 * scale));
 
-  ctx.textBaseline = 'alphabetic';
-  const cx = W / 2;
+  // Gold top faixa
+  ctx.fillStyle = GOLD;
+  ctx.globalAlpha = 0.15;
+  ctx.fillRect(0, 0, W, Math.round(180 * scale));
+  ctx.globalAlpha = 1;
 
-  // Nome do evento — centralizado, grande
+  // RESULTADOS title
   ctx.textAlign = 'center';
-  ctx.font = `bold ${Math.round(72 * fs)}px Arial Black, Arial, sans-serif`;
-  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `bold ${Math.round(96 * scale)}px Arial Black, Arial, sans-serif`;
+  ctx.fillStyle = GOLD;
   ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 24;
-  ctx.shadowOffsetY = 4;
-  const nameY = H * 0.48;
-  const endY = wrapText(ctx, String(event.title ?? '').toUpperCase(), cx, nameY, W - Math.round(120 * fs), Math.round(86 * fs), 2);
+  ctx.shadowBlur = 12;
+  ctx.fillText('RESULTADOS', W / 2, Math.round(100 * scale));
   ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
   ctx.shadowColor = 'transparent';
 
-  // Faixa dourada abaixo do título
-  ctx.fillStyle = GOLD;
-  ctx.fillRect(W * 0.2, endY + Math.round(8 * fs), W * 0.6, Math.round(4 * fs));
-
-  // Data
-  ctx.textAlign = 'center';
-  ctx.font = `${Math.round(36 * fs)}px Arial, sans-serif`;
-  ctx.fillStyle = GOLD;
-  ctx.fillText(dateStr, cx, endY + Math.round(58 * fs));
-
-  // Local com ícone
-  ctx.font = `${Math.round(32 * fs)}px Arial, sans-serif`;
-  ctx.fillStyle = '#CCCCCC';
-  ctx.fillText(`📍 ${String(event.city ?? '')}`, cx, endY + Math.round(104 * fs));
-
-  // Distância / modalidade
-  const modality = String(event.distance ?? event.category ?? event.sport_type ?? '');
-  if (modality) {
-    ctx.font = `${Math.round(28 * fs)}px Arial, sans-serif`;
-    ctx.fillStyle = '#AAAAAA';
-    ctx.fillText(modality, cx, endY + Math.round(148 * fs));
-  }
-
-  // Preço
-  if (event.price) {
-    ctx.font = `bold ${Math.round(40 * fs)}px Arial, sans-serif`;
-    ctx.fillStyle = GOLD;
-    ctx.fillText(`A partir de R$ ${event.price}`, cx, endY + Math.round(205 * fs));
-  }
-}
-
-function drawTemplateB(
-  ctx: CanvasRenderingContext2D,
-  W: number,
-  H: number,
-  event: Record<string, unknown>,
-  palette: Palette,
-  dateStr: string,
-  fs: number,
-) {
-  drawBase(ctx, W, H, palette);
-  drawLogoAndFooter(ctx, W, H, fs);
-
-  ctx.textBaseline = 'alphabetic';
-  const lx = Math.round(60 * fs);
-
-  // Bloco lateral dourado espessado
-  ctx.fillStyle = palette.accent;
-  ctx.fillRect(0, H * 0.33, Math.round(12 * fs), H * 0.52);
-
-  // Nome do evento — alinhado à esquerda
-  ctx.textAlign = 'left';
-  ctx.font = `bold ${Math.round(72 * fs)}px Arial Black, Arial, sans-serif`;
+  // Event name
+  ctx.font = `bold ${Math.round(56 * scale)}px Arial Black, Arial, sans-serif`;
   ctx.fillStyle = '#FFFFFF';
-  ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 24;
-  ctx.shadowOffsetY = 4;
-  const nameY = H * 0.47;
-  const endY = wrapText(ctx, String(event.title ?? '').toUpperCase(), lx, nameY, W - Math.round(120 * fs), Math.round(86 * fs), 2);
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-  ctx.shadowColor = 'transparent';
+  const nameLines = wrapLines(ctx, eventName(ev), W * 0.88);
+  let ny = Math.round(200 * scale);
+  for (const line of nameLines) {
+    ctx.fillText(line, W / 2, ny);
+    ny += Math.round(66 * scale);
+  }
 
-  // Data
-  ctx.textAlign = 'left';
-  ctx.font = `${Math.round(36 * fs)}px Arial, sans-serif`;
+  // Motivational text
+  ctx.font = `${Math.round(32 * scale)}px Arial, sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillText('QUE ENERGIA FOI ESSA, GALERA!', W / 2, Math.round(300 * scale));
+
+  // Horizontal line
+  drawHorizontalLine(ctx, W, Math.round(360 * scale));
+
+  // Distance big
+  ctx.font = `bold ${Math.round(80 * scale)}px Arial Black, Arial, sans-serif`;
   ctx.fillStyle = GOLD;
-  ctx.fillText(dateStr, lx, endY + Math.round(54 * fs));
+  ctx.fillText(eventDistance(ev) || '5KM', W / 2, Math.round(450 * scale));
 
-  // Local
-  ctx.font = `${Math.round(32 * fs)}px Arial, sans-serif`;
-  ctx.fillStyle = '#CCCCCC';
-  ctx.fillText(`📍 ${String(event.city ?? '')}`, lx, endY + Math.round(98 * fs));
-
-  // Distância / modalidade
-  const modality = String(event.distance ?? event.category ?? event.sport_type ?? '');
-  if (modality) {
-    ctx.font = `${Math.round(28 * fs)}px Arial, sans-serif`;
-    ctx.fillStyle = '#AAAAAA';
-    ctx.fillText(modality, lx, endY + Math.round(140 * fs));
-  }
-
-  // Preço
-  if (event.price) {
-    ctx.font = `bold ${Math.round(40 * fs)}px Arial, sans-serif`;
-    ctx.fillStyle = GOLD;
-    ctx.fillText(`A partir de R$ ${event.price}`, lx, endY + Math.round(196 * fs));
-  }
-}
-
-function drawTemplateC(
-  ctx: CanvasRenderingContext2D,
-  W: number,
-  H: number,
-  event: Record<string, unknown>,
-  palette: Palette,
-  dateStr: string,
-  fs: number,
-) {
-  drawBase(ctx, W, H, palette);
-  drawLogoAndFooter(ctx, W, H, fs);
-
-  ctx.textBaseline = 'alphabetic';
-  const cx = W / 2;
-
-  // Nome do evento — topo
-  ctx.textAlign = 'center';
-  ctx.font = `bold ${Math.round(64 * fs)}px Arial Black, Arial, sans-serif`;
+  // UM DIA INESQUECÍVEL
+  ctx.font = `bold ${Math.round(36 * scale)}px Arial, sans-serif`;
   ctx.fillStyle = '#FFFFFF';
-  ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 20;
-  ctx.shadowOffsetY = 4;
-  wrapText(ctx, String(event.title ?? '').toUpperCase(), cx, H * 0.2, W - Math.round(120 * fs), Math.round(78 * fs), 2);
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-  ctx.shadowColor = 'transparent';
+  ctx.fillText('UM DIA INESQUECÍVEL', W / 2, Math.round(520 * scale));
 
-  // Ícone do esporte — centro
-  const st = String(event.sport_type ?? '').toLowerCase();
-  let icon = '🏃';
-  if (st.includes('bike') || st.includes('cicl')) icon = '🚴';
-  else if (st.includes('tri')) icon = '🏊';
-  else if (st.includes('trail') || st.includes('trilha')) icon = '🥾';
-  ctx.font = `${Math.round(130 * fs)}px serif`;
-  ctx.fillText(icon, cx, H * 0.55);
-
-  // Dados abaixo do ícone
-  let by = H * 0.66;
-
-  ctx.font = `${Math.round(36 * fs)}px Arial, sans-serif`;
-  ctx.fillStyle = GOLD;
-  ctx.fillText(dateStr, cx, by);
-  by += Math.round(50 * fs);
-
-  ctx.font = `${Math.round(32 * fs)}px Arial, sans-serif`;
+  // Date
+  ctx.font = `${Math.round(32 * scale)}px Arial, sans-serif`;
   ctx.fillStyle = '#CCCCCC';
-  ctx.fillText(`📍 ${String(event.city ?? '')}`, cx, by);
-  by += Math.round(46 * fs);
+  ctx.fillText(`📅 ${fmtDate(ev.date)}`, W / 2, Math.round(590 * scale));
 
-  const modality = String(event.distance ?? event.category ?? event.sport_type ?? '');
-  if (modality) {
-    ctx.font = `${Math.round(28 * fs)}px Arial, sans-serif`;
-    ctx.fillStyle = '#AAAAAA';
-    ctx.fillText(modality, cx, by);
-    by += Math.round(42 * fs);
-  }
+  // Location
+  ctx.font = `${Math.round(30 * scale)}px Arial, sans-serif`;
+  ctx.fillStyle = '#CCCCCC';
+  ctx.fillText(`📍 ${eventLocation(ev)}`, W / 2, Math.round(640 * scale));
 
-  if (event.price) {
-    ctx.font = `bold ${Math.round(40 * fs)}px Arial, sans-serif`;
-    ctx.fillStyle = GOLD;
-    ctx.fillText(`A partir de R$ ${event.price}`, cx, by);
-  }
+  // Horizontal line
+  drawHorizontalLine(ctx, W, Math.round(700 * scale));
+
+  // Next event CTA
+  ctx.font = `bold ${Math.round(28 * scale)}px Arial, sans-serif`;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText('CONFIRMA PRESENÇA NO PRÓXIMO!', W / 2, Math.round(760 * scale));
+
+  ctx.font = `${Math.round(26 * scale)}px Arial, sans-serif`;
+  ctx.fillStyle = GOLD;
+  ctx.fillText('Veja resultados em 022runners.com.br', W / 2, Math.round(810 * scale));
+
+  // Footer
+  drawFooter(ctx, W, H, scale);
 }
+
+// ── component ─────────────────────────────────────────────────────────────────
 
 export function SocialGeneratorPage() {
   const { user } = useAuth();
-  const [events, setEvents] = useState<Record<string, unknown>[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<Record<string, unknown> | null>(null);
-  const [postType, setPostType] = useState('abertura_inscricoes');
-  const [platform, setPlatform] = useState('Instagram');
-  const [format, setFormat] = useState('feed');
-  const [template, setTemplate] = useState('A');
-  const [generatedText, setGeneratedText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [generatingImage, setGeneratingImage] = useState(false);
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<EventRow | null>(null);
+  const [postType, setPostType] = useState<PostType>('divulgacao');
+  const [format, setFormat] = useState<FormatKey>('feed');
   const [imageDataUrl, setImageDataUrl] = useState('');
-  const [history, setHistory] = useState<{ text: string; event: string; type: string; platform: string; ts: number }[]>([]);
+  const [generating, setGenerating] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('events').select('*').eq('organizer_id', user.id).eq('status', 'published')
+    supabase
+      .from('events')
+      .select('*')
+      .eq('organizer_id', user.id)
+      .eq('status', 'published')
       .then(({ data }) => {
-        const rows = (data ?? []) as Record<string, unknown>[];
+        const rows = (data ?? []) as EventRow[];
         setEvents(rows);
         if (rows[0]) setSelectedEvent(rows[0]);
       });
-    const saved = localStorage.getItem(HISTORY_KEY);
-    if (saved) setHistory(JSON.parse(saved) as typeof history);
   }, [user]);
 
-  const generateCanvas = useCallback(async (event: Record<string, unknown>, fmt: string, tpl: string) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  const renderCanvas = useCallback(
+    async (ev: EventRow, fmt: FormatKey, bg: HTMLImageElement | null) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    setGeneratingImage(true);
-    const fmtDef = FORMATS.find(f => f.key === fmt) ?? FORMATS[0];
-    const W = fmtDef.w;
-    const H = fmtDef.h;
-    canvas.width = W;
-    canvas.height = H;
+      const fmtDef = FORMATS.find(f => f.key === fmt) ?? FORMATS[0];
+      canvas.width = fmtDef.w;
+      canvas.height = fmtDef.h;
 
-    const palette = getAccentByType(String(event.sport_type ?? ''));
-    const fs = W / 1080; // font scale
-    const dateStr = event.date
-      ? new Date(String(event.date)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-      : '';
+      if (postType === 'divulgacao') {
+        await renderDivulgacao(ctx, fmtDef.w, fmtDef.h, ev, bg);
+      } else {
+        await renderResultado(ctx, fmtDef.w, fmtDef.h, ev, bg);
+      }
 
-    if (tpl === 'A') drawTemplateA(ctx, W, H, event, palette, dateStr, fs);
-    else if (tpl === 'B') drawTemplateB(ctx, W, H, event, palette, dateStr, fs);
-    else drawTemplateC(ctx, W, H, event, palette, dateStr, fs);
+      setImageDataUrl(canvas.toDataURL('image/png'));
+    },
+    [postType],
+  );
 
-    setImageDataUrl(canvas.toDataURL('image/png'));
-    setGeneratingImage(false);
-  }, []);
-
-  const generate = async () => {
+  const handleGenerateClick = () => {
     if (!selectedEvent) { toast.error('Selecione um evento.'); return; }
-    setLoading(true);
-    setImageDataUrl('');
-    try {
-      const distances = (Array.isArray(selectedEvent.distances) ? selectedEvent.distances : [])
-        .map((d: Record<string, unknown>) => String(d.name ?? '')).join(', ');
-      const date = selectedEvent.date
-        ? new Date(String(selectedEvent.date)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-        : '';
-      const text = await callAIAssistant(postType, {
-        title: selectedEvent.title,
-        city: selectedEvent.city,
-        date,
-        distances,
-        slug: selectedEvent.slug,
-      }, platform);
-      setGeneratedText(text);
-      const entry = { text, event: String(selectedEvent.title ?? ''), type: postType, platform, ts: Date.now() };
-      const newHistory = [entry, ...history].slice(0, 10);
-      setHistory(newHistory);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
-      toast.success('Post gerado com IA!');
-      await generateCanvas(selectedEvent, format, template);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Erro ao gerar post.');
-    } finally {
-      setLoading(false);
+    setShowModal(true);
+  };
+
+  const handleChoosePhoto = () => {
+    setShowModal(false);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedEvent) return;
+    setGenerating(true);
+    const img = new Image();
+    img.onload = async () => {
+      setBgImage(img);
+      await renderCanvas(selectedEvent, format, img);
+      setGenerating(false);
+    };
+    img.src = URL.createObjectURL(file);
+    e.target.value = '';
+  };
+
+  const handlePremiumBg = async () => {
+    setShowModal(false);
+    if (!selectedEvent) return;
+    setGenerating(true);
+    setBgImage(null);
+    await renderCanvas(selectedEvent, format, null);
+    setGenerating(false);
+  };
+
+  const handleFormatChange = async (fmt: FormatKey) => {
+    setFormat(fmt);
+    if (selectedEvent && imageDataUrl) {
+      setGenerating(true);
+      await renderCanvas(selectedEvent, fmt, bgImage);
+      setGenerating(false);
     }
   };
 
-  const handleRegenerateImage = async () => {
-    if (!selectedEvent) return;
-    await generateCanvas(selectedEvent, format, template);
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(generatedText);
-    toast.success('Texto copiado!');
-  };
-
-  const handleDownloadImage = () => {
+  const handleDownload = () => {
     if (!imageDataUrl) return;
     const fmtDef = FORMATS.find(f => f.key === format) ?? FORMATS[0];
-    const link = document.createElement('a');
-    link.download = `post-${String(selectedEvent?.slug ?? 'evento')}-${fmtDef.w}x${fmtDef.h}.png`;
-    link.href = imageDataUrl;
-    link.click();
+    const a = document.createElement('a');
+    a.download = `022runners-${postType}-${fmtDef.w}x${fmtDef.h}.png`;
+    a.href = imageDataUrl;
+    a.click();
     toast.success('Imagem baixada!');
-  };
-
-  const handleShare = () => {
-    if (platform === 'WhatsApp') window.open(`https://wa.me/?text=${encodeURIComponent(generatedText)}`, '_blank');
-    else if (platform === 'Facebook') window.open(`https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(generatedText)}`, '_blank');
-    else { handleCopy(); toast.success('Texto copiado — cole no Instagram!'); }
-  };
-
-  const handleFormatChange = (fmt: string) => {
-    setFormat(fmt);
-    if (selectedEvent && imageDataUrl) generateCanvas(selectedEvent, fmt, template);
-  };
-
-  const handleTemplateChange = (tpl: string) => {
-    setTemplate(tpl);
-    if (selectedEvent && imageDataUrl) generateCanvas(selectedEvent, format, tpl);
   };
 
   const currentFmt = FORMATS.find(f => f.key === format) ?? FORMATS[0];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#000000' }}>
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
 
-      <div className="bg-white border-b py-8">
-        <div className="max-w-5xl mx-auto px-4">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <RunnerPostsIcon /> Gerador de Posts com IA
-          </h1>
-          <p className="text-gray-500 mt-1">Posts e imagens criados pela IA especialmente para seus eventos</p>
-        </div>
+      {/* Header */}
+      <div className="px-4 pt-8 pb-4 max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold tracking-widest" style={{ color: GOLD }}>
+          GERADOR DE POSTS
+        </h1>
+        <p className="text-gray-400 mt-1 text-sm">Crie posts profissionais para seus eventos</p>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
-        {/* Configurações */}
-        <div className="bg-white rounded-xl border shadow-sm p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Configurações</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="text-xs text-gray-500 font-medium block mb-1">Evento</label>
-              <select
-                value={String(selectedEvent?.id ?? '')}
-                onChange={e => setSelectedEvent(events.find(ev => ev.id === e.target.value) ?? null)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"
+      <div className="max-w-3xl mx-auto px-4 pb-12 space-y-6">
+
+        {/* SEÇÃO 1 — Seletor de evento */}
+        <div className="rounded-xl border p-5 space-y-3" style={{ borderColor: GOLD + '55', backgroundColor: '#0a0a0a' }}>
+          <h2 className="text-xs font-bold tracking-widest" style={{ color: GOLD }}>SEÇÃO 1 — EVENTO</h2>
+          <select
+            value={selectedEvent?.id ?? ''}
+            onChange={e => setSelectedEvent(events.find(ev => ev.id === e.target.value) ?? null)}
+            className="w-full rounded-lg px-4 py-3 text-sm font-medium focus:outline-none"
+            style={{ backgroundColor: '#111', border: `1px solid ${GOLD}55`, color: '#fff' }}
+          >
+            <option value="">Selecione um evento...</option>
+            {events.map(ev => (
+              <option key={ev.id} value={ev.id}>{ev.title}</option>
+            ))}
+          </select>
+          {selectedEvent && (
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+              {selectedEvent.date && <span>📅 {fmtDate(selectedEvent.date)}</span>}
+              {(selectedEvent.city || selectedEvent.state) && <span>📍 {eventLocation(selectedEvent)}</span>}
+              {eventDistance(selectedEvent) && <span>🏃 {eventDistance(selectedEvent)}</span>}
+              {selectedEvent.price && <span>💰 {eventPrice(selectedEvent)}</span>}
+            </div>
+          )}
+        </div>
+
+        {/* SEÇÃO 2 — Tipo de post */}
+        <div className="rounded-xl border p-5 space-y-3" style={{ borderColor: GOLD + '55', backgroundColor: '#0a0a0a' }}>
+          <h2 className="text-xs font-bold tracking-widest" style={{ color: GOLD }}>SEÇÃO 2 — TIPO DE POST</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {(['divulgacao', 'resultado'] as PostType[]).map(type => (
+              <button
+                key={type}
+                onClick={() => setPostType(type)}
+                className="py-4 rounded-xl font-bold text-sm tracking-wider transition-all"
+                style={postType === type
+                  ? { backgroundColor: GOLD, color: '#000', border: `2px solid ${GOLD}` }
+                  : { backgroundColor: '#111', color: GOLD, border: `2px solid ${GOLD}55` }}
               >
-                {events.map(ev => <option key={String(ev.id)} value={String(ev.id)}>{String(ev.title)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 font-medium block mb-1">Tipo de Post</label>
-              <select value={postType} onChange={e => setPostType(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
-                {POST_TYPES.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 font-medium block mb-1">Plataforma</label>
-              <select value={platform} onChange={e => setPlatform(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
-                {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
+                {type === 'divulgacao' ? '🚀 DIVULGAÇÃO' : '🏆 RESULTADO'}
+                <span className="block text-xs font-normal mt-1 opacity-70">
+                  {type === 'divulgacao' ? 'Inscrições abertas' : 'Parabéns corredores'}
+                </span>
+              </button>
+            ))}
           </div>
-          <button onClick={generate} disabled={loading || generatingImage}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm disabled:opacity-60"
-            style={{ backgroundColor: GOLD, color: '#000' }}>
-            {loading
-              ? <><RefreshCw size={16} className="animate-spin" /> Gerando com IA...</>
-              : generatingImage
-                ? <><Image size={16} className="animate-pulse" /> Gerando imagem...</>
-                : <><Sparkles size={16} /> Gerar post + imagem</>}
-          </button>
         </div>
 
-        {/* Seletor de Formato e Template */}
-        {(generatedText || imageDataUrl) && (
-          <div className="bg-white rounded-xl border shadow-sm p-5">
-            <div className="grid sm:grid-cols-2 gap-5">
-              {/* Formato */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Formato da Imagem</h3>
-                <div className="flex gap-2 flex-wrap">
-                  {FORMATS.map(f => (
-                    <button
-                      key={f.key}
-                      onClick={() => handleFormatChange(f.key)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
-                      style={format === f.key
-                        ? { backgroundColor: GOLD, color: '#000', borderColor: GOLD }
-                        : { borderColor: '#d1d5db', color: '#6b7280' }}>
-                      {f.label}
-                      <span className="ml-1 opacity-60">{f.w}×{f.h}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Template */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Layout</h3>
-                <div className="flex gap-2 flex-wrap">
-                  {TEMPLATES.map(t => (
-                    <button
-                      key={t.key}
-                      onClick={() => handleTemplateChange(t.key)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
-                      style={template === t.key
-                        ? { backgroundColor: GOLD, color: '#000', borderColor: GOLD }
-                        : { borderColor: '#d1d5db', color: '#6b7280' }}>
-                      {t.label}
-                      <span className="block text-[10px] opacity-60">{t.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+        {/* SEÇÃO 3 — Formato */}
+        <div className="rounded-xl border p-5 space-y-3" style={{ borderColor: GOLD + '55', backgroundColor: '#0a0a0a' }}>
+          <h2 className="text-xs font-bold tracking-widest" style={{ color: GOLD }}>SEÇÃO 3 — FORMATO</h2>
+          <div className="grid grid-cols-3 gap-3">
+            {FORMATS.map(f => (
+              <button
+                key={f.key}
+                onClick={() => handleFormatChange(f.key as FormatKey)}
+                className="py-3 rounded-xl text-xs font-bold tracking-wide transition-all"
+                style={format === f.key
+                  ? { backgroundColor: GOLD, color: '#000', border: `2px solid ${GOLD}` }
+                  : { backgroundColor: '#111', color: GOLD, border: `2px solid ${GOLD}55` }}
+              >
+                {f.label}
+                <span className="block font-normal opacity-60 mt-0.5">{f.w}×{f.h}</span>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* Resultado — texto + imagem */}
-        {generatedText && (
-          <div className="bg-white rounded-xl border shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-900">Post Gerado</h2>
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={generate} disabled={loading || generatingImage}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border"
-                  style={{ borderColor: GOLD, color: GOLD }}>
-                  <RefreshCw size={12} /> Regenerar
-                </button>
-                <button onClick={handleCopy}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border"
-                  style={{ borderColor: GOLD, color: GOLD }}>
-                  <Copy size={12} /> Copiar texto
-                </button>
-                <button onClick={handleShare}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
-                  style={{ backgroundColor: GOLD, color: '#000' }}>
-                  <Share2 size={12} /> Compartilhar
-                </button>
-              </div>
+        {/* Botão Gerar Post */}
+        <button
+          onClick={handleGenerateClick}
+          disabled={generating || !selectedEvent}
+          className="w-full py-5 rounded-xl text-lg font-bold tracking-widest transition-all disabled:opacity-40"
+          style={{ backgroundColor: GOLD, color: '#000' }}
+        >
+          {generating ? 'GERANDO...' : '✨ GERAR POST'}
+        </button>
+
+        {/* SEÇÃO 4 — Preview + Download */}
+        {imageDataUrl && (
+          <div className="rounded-xl border p-5 space-y-4" style={{ borderColor: GOLD, backgroundColor: '#0a0a0a' }}>
+            <h2 className="text-xs font-bold tracking-widest" style={{ color: GOLD }}>SEÇÃO 4 — PREVIEW</h2>
+            <div
+              className="w-full overflow-hidden rounded-lg mx-auto"
+              style={{ border: `2px solid ${GOLD}`, maxWidth: 480 }}
+            >
+              <img
+                src={imageDataUrl}
+                alt="Preview do post"
+                className="w-full h-auto block"
+                style={{ aspectRatio: `${currentFmt.w}/${currentFmt.h}` }}
+              />
             </div>
-
-            <div className="grid md:grid-cols-2 gap-5">
-              {/* Texto */}
-              <div>
-                <textarea value={generatedText} onChange={e => setGeneratedText(e.target.value)}
-                  rows={14} className="w-full border rounded-xl px-4 py-3 text-sm focus:outline-none resize-none font-mono"
-                  style={{ borderColor: '#e5e7eb' }} />
-                <p className="text-xs text-gray-400 mt-1">{generatedText.length} caracteres · Edite acima se quiser personalizar</p>
-              </div>
-
-              {/* Preview da imagem */}
-              <div className="flex flex-col items-center gap-3">
-                {generatingImage ? (
-                  <div className="w-full aspect-square rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400">
-                    <Image size={32} className="animate-pulse" style={{ color: GOLD }} />
-                    <p className="text-sm">Gerando {currentFmt.w}×{currentFmt.h}…</p>
-                  </div>
-                ) : imageDataUrl ? (
-                  <>
-                    <div
-                      className="w-full rounded-xl overflow-hidden shadow-lg border"
-                      style={{ aspectRatio: `${currentFmt.w}/${currentFmt.h}` }}
-                    >
-                      <img src={imageDataUrl} alt="Post gerado" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex gap-2 w-full">
-                      <button onClick={handleDownloadImage}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm"
-                        style={{ backgroundColor: GOLD, color: '#000' }}>
-                        <Download size={15} /> Baixar imagem
-                      </button>
-                      <button onClick={handleRegenerateImage} disabled={generatingImage}
-                        className="px-4 py-2.5 rounded-xl border text-sm font-medium"
-                        style={{ borderColor: GOLD, color: GOLD }}>
-                        <RefreshCw size={14} />
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-400">PNG {currentFmt.w}×{currentFmt.h}px</p>
-                  </>
-                ) : (
-                  <div className="w-full aspect-square rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400">
-                    <Image size={32} />
-                    <p className="text-sm text-center px-4">A imagem aparecerá aqui após gerar o post</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Histórico */}
-        {history.length > 0 && (
-          <div className="bg-white rounded-xl border shadow-sm p-5">
-            <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Clock size={16} /> Últimos Posts Gerados</h2>
-            <div className="space-y-2">
-              {history.map((h, i) => (
-                <button key={i} onClick={() => setGeneratedText(h.text)}
-                  className="w-full text-left p-3 border rounded-lg hover:border-yellow-400 hover:bg-amber-50/30 transition-all">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-gray-700">{h.event}</span>
-                    <span className="text-xs text-gray-400">{new Date(h.ts).toLocaleDateString('pt-BR')}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 line-clamp-2">{h.text}</p>
-                  <div className="flex gap-2 mt-1">
-                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: '#f0e6c8', color: '#92400e' }}>{h.platform}</span>
-                  </div>
-                </button>
-              ))}
+            <p className="text-center text-xs text-gray-500">
+              {currentFmt.w}×{currentFmt.h}px • PNG
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDownload}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm tracking-wider"
+                style={{ backgroundColor: '#000', border: `2px solid ${GOLD}`, color: GOLD }}
+              >
+                <Download size={16} /> BAIXAR PNG
+              </button>
+              <button
+                onClick={handleGenerateClick}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm tracking-wider"
+                style={{ backgroundColor: GOLD, color: '#000' }}
+              >
+                ✨ NOVO POST
+              </button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Modal de seleção de fundo */}
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6 space-y-4"
+            style={{ backgroundColor: '#111', border: `2px solid ${GOLD}`, boxShadow: `0 0 40px ${GOLD}33` }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg tracking-wider" style={{ color: GOLD }}>ESCOLHA O FUNDO</h3>
+              <button onClick={() => setShowModal(false)} style={{ color: '#666' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <button
+              onClick={handleChoosePhoto}
+              className="w-full rounded-xl p-5 text-left transition-all hover:opacity-90"
+              style={{ backgroundColor: '#1a1a1a', border: `1px solid ${GOLD}55` }}
+            >
+              <div className="text-3xl mb-2">📷</div>
+              <div className="font-bold text-white">USAR FOTO DO EVENTO</div>
+              <div className="text-xs text-gray-400 mt-1">Faça upload de uma foto real</div>
+            </button>
+
+            <button
+              onClick={handlePremiumBg}
+              className="w-full rounded-xl p-5 text-left transition-all hover:opacity-90"
+              style={{ backgroundColor: '#1a1a1a', border: `1px solid ${GOLD}55` }}
+            >
+              <div className="text-3xl mb-2">✨</div>
+              <div className="font-bold" style={{ color: GOLD }}>GERAR FUNDO PREMIUM</div>
+              <div className="text-xs text-gray-400 mt-1">Criamos um visual profissional</div>
+            </button>
+
+            <button
+              onClick={() => setShowModal(false)}
+              className="w-full py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
