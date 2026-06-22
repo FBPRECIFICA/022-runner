@@ -72,9 +72,10 @@ export function ConfirmationPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Inscrição Realizada!</h1>
           <p className="text-gray-500 text-sm mb-4">Você está inscrito. Aguarde a confirmação do pagamento.</p>
-          <div className="inline-block bg-gray-50 border rounded-xl px-6 py-3">
-            <p className="text-xs text-gray-400 mb-1">Número da Inscrição</p>
-            <p className="text-2xl font-mono font-bold" style={{ color: '#C9A84C' }}>{reg.registration_number}</p>
+          <div className="bg-amber-50 border-2 border-[#C9A84C] rounded-2xl px-8 py-5 mt-2">
+            <p className="text-xs font-semibold text-[#B8962E] uppercase tracking-widest mb-1">Número de Peito</p>
+            <p className="text-5xl font-black font-mono" style={{ color: '#C9A84C' }}>#{reg.registration_number}</p>
+            <p className="text-xs text-gray-400 mt-2">Apresente este número no check-in</p>
           </div>
         </div>
 

@@ -11,7 +11,7 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'sb_publishable_b
 
 async function fetchActiveEvents(): Promise<string> {
   try {
-    const url = `${SUPABASE_URL}/rest/v1/events?select=title,date,city,state,description,slug&or=(status.eq.active,status.eq.published)&order=date.asc&limit=30`
+    const url = `${SUPABASE_URL}/rest/v1/events?select=title,date,city,state,location,description,distances,prices,additional_info,slug&or=(status.eq.active,status.eq.published)&order=date.asc&limit=30`
     const res = await fetch(url, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -20,11 +20,24 @@ async function fetchActiveEvents(): Promise<string> {
     })
     const data = await res.json()
     if (Array.isArray(data) && data.length > 0) {
-      return data.map((e: Record<string, unknown>) =>
-        `• ${e.title} | ${e.city}${e.state ? '/' + e.state : ''} | ${e.date ? new Date(String(e.date)).toLocaleDateString('pt-BR') : 'data a confirmar'} | 022runners.com.br/evento/${e.slug}`
-      ).join('\n')
+      return data.map((e: Record<string, unknown>) => {
+        const dateObj = e.date ? new Date(String(e.date)) : null
+        const dateStr = dateObj ? dateObj.toLocaleDateString('pt-BR') : 'a confirmar'
+        const timeStr = dateObj ? dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
+        const distances = Array.isArray(e.distances)
+          ? e.distances.map((d: Record<string, unknown>) => `${d.name} R$${d.price ?? d.lots?.[0]?.price ?? '?'}`).join(', ')
+          : ''
+        return [
+          `• ${e.title}`,
+          `  Data: ${dateStr}${timeStr ? ' às ' + timeStr : ''}`,
+          `  Local: ${e.location || e.city}${e.city ? ' — ' + e.city : ''}`,
+          distances ? `  Distâncias/Preços: ${distances}` : '',
+          e.additional_info ? `  Informações: ${e.additional_info}` : '',
+          `  Link: 022runners.com.br/evento/${e.slug}`,
+        ].filter(Boolean).join('\n')
+      }).join('\n\n')
     }
-    return 'Nenhum evento ativo no momento.'
+    return 'No momento não há eventos publicados. Em breve novidades!'
   } catch {
     return 'Não foi possível carregar os eventos agora.'
   }

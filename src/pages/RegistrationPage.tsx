@@ -133,6 +133,36 @@ export function RegistrationPage() {
       trackRegistrationComplete(event.title, Number(price));
       localStorage.removeItem(LS_KEY);
       setRegistrationId(data.id);
+
+      // Notificar organizador — EMAIL 4
+      const { count: totalRegs } = await supabase
+        .from('registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', event.id)
+        .neq('status', 'cancelled');
+      const { data: organizer } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', event.organizer_id)
+        .single();
+      if (organizer?.email) {
+        supabase.functions.invoke('send-email', {
+          body: {
+            templateType: 'organizador_nova_inscricao',
+            recipientEmail: organizer.email,
+            data: {
+              eventTitle: event.title,
+              athleteName: form.name,
+              athleteEmail: form.email,
+              distanceName: chosen?.name || '',
+              amount: Number(price).toFixed(2).replace('.', ','),
+              paymentStatus: 'pending',
+              totalRegistrations: (totalRegs ?? 0) + 1,
+            },
+          },
+        }).catch(() => {});
+      }
+
       setStep('confirmação');
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar inscrição. Tente novamente.');

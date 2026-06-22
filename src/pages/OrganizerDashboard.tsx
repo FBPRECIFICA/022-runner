@@ -91,7 +91,7 @@ export function OrganizerDashboard() {
     if (!user) return;
     const { data } = await supabase
       .from('events')
-      .select('*')
+      .select('*, registrations(count)')
       .eq('organizer_id', user.id)
       .order('created_at', { ascending: false });
     setEvents(data || []);
@@ -404,7 +404,12 @@ export function OrganizerDashboard() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-gray-900 truncate">{event.title}</h3>
                   <p className="text-sm text-gray-500">{event.city} · {new Date(event.date).toLocaleDateString('pt-BR')}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${event.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{event.status === 'published' ? 'Publicado' : 'Rascunho'}</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${event.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{event.status === 'published' ? 'Publicado' : 'Rascunho'}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold">
+                      {event.registrations?.[0]?.count ?? 0} inscritos
+                    </span>
+                  </div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Visualizar"><Eye size={18} /></a>
