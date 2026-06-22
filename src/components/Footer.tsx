@@ -1,4 +1,5 @@
 ﻿import { Link } from 'react-router-dom';
+import { SecurityBadges } from './SecurityBadges';
 
 export function Footer() {
   return (
@@ -43,6 +44,10 @@ export function Footer() {
               <li><a href="https://wa.me/5522974044125" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">WhatsApp</a></li>
             </ul>
           </div>
+        </div>
+
+        <div className="mb-6">
+          <SecurityBadges />
         </div>
 
         <div style={{ borderTop: '1px solid #1f2937' }} className="pt-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs">

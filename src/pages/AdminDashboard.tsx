@@ -55,6 +55,10 @@ export function AdminDashboard() {
   };
 
   const deleteEvent = async (id: string) => {
+    await supabase.from('registrations').delete().eq('event_id', id);
+    await supabase.from('favorites').delete().eq('event_id', id);
+    await supabase.from('reviews').delete().eq('event_id', id);
+    await supabase.from('event_photos').delete().eq('event_id', id);
     const { error } = await supabase.from('events').delete().eq('id', id);
     if (error) { toast.error('Erro ao excluir evento.'); return; }
     setEvents(prev => prev.filter(e => e.id !== id));

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
-import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload } from 'lucide-react';
+import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, TrendingDown } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import * as XLSX from 'xlsx';
 
@@ -87,6 +88,7 @@ export function OrganizerDashboard() {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [eventRegistrations, setEventRegistrations] = useState<Record<string, any[]>>({});
   const [loadingRegs, setLoadingRegs] = useState(false);
+  const [allRegistrations, setAllRegistrations] = useState<any[]>([]);
 
   useEffect(() => { loadEvents(); }, []);
 
@@ -117,6 +119,17 @@ export function OrganizerDashboard() {
       .eq('organizer_id', user.id)
       .order('created_at', { ascending: false });
     setEvents(data || []);
+    if (data && data.length > 0) {
+      const eventIds = data.map((e: any) => e.id);
+      const { data: regs } = await supabase
+        .from('registrations')
+        .select('*')
+        .in('event_id', eventIds)
+        .order('created_at', { ascending: false });
+      setAllRegistrations(regs || []);
+    } else {
+      setAllRegistrations([]);
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -412,8 +425,128 @@ export function OrganizerDashboard() {
         </div>
 
         {/* Lista de Eventos */}
-        {tab === 'eventos' && (
-          <div className="space-y-4 overflow-x-auto">
+        {tab === 'eventos' && (() => {
+          const paidRegs = allRegistrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
+          const pendingRegs = allRegistrations.filter(r => r.status === 'pending');
+          const totalBruto = paidRegs.reduce((s, r) => s + Number(r.amount || 0), 0);
+          const taxaPlataforma = totalBruto * 0.1;
+          const valorLiquido = totalBruto * 0.9;
+
+          const weeklyData = (() => {
+            const weeks: Record<string, number> = {};
+            paidRegs.forEach(r => {
+              const d = new Date(r.created_at);
+              const start = new Date(d.getFullYear(), 0, 1);
+              const week = Math.ceil(((d.getTime() - start.getTime()) / 86400000 + start.getDay() + 1) / 7);
+              const key = `Sem ${week}`;
+              weeks[key] = (weeks[key] || 0) + 1;
+            });
+            return Object.entries(weeks).slice(-8).map(([name, value]) => ({ name, value }));
+          })();
+
+          return (
+            <>
+              {/* Cards financeiros */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                <div className="bg-white rounded-xl p-4 border-2" style={{ borderColor: '#C9A84C' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign size={16} style={{ color: '#C9A84C' }} />
+                    <span className="text-xs font-medium text-gray-500">Total Bruto</span>
+                  </div>
+                  <p className="text-xl font-bold" style={{ color: '#C9A84C' }}>R$ {totalBruto.toFixed(2).replace('.', ',')}</p>
+                  <p className="text-xs text-gray-400">{paidRegs.length} inscr. pagas</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#fca5a5' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingDown size={16} className="text-red-400" />
+                    <span className="text-xs font-medium text-gray-500">Taxa Plataforma (10%)</span>
+                  </div>
+                  <p className="text-xl font-bold text-red-400">R$ {taxaPlataforma.toFixed(2).replace('.', ',')}</p>
+                  <p className="text-xs text-gray-400">10% sobre total bruto</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#86efac' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp size={16} className="text-green-500" />
+                    <span className="text-xs font-medium text-gray-500">Valor Líquido Est.</span>
+                  </div>
+                  <p className="text-xl font-bold text-green-600">R$ {valorLiquido.toFixed(2).replace('.', ',')}</p>
+                  <p className="text-xs text-gray-400">90% do total bruto</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#fde68a' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Clock size={16} className="text-yellow-500" />
+                    <span className="text-xs font-medium text-gray-500">Aguardando Pagamento</span>
+                  </div>
+                  <p className="text-xl font-bold text-yellow-600">{pendingRegs.length}</p>
+                  <p className="text-xs text-gray-400">inscrições pendentes</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-400 -mt-4 mb-4">
+                * Valor líquido estimado. O valor real pode variar conforme a taxa Asaas de cada transação (PIX 0,99% | Cartão 2,99%).
+              </p>
+
+              {/* Gráfico de inscrições por semana */}
+              {weeklyData.length > 0 && (
+                <div className="bg-white rounded-xl border p-4 mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Inscrições por Semana</h3>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <BarChart data={weeklyData}>
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                      <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" allowDecimals={false} />
+                      <Tooltip contentStyle={{ fontSize: 12 }} />
+                      <Bar dataKey="value" fill="#C9A84C" radius={[4, 4, 0, 0]} name="Inscrições" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Tabela de transações */}
+              {allRegistrations.length > 0 && (
+                <div className="bg-white rounded-xl border mb-6 overflow-hidden">
+                  <div className="px-4 py-3 border-b">
+                    <h3 className="text-sm font-semibold text-gray-700">Transações</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left border-b text-gray-500">
+                          <th className="px-4 py-2 font-medium">Atleta</th>
+                          <th className="px-4 py-2 font-medium">Nº Peito</th>
+                          <th className="px-4 py-2 font-medium">Categoria</th>
+                          <th className="px-4 py-2 font-medium">Valor</th>
+                          <th className="px-4 py-2 font-medium">Status</th>
+                          <th className="px-4 py-2 font-medium">Data</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allRegistrations.slice(0, 50).map(r => (
+                          <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50">
+                            <td className="px-4 py-2 font-medium text-gray-900">{r.name}</td>
+                            <td className="px-4 py-2 font-mono font-bold" style={{ color: '#C9A84C' }}>{r.registration_number}</td>
+                            <td className="px-4 py-2 text-gray-500">{r.distance_name}</td>
+                            <td className="px-4 py-2 text-gray-700">R$ {Number(r.amount || 0).toFixed(2).replace('.', ',')}</td>
+                            <td className="px-4 py-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                r.status === 'paid' || r.status === 'confirmed'
+                                  ? 'bg-green-100 text-green-700'
+                                  : r.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                                {r.status === 'paid' || r.status === 'confirmed' ? 'Pago' : r.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-gray-400 text-xs">{new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4 overflow-x-auto">
             {events.length === 0 ? (
               <div className="bg-white rounded-xl border p-12 text-center">
                 <Calendar size={48} className="mx-auto text-gray-300 mb-4" />
@@ -490,8 +623,10 @@ export function OrganizerDashboard() {
                 )}
               </div>
             ))}
-          </div>
-        )}
+              </div>
+            </>
+          );
+        })()}
 
         {/* Criar Evento */}
         {tab === 'criar' && (
