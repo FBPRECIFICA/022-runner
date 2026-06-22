@@ -225,6 +225,9 @@ export function PaymentPage() {
               <p>4. Confirme o valor de R$ {Number(reg.amount).toFixed(2).replace('.', ',')}</p>
             </div>
             <p className="text-xs text-gray-400">O status será atualizado automaticamente após confirmação</p>
+            <button onClick={handleConfirmPaid} className="w-full text-sm text-gray-500 underline">
+              Já paguei — confirmar inscrição
+            </button>
           </div>
         )}
 

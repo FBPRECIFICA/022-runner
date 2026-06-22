@@ -84,8 +84,30 @@ export function OrganizerDashboard() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [eventRegistrations, setEventRegistrations] = useState<Record<string, any[]>>({});
+  const [loadingRegs, setLoadingRegs] = useState(false);
 
   useEffect(() => { loadEvents(); }, []);
+
+  const toggleInscritos = async (eventId: string) => {
+    if (expandedEventId === eventId) {
+      setExpandedEventId(null);
+      return;
+    }
+    setExpandedEventId(eventId);
+    if (!eventRegistrations[eventId]) {
+      setLoadingRegs(true);
+      const { data } = await supabase
+        .from('registrations')
+        .select('*')
+        .eq('event_id', eventId)
+        .neq('status', 'cancelled')
+        .order('registration_number');
+      setEventRegistrations(prev => ({ ...prev, [eventId]: data || [] }));
+      setLoadingRegs(false);
+    }
+  };
 
   const loadEvents = async () => {
     if (!user) return;
@@ -399,23 +421,73 @@ export function OrganizerDashboard() {
                 <button onClick={() => setTab('criar')} className="mt-4 bg-[#C9A84C] text-white px-6 py-2 rounded-lg hover:bg-[#B8962E]">Criar primeiro evento</button>
               </div>
             ) : events.map(event => (
-              <div key={event.id} className="bg-white rounded-xl border p-4 flex flex-wrap sm:flex-nowrap items-center gap-4">
-                {event.banner_url && <img src={event.banner_url} alt="" className="w-20 h-16 object-cover rounded-lg flex-shrink-0" />}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-gray-900 truncate">{event.title}</h3>
-                  <p className="text-sm text-gray-500">{event.city} · {new Date(event.date).toLocaleDateString('pt-BR')}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${event.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{event.status === 'published' ? 'Publicado' : 'Rascunho'}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold">
-                      {event.registrations?.[0]?.count ?? 0} inscritos
-                    </span>
+              <div key={event.id} className="bg-white rounded-xl border overflow-hidden">
+                <div className="p-4 flex flex-wrap sm:flex-nowrap items-center gap-4">
+                  {event.banner_url && <img src={event.banner_url} alt="" className="w-20 h-16 object-cover rounded-lg flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 truncate">{event.title}</h3>
+                    <p className="text-sm text-gray-500">{event.city} · {new Date(event.date).toLocaleDateString('pt-BR')}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${event.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{event.status === 'published' ? 'Publicado' : 'Rascunho'}</span>
+                      <button
+                        onClick={() => toggleInscritos(event.id)}
+                        className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold hover:bg-amber-100 transition-colors"
+                      >
+                        {event.registrations?.[0]?.count ?? 0} inscritos {expandedEventId === event.id ? '▲' : '▼'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Visualizar"><Eye size={18} /></a>
+                    <button onClick={() => openEdit(event)} className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Editar"><Edit size={18} /></button>
+                    <button onClick={() => exportExcel(event)} className="p-2 text-gray-500 hover:text-green-600 border rounded-lg" title="Exportar Excel"><Download size={18} /></button>
                   </div>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Visualizar"><Eye size={18} /></a>
-                  <button onClick={() => openEdit(event)} className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Editar"><Edit size={18} /></button>
-                  <button onClick={() => exportExcel(event)} className="p-2 text-gray-500 hover:text-green-600 border rounded-lg" title="Exportar Excel"><Download size={18} /></button>
-                </div>
+
+                {/* Lista de inscritos expandível */}
+                {expandedEventId === event.id && (
+                  <div className="border-t bg-gray-50">
+                    {loadingRegs ? (
+                      <div className="flex items-center justify-center py-6">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C9A84C]" />
+                      </div>
+                    ) : (eventRegistrations[event.id] || []).length === 0 ? (
+                      <p className="text-center text-gray-400 text-sm py-6">Nenhum inscrito ainda.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left border-b" style={{ color: '#6b7280' }}>
+                              <th className="px-4 py-2 font-medium">Nº Peito</th>
+                              <th className="px-4 py-2 font-medium">Nome</th>
+                              <th className="px-4 py-2 font-medium">Categoria</th>
+                              <th className="px-4 py-2 font-medium">Pagamento</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(eventRegistrations[event.id] || []).map(r => (
+                              <tr key={r.id} className="border-b last:border-0 hover:bg-white transition-colors">
+                                <td className="px-4 py-2 font-mono font-bold text-[#C9A84C]">{r.registration_number}</td>
+                                <td className="px-4 py-2 text-gray-900">{r.name}</td>
+                                <td className="px-4 py-2 text-gray-500">{r.distance_name}</td>
+                                <td className="px-4 py-2">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                    r.status === 'paid' || r.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                                    r.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-red-100 text-red-700'
+                                  }`}>
+                                    {r.status === 'paid' || r.status === 'confirmed' ? '✅ Pago' :
+                                     r.status === 'pending' ? '⏳ Pendente' : r.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

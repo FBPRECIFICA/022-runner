@@ -26,8 +26,8 @@ export function CheckinPage() {
 
   const handleCheckin = async (id: string) => {
     const now = new Date().toISOString();
-    await supabase.from('registrations').update({ checkin_at: now }).eq('id', id);
-    setRegistrations(prev => prev.map(r => r.id === id ? { ...r, checkin_at: now } : r));
+    await supabase.from('registrations').update({ checkin_at: now, status: 'presente' }).eq('id', id);
+    setRegistrations(prev => prev.map(r => r.id === id ? { ...r, checkin_at: now, status: 'presente' } : r));
   };
 
   const distances = [...new Set(registrations.map(r => r.distance_name))];
@@ -68,7 +68,7 @@ export function CheckinPage() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
-              placeholder="Buscar por nome ou nº de inscrição" />
+              placeholder="Digite o nome ou número de peito" />
           </div>
           <select value={distanceFilter} onChange={e => setDistanceFilter(e.target.value)}
             className="border rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white">
@@ -83,22 +83,26 @@ export function CheckinPage() {
             <div key={r.id}
               className={`bg-white rounded-xl border p-4 flex items-center gap-3 transition-all ${r.checkin_at ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
               <div className="flex-1">
-                <p className="font-bold text-gray-900">{r.name}</p>
-                <p className="text-xs text-gray-400 font-mono">{r.registration_number} · {r.distance_name}</p>
+                <p className="font-bold text-gray-900 text-base">{r.name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-sm font-mono font-bold text-[#C9A84C]">#{r.registration_number}</span>
+                  <span className="text-xs text-gray-400">·</span>
+                  <span className="text-xs text-gray-500">{r.distance_name}</span>
+                </div>
                 {r.checkin_at && (
                   <p className="text-xs text-green-600 font-medium mt-0.5">
-                    Check-in: {new Date(r.checkin_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    Presente · {new Date(r.checkin_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 )}
               </div>
               {r.checkin_at ? (
                 <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
-                  <CheckCircle size={20} /> OK
+                  <CheckCircle size={20} /> Presente
                 </div>
               ) : (
                 <button onClick={() => handleCheckin(r.id)}
-                  className="px-4 py-2.5 bg-[#C9A84C] text-white rounded-xl font-semibold text-sm hover:bg-[#B8962E] active:scale-95 transition-all">
-                  Check-in
+                  className="px-4 py-2.5 bg-[#C9A84C] text-white rounded-xl font-semibold text-sm hover:bg-[#B8962E] active:scale-95 transition-all whitespace-nowrap">
+                  Confirmar Check-in
                 </button>
               )}
             </div>
