@@ -26,6 +26,8 @@ const ProfilePage           = lazy(() => import('./pages/ProfilePage').then(m =>
 const TeamsPage             = lazy(() => import('./pages/TeamsPage').then(m => ({ default: m.TeamsPage })));
 const SocialGeneratorPage   = lazy(() => import('./pages/SocialGeneratorPage').then(m => ({ default: m.SocialGeneratorPage })));
 const SelectProfilePage     = lazy(() => import('./pages/SelectProfilePage').then(m => ({ default: m.SelectProfilePage })));
+const ForgotPasswordPage    = lazy(() => import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage     = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 
 function PageSpinner() {
   return (
@@ -82,6 +84,9 @@ function App() {
                 } />
                 <Route path="equipes" element={<TeamsPage />} />
                 <Route path="perfil-inicio" element={<SelectProfilePage />} />
+                <Route path="esqueci-senha" element={<ForgotPasswordPage />} />
+                <Route path="recuperar-senha" element={<ForgotPasswordPage />} />
+                <Route path="redefinir-senha" element={<ResetPasswordPage />} />
                 <Route path="gerador-social" element={
                   <ProtectedRoute allowedRoles={['organizer', 'admin']}>
                     <SocialGeneratorPage />

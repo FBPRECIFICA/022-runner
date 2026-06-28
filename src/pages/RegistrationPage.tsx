@@ -6,6 +6,7 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 import { trackRegistrationStart, trackRegistrationComplete } from '../utils/analytics';
 import { validateCPF } from '../utils/validators';
 import { TermoResponsabilidade } from '../components/TermoResponsabilidade';
+import { SecurityBadges } from '../components/SecurityBadges';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não sei'];
@@ -179,7 +180,8 @@ export function RegistrationPage() {
   );
   if (!event) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Evento não encontrado.</p></div>;
 
-  const distances: any[] = event.distances || [];
+  const rawDistances: any[] = event.distances || [];
+  const distances: any[] = rawDistances.length > 0 ? rawDistances : [{ name: 'Geral', price: 0, lots: [] }];
   const chosen = distances[form.distance_index] || distances[0];
   const chosenPrice = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
   const currentStepIdx = STEPS.indexOf(step);
@@ -293,6 +295,9 @@ export function RegistrationPage() {
             <button onClick={handleNext} className="w-full font-bold py-3 rounded-xl text-lg mt-2 transition-colors" style={{ backgroundColor: '#C9A84C', color: '#000' }}>
               Avançar para o Termo →
             </button>
+            <div className="mt-4">
+              <SecurityBadges />
+            </div>
           </div>
         )}
 

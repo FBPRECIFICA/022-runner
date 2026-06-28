@@ -209,15 +209,20 @@ export function AdminDashboard() {
                     <table className="w-full text-sm">
                       <thead style={{ backgroundColor: '#0f172a' }}>
                         <tr className="text-left" style={{ color: '#94a3b8' }}>
-                          {['Nome', 'Email', 'Papel', 'Ações'].map(h => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}
+                          {['Nome', 'Email', 'Papel', 'Eventos', 'Inscrições', 'Ações'].map(h => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}
                         </tr>
                       </thead>
                       <tbody>
-                        {users.map(u => (
+                        {users.map(u => {
+                          const userEvents = events.filter(e => e.organizer_id === u.id).length;
+                          const userRegs = registrations.filter(r => r.user_id === u.id).length;
+                          return (
                           <tr key={u.id} style={{ borderTop: '1px solid #334155' }}>
                             <td className="px-4 py-3 text-white font-medium">{u.name}</td>
                             <td className="px-4 py-3" style={{ color: '#94a3b8' }}>{u.email}</td>
                             <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full bg-[#1A1A1A] text-amber-300">{u.role}</span></td>
+                            <td className="px-4 py-3 text-center font-bold" style={{ color: '#C9A84C' }}>{userEvents > 0 ? userEvents : '—'}</td>
+                            <td className="px-4 py-3 text-center" style={{ color: '#94a3b8' }}>{userRegs > 0 ? userRegs : '—'}</td>
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
                                 <button onClick={() => updateUserRole(u.id, 'organizer')} className="text-xs px-2 py-1 rounded bg-green-800 text-white hover:bg-green-700" title="Promover a organizador"><Shield size={12} /></button>
@@ -225,7 +230,8 @@ export function AdminDashboard() {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -236,26 +242,28 @@ export function AdminDashboard() {
               {tab === 'registrations' && (
                 <div className="space-y-4">
                   <h1 className="text-2xl font-bold text-white">Inscrições</h1>
-                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1e293b' }}>
+                  <div className="rounded-xl overflow-x-auto" style={{ backgroundColor: '#1e293b' }}>
                     <table className="w-full text-sm">
                       <thead style={{ backgroundColor: '#0f172a' }}>
                         <tr className="text-left" style={{ color: '#94a3b8' }}>
-                          {['Nº', 'Nome', 'Distância', 'Valor', 'Status', 'Data'].map(h => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}
+                          {['Atleta', 'Evento', 'Valor', 'Status', 'Data'].map(h => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}
                         </tr>
                       </thead>
                       <tbody>
-                        {registrations.slice(0, 50).map(r => (
+                        {registrations.slice(0, 100).map(r => {
+                          const evtTitle = events.find(e => e.id === r.event_id)?.title || '—';
+                          return (
                           <tr key={r.id} style={{ borderTop: '1px solid #334155' }}>
-                            <td className="px-4 py-3 font-mono text-xs" style={{ color: '#C9A84C' }}>{r.registration_number}</td>
-                            <td className="px-4 py-3 text-white">{r.name}</td>
-                            <td className="px-4 py-3" style={{ color: '#94a3b8' }}>{r.distance_name}</td>
+                            <td className="px-4 py-3 text-white font-medium">{r.name}</td>
+                            <td className="px-4 py-3" style={{ color: '#94a3b8' }}>{evtTitle}</td>
                             <td className="px-4 py-3" style={{ color: '#94a3b8' }}>R$ {Number(r.amount).toFixed(2)}</td>
                             <td className="px-4 py-3">
-                              <span className={`text-xs px-2 py-1 rounded-full ${r.status === 'confirmed' ? 'bg-green-900 text-green-300' : r.status === 'cancelled' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300'}`}>{r.status}</span>
+                              <span className={`text-xs px-2 py-1 rounded-full ${r.status === 'confirmed' || r.status === 'paid' ? 'bg-green-900 text-green-300' : r.status === 'cancelled' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300'}`}>{r.status}</span>
                             </td>
                             <td className="px-4 py-3 text-xs" style={{ color: '#94a3b8' }}>{new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

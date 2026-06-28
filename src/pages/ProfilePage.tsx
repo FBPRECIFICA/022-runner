@@ -8,7 +8,7 @@ import { Camera, Save, LogOut, Trash2 } from 'lucide-react';
 export function ProfilePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', phone: '', city: '', bio: '', birthdate: '' });
+  const [form, setForm] = useState({ name: '', phone: '', city: '', bio: '', birthdate: '', cpf: '' });
   const [avatar, setAvatar] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -17,7 +17,7 @@ export function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     supabase.from('users').select('*').eq('id', user.id).single().then(({ data }) => {
-      if (data) setForm({ name: data.name || '', phone: data.phone || '', city: data.city || '', bio: data.bio || '', birthdate: data.birthdate || '' });
+      if (data) setForm({ name: data.name || '', phone: data.phone || '', city: data.city || '', bio: data.bio || '', birthdate: data.birthdate || '', cpf: data.cpf || '' });
       if (data?.avatar_url) setAvatar(data.avatar_url);
     });
   }, [user]);
@@ -44,7 +44,7 @@ export function ProfilePage() {
     if (!user) return;
     setSaving(true);
     const { error } = await supabase.from('users').update({
-      name: form.name, phone: form.phone, city: form.city, bio: form.bio, birthdate: form.birthdate || null,
+      name: form.name, phone: form.phone, city: form.city, bio: form.bio, birthdate: form.birthdate || null, cpf: form.cpf || null,
     }).eq('id', user.id);
     if (error) toast.error('Erro ao salvar.');
     else toast.success('Perfil atualizado!');
@@ -103,6 +103,7 @@ export function ProfilePage() {
               {[
                 { label: 'Nome completo', key: 'name', type: 'text' },
                 { label: 'Telefone', key: 'phone', type: 'tel' },
+                { label: 'CPF', key: 'cpf', type: 'text' },
                 { label: 'Cidade', key: 'city', type: 'text' },
                 { label: 'Data de Nascimento', key: 'birthdate', type: 'date' },
               ].map(f => (

@@ -2,22 +2,25 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, Calendar, MapPin, Clock, XCircle, ArrowRight, Star } from 'lucide-react';
+import { Trophy, Calendar, MapPin, Clock, XCircle, ArrowRight, Star, Heart } from 'lucide-react';
 
 export function AthleteDashboard() {
   const { user } = useAuth();
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [recommended, setRecommended] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [{ data: regs }, { data: evts }] = await Promise.all([
+      const [{ data: regs }, { data: evts }, { data: favs }] = await Promise.all([
         supabase.from('registrations').select('*, event:event_id(title, date, city, location, slug, banner_url)').eq('user_id', user?.id).order('created_at', { ascending: false }),
         supabase.from('events').select('*').eq('status', 'published').order('date', { ascending: true }).limit(4),
+        supabase.from('favorites').select('*, event:event_id(id, title, date, city, slug, banner_url)').eq('user_id', user?.id),
       ]);
       setRegistrations(regs || []);
       setRecommended(evts || []);
+      setFavorites((favs || []).filter((f: any) => f.event));
       setLoading(false);
     }
     if (user) load();
@@ -100,7 +103,10 @@ export function AthleteDashboard() {
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
                     <p className="font-bold text-[#C9A84C] text-sm">R$ {Number(r.amount).toFixed(2).replace('.', ',')}</p>
-                    <p className="text-xs font-mono text-gray-400">{r.registration_number}</p>
+                    <div className="flex flex-col items-center rounded-lg px-3 py-1" style={{ backgroundColor: '#111', border: '1px solid #C9A84C44' }}>
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#C9A84C66', fontSize: '9px' }}>Nº Peito</span>
+                      <span className="font-black font-mono text-xl leading-tight" style={{ color: '#C9A84C' }}>#{r.registration_number}</span>
+                    </div>
                     {r.status !== 'cancelled' && (
                       <button onClick={() => handleCancel(r.id)}
                         className="flex items-center gap-1 text-xs text-red-500 hover:underline">
@@ -127,6 +133,26 @@ export function AthleteDashboard() {
                   </div>
                   <Trophy size={16} className="text-yellow-500 flex-shrink-0" />
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Eventos Favoritados */}
+        {favorites.length > 0 && (
+          <div className="bg-white rounded-xl border shadow-sm p-5">
+            <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><Heart size={16} className="text-red-500" fill="#ef4444" /> Eventos Favoritados</h2>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {favorites.map((f: any) => (
+                <Link key={f.id} to={`/evento/${f.event.slug}`}
+                  className="flex items-center gap-3 border rounded-xl p-3 hover:border-red-200 hover:bg-red-50/30 transition-all">
+                  {f.event.banner_url && <img src={f.event.banner_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{f.event.title}</p>
+                    <p className="text-xs text-gray-400">{f.event.city} · {new Date(f.event.date).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                  <ArrowRight size={16} className="text-gray-400 flex-shrink-0" />
+                </Link>
               ))}
             </div>
           </div>

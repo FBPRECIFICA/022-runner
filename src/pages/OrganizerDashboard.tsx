@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
-import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, TrendingDown } from 'lucide-react';
+import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, TrendingDown, ClipboardCheck, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import * as XLSX from 'xlsx';
@@ -89,6 +89,7 @@ export function OrganizerDashboard() {
   const [eventRegistrations, setEventRegistrations] = useState<Record<string, any[]>>({});
   const [loadingRegs, setLoadingRegs] = useState(false);
   const [allRegistrations, setAllRegistrations] = useState<any[]>([]);
+  const [regSearch, setRegSearch] = useState('');
 
   useEffect(() => { loadEvents(); }, []);
 
@@ -276,7 +277,7 @@ export function OrganizerDashboard() {
     setTab('criar');
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (publishStatus: 'published' | 'draft' = 'published') => {
     setError('');
     if (!form.title || !form.date || !form.city || !form.location) {
       setError('Preencha todos os campos obrigatórios.');
@@ -339,11 +340,13 @@ export function OrganizerDashboard() {
           ...payload,
           slug,
           organizer_id: user?.id,
-          status: 'published',
+          status: publishStatus,
           plan: 'free',
         });
         if (insertError) throw insertError;
-        setSuccess(`✅ Evento criado! Link: https://022runners.com.br/evento/${slug}`);
+        setSuccess(publishStatus === 'draft'
+          ? '💾 Rascunho salvo! O evento não aparece publicamente ainda.'
+          : `✅ Evento publicado! Link: https://022runners.com.br/evento/${slug}`);
       }
 
       setForm(emptyForm);
@@ -502,10 +505,26 @@ export function OrganizerDashboard() {
               )}
 
               {/* Tabela de transações */}
-              {allRegistrations.length > 0 && (
+              {allRegistrations.length > 0 && (() => {
+                const filteredRegs = regSearch.trim()
+                  ? allRegistrations.filter(r =>
+                      r.name?.toLowerCase().includes(regSearch.toLowerCase()) ||
+                      r.registration_number?.toLowerCase().includes(regSearch.toLowerCase())
+                    )
+                  : allRegistrations;
+                return (
                 <div className="bg-white rounded-xl border mb-6 overflow-hidden">
-                  <div className="px-4 py-3 border-b">
-                    <h3 className="text-sm font-semibold text-gray-700">Transações</h3>
+                  <div className="px-4 py-3 border-b flex flex-wrap items-center gap-3">
+                    <h3 className="text-sm font-semibold text-gray-700">Inscritos</h3>
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        value={regSearch}
+                        onChange={e => setRegSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                        placeholder="Buscar por nome ou nº de peito..."
+                      />
+                    </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -520,7 +539,7 @@ export function OrganizerDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {allRegistrations.slice(0, 50).map(r => (
+                        {filteredRegs.slice(0, 50).map(r => (
                           <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50">
                             <td className="px-4 py-2 font-medium text-gray-900">{r.name}</td>
                             <td className="px-4 py-2 font-mono font-bold" style={{ color: '#C9A84C' }}>{r.registration_number}</td>
@@ -544,7 +563,8 @@ export function OrganizerDashboard() {
                     </table>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               <div className="space-y-4 overflow-x-auto">
             {events.length === 0 ? (
@@ -574,6 +594,7 @@ export function OrganizerDashboard() {
                     <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Visualizar"><Eye size={18} /></a>
                     <button onClick={() => openEdit(event)} className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Editar"><Edit size={18} /></button>
                     <button onClick={() => exportExcel(event)} className="p-2 text-gray-500 hover:text-green-600 border rounded-lg" title="Exportar Excel"><Download size={18} /></button>
+                    <Link to={`/checkin/${event.slug}`} className="p-2 text-gray-500 hover:text-purple-600 border rounded-lg" title="Check-in"><ClipboardCheck size={18} /></Link>
                   </div>
                 </div>
 
@@ -874,9 +895,16 @@ export function OrganizerDashboard() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => { setTab('eventos'); setEditingEventId(null); setForm(emptyForm); setSponsorUploading([]); }} className="flex-1 border text-gray-600 py-3 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
-              <button onClick={handleSubmit} disabled={loading}
+            <div className="flex gap-3 mt-6 flex-wrap">
+              <button onClick={() => { setTab('eventos'); setEditingEventId(null); setForm(emptyForm); setSponsorUploading([]); }} className="border text-gray-600 py-3 px-5 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
+              {!editingEventId && (
+                <button onClick={() => handleSubmit('draft')} disabled={loading}
+                  className="flex-1 border-2 text-gray-700 py-3 rounded-lg font-medium disabled:opacity-50 hover:bg-gray-50"
+                  style={{ borderColor: '#C9A84C' }}>
+                  {loading ? 'Salvando...' : '💾 Salvar Rascunho'}
+                </button>
+              )}
+              <button onClick={() => handleSubmit('published')} disabled={loading}
                 className="flex-1 bg-[#C9A84C] text-white py-3 rounded-lg hover:bg-[#B8962E] font-medium disabled:opacity-50">
                 {loading ? 'Salvando...' : editingEventId ? '💾 Salvar Alterações' : '🚀 Publicar Evento'}
               </button>

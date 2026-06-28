@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle, Star, Timer } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle, Star, Timer, ImageIcon } from 'lucide-react';
 import { scoreBadge } from '../utils/scoreCalculator';
 import { Helmet } from 'react-helmet-async';
 import { trackEventView, trackShare } from '../utils/analytics';
@@ -32,6 +32,7 @@ export function EventDetailPage() {
   const navigate = useNavigate();
   const [event, setEvent] = useState<any>(null);
   const [organizer, setOrganizer] = useState<any>(null);
+  const [eventPhotos, setEventPhotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -46,6 +47,8 @@ export function EventDetailPage() {
         const { data: org } = await supabase.from('users').select('name, email').eq('id', data.organizer_id).single();
         setOrganizer(org);
       }
+      const { data: photos } = await supabase.from('event_photos').select('*').eq('event_id', data.id);
+      setEventPhotos(photos || []);
       setLoading(false);
     }
     fetchEvent();
@@ -213,11 +216,39 @@ export function EventDetailPage() {
               </div>
             )}
 
-            {/* Regulamento */}
-            {event.additional_info && (
+            {/* Percurso */}
+            {(event.route_description || event.location) && (
               <div className="bg-white rounded-xl border p-5 shadow-sm">
-                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Regulamento / Informações</h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.additional_info}</p>
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-2">
+                  <MapPin size={15} /> Percurso
+                </h2>
+                {event.route_description && (
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-line mb-3">{event.route_description}</p>
+                )}
+                {event.total_distance_km && (
+                  <p className="text-sm text-gray-600 mb-3 font-medium">Distância total: <span style={{ color: '#C9A84C' }}>{event.total_distance_km} km</span></p>
+                )}
+                <div className="rounded-xl overflow-hidden border" style={{ height: '220px' }}>
+                  <iframe
+                    title="Mapa do percurso"
+                    width="100%"
+                    height="220"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent((event.location || '') + ' ' + (event.city || ''))}&output=embed`}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Regulamento */}
+            {(event.regulations || event.additional_info) && (
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Regulamento</h2>
+                <div className="max-h-96 overflow-y-auto pr-1">
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.regulations || event.additional_info}</p>
+                </div>
               </div>
             )}
 
@@ -322,6 +353,31 @@ export function EventDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Galeria de Fotos */}
+            <div className="bg-white rounded-xl border p-5 shadow-sm">
+              <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
+                <ImageIcon size={15} /> Galeria
+              </h2>
+              {eventPhotos.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {eventPhotos.map((photo: any, i: number) => (
+                    <div key={i} className="relative rounded-lg overflow-hidden" style={{ paddingBottom: '75%' }}>
+                      <img
+                        src={photo.photo_url || photo.url}
+                        alt={`Foto ${i + 1}`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center text-gray-400">
+                  <ImageIcon size={36} className="mb-2 opacity-30" />
+                  <p className="text-sm">Fotos serão adicionadas em breve</p>
+                </div>
+              )}
+            </div>
 
             {/* Avaliações */}
             <ReviewSection eventId={event.id} />

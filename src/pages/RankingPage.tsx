@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Trophy, Medal } from 'lucide-react';
 import { LAGOS_REGION_CITIES } from '../types';
@@ -17,16 +17,21 @@ export function RankingPage() {
 
   const loadRanking = async (p: number) => {
     setLoading(true);
-    let q = supabase.from('registrations').select('user_id, name, city, distance_name, status').neq('status', 'cancelled');
+    let q = supabase.from('registrations').select('user_id, name, city, distance_name, status, finish_time, score, event:event_id(title)').neq('status', 'cancelled');
     if (city) q = q.eq('city', city);
     const { data } = await q;
 
-    const map: Record<string, { name: string; city: string; events: number; km: number; medals: number }> = {};
-    (data || []).forEach(r => {
-      if (!map[r.name]) map[r.name] = { name: r.name, city: r.city || '', events: 0, km: 0, medals: 0 };
+    const map: Record<string, { name: string; city: string; events: number; km: number; medals: number; bestTime: string | null; score: number; lastEvent: string }> = {};
+    (data || []).forEach((r: any) => {
+      if (!map[r.name]) map[r.name] = { name: r.name, city: r.city || '', events: 0, km: 0, medals: 0, bestTime: null, score: 0, lastEvent: '' };
       map[r.name].events++;
       map[r.name].km += parseFloat(r.distance_name) || 0;
       if (r.status === 'confirmed') map[r.name].medals++;
+      if (r.finish_time && (!map[r.name].bestTime || r.finish_time < map[r.name].bestTime!)) {
+        map[r.name].bestTime = r.finish_time;
+      }
+      if (r.score) map[r.name].score += Number(r.score);
+      if (r.event?.title) map[r.name].lastEvent = r.event.title;
     });
 
     const sorted = Object.values(map).sort((a, b) => b.events - a.events || b.km - a.km);
@@ -42,7 +47,7 @@ export function RankingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b py-8">
-        <div className="max-w-4xl mx-auto px-4">
+        <div className="max-w-5xl mx-auto px-4">
           <div className="flex items-center gap-3 mb-2">
             <Trophy size={28} className="text-yellow-500" />
             <h1 className="text-3xl font-bold text-gray-900">Ranking de Atletas</h1>
@@ -51,7 +56,7 @@ export function RankingPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Filtros */}
         <div className="bg-white rounded-xl border shadow-sm p-4 mb-6 flex flex-wrap gap-3">
           <select value={city} onChange={e => setCity(e.target.value)}
@@ -85,15 +90,17 @@ export function RankingPage() {
         )}
 
         {/* Tabela */}
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="text-left text-gray-500">
-                <th className="px-4 py-3 font-medium">#</th>
+                <th className="px-4 py-3 font-medium">Posição</th>
                 <th className="px-4 py-3 font-medium">Atleta</th>
                 <th className="px-4 py-3 font-medium hidden sm:table-cell">Cidade</th>
                 <th className="px-4 py-3 font-medium text-center">Eventos</th>
-                <th className="px-4 py-3 font-medium text-center hidden sm:table-cell">Km</th>
+                <th className="px-4 py-3 font-medium text-center hidden md:table-cell">Tempo de Prova</th>
+                <th className="px-4 py-3 font-medium text-center hidden md:table-cell">Pontuação</th>
+                <th className="px-4 py-3 font-medium hidden lg:table-cell">Último Evento</th>
                 <th className="px-4 py-3 font-medium text-center">Medalhas</th>
               </tr>
             </thead>
@@ -112,7 +119,11 @@ export function RankingPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{r.city || '—'}</td>
                   <td className="px-4 py-3 text-center font-bold text-[#C9A84C]">{r.events}</td>
-                  <td className="px-4 py-3 text-center text-gray-500 hidden sm:table-cell">{r.km.toFixed(0)}</td>
+                  <td className="px-4 py-3 text-center text-gray-600 font-mono hidden md:table-cell">{r.bestTime || '—'}</td>
+                  <td className="px-4 py-3 text-center hidden md:table-cell">
+                    <span className="font-bold text-gray-700">{r.score > 0 ? r.score : '—'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell truncate max-w-[140px]">{r.lastEvent || '—'}</td>
                   <td className="px-4 py-3 text-center">
                     <span className="inline-flex items-center gap-1 text-yellow-600 font-semibold"><Trophy size={13} /> {r.medals}</span>
                   </td>
