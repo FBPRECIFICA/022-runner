@@ -22,6 +22,8 @@ interface PaymentResult {
 export function PaymentPage() {
   const { registrationId } = useParams<{ registrationId: string }>();
   const navigate = useNavigate();
+
+  // — State hooks (todos antes de qualquer derived value ou useEffect) —
   const [reg, setReg] = useState<Record<string, unknown> | null>(null);
   const [event, setEvent] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,12 @@ export function PaymentPage() {
   const [secondsLeft, setSecondsLeft] = useState(30 * 60);
   const [polling, setPolling] = useState(false);
 
+  // — Derived values (declarados ANTES dos useEffects que os referenciam) —
+  const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+  const secs = String(secondsLeft % 60).padStart(2, '0');
+  const expired = secondsLeft <= 0;
+
+  // — Effects —
   useEffect(() => {
     async function load() {
       const { data: r } = await supabase.from('registrations').select('*').eq('id', registrationId).single();
@@ -51,7 +59,6 @@ export function PaymentPage() {
     return () => clearInterval(id);
   }, [secondsLeft]);
 
-  // Polling: verifica status a cada 5s após mostrar QR Code PIX
   useEffect(() => {
     if (!paymentResult || method !== 'PIX' || expired) return;
     setPolling(true);
@@ -70,10 +77,7 @@ export function PaymentPage() {
     return () => { clearInterval(interval); setPolling(false); };
   }, [paymentResult, method, expired, registrationId, navigate]);
 
-  const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
-  const secs = String(secondsLeft % 60).padStart(2, '0');
-  const expired = secondsLeft <= 0;
-
+  // — Handlers —
   const handleCreatePayment = async () => {
     if (!reg || !event) return;
     setCreating(true);
@@ -125,6 +129,7 @@ export function PaymentPage() {
     navigate(`/confirmacao/${registrationId}`);
   };
 
+  // — Render —
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -248,9 +253,9 @@ export function PaymentPage() {
               </div>
             )}
             <div className="bg-amber-50 rounded-lg p-3 text-xs text-[#B8962E] text-left">
-              <p>Abra seu app do banco e escaneie o QR Code ou cole o código PIX</p>
+              <p>Abra o app do seu banco, escaneie o QR Code ou cole o código PIX</p>
             </div>
-            {polling && (
+            {polling && !expired && (
               <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#C9A84C]" />
                 Aguardando confirmação do pagamento...
