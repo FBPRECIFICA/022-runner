@@ -16,12 +16,17 @@ export interface EventPostData {
   slug?: string;
 }
 
+const FORMAT_DIMS: Record<string, { w: number; h: number }> = {
+  feed:     { w: 1080, h: 1080 },
+  stories:  { w: 1080, h: 1920 },
+  whatsapp: { w: 800,  h: 800  },
+};
+
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // Strip the data URL prefix (e.g. "data:image/jpeg;base64,")
       const base64 = result.split(',')[1];
       resolve(base64);
     };
@@ -30,17 +35,17 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-async function htmlToPng(html: string): Promise<string> {
+async function htmlToPng(html: string, width: number, height: number): Promise<string> {
   const container = document.createElement('div');
   container.style.cssText =
-    'position:fixed;left:-9999px;top:-9999px;width:1080px;height:1080px;overflow:hidden;z-index:-1;';
+    `position:fixed;left:-9999px;top:-9999px;width:${width}px;height:${height}px;overflow:hidden;z-index:-1;`;
   container.innerHTML = html;
   document.body.appendChild(container);
 
   try {
     const canvas = await html2canvas(container, {
-      width: 1080,
-      height: 1080,
+      width,
+      height,
       scale: 1,
       useCORS: true,
       allowTaint: true,
@@ -56,7 +61,8 @@ async function htmlToPng(html: string): Promise<string> {
 export async function generateEventPost(
   eventData: EventPostData,
   postType: 'divulgacao' | 'resultado',
-  imageFile?: File | null,
+  imageFile: File | null,
+  format = 'feed',
 ): Promise<string> {
   const imageBase64 = imageFile ? await fileToBase64(imageFile) : null;
 
@@ -80,6 +86,7 @@ export async function generateEventPost(
     },
     imageBase64,
     postType,
+    format,
   };
 
   const res = await fetch(GENERATE_POST_URL, {
@@ -91,9 +98,13 @@ export async function generateEventPost(
     body: JSON.stringify(payload),
   });
 
-  const data = (await res.json()) as { html?: string; error?: string };
+  const data = (await res.json()) as { html?: string; width?: number; height?: number; error?: string };
   if (data.error) throw new Error(data.error);
   if (!data.html) throw new Error('HTML não retornado pela API');
 
-  return htmlToPng(data.html);
+  const dims = FORMAT_DIMS[format] ?? FORMAT_DIMS.feed;
+  const width  = data.width  ?? dims.w;
+  const height = data.height ?? dims.h;
+
+  return htmlToPng(data.html, width, height);
 }

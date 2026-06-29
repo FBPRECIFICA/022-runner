@@ -54,7 +54,7 @@ export function SocialGeneratorPage() {
     setError('');
     setResultImage('');
     try {
-      const png = await generateEventPost(selectedEvent, postType, imageFile ?? null);
+      const png = await generateEventPost(selectedEvent, postType, imageFile ?? null, format);
       setResultImage(png);
       toast.success('Post gerado com sucesso!');
     } catch (e: unknown) {

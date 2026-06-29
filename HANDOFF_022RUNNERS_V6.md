@@ -165,3 +165,34 @@ supabase/functions/
 - [ ] Implementar foto/avatar do atleta no check-in
 - [ ] Dashboard financeiro para organizadores (relatório de recebimentos)
 - [ ] Lembretes automáticos 3 dias antes do evento
+
+---
+
+## DIAGNÓSTICO BLOCO 63 — 2026-06-29
+
+### Último bloco executado: BLOCO 63
+
+### ITENS RESOLVIDOS (BLOCO 62 + BLOCO 63)
+- [x] **4.4** — Redirecionamento login: LoginPage com seleção de perfil, validação de role, redirect correto
+- [x] **9 — PaymentPage tela branca**: removido `qrcode.react`, corrigido `[l, v]` → `[label, value]`, build limpo
+- [x] **9 — Cartão Asaas**: abre link externo — comportamento intencional ✅
+- [x] **Status "Cancelado"**: AthleteDashboard mapeia `pending/awaiting_payment` → "Aguardando Pagamento"
+- [x] **BLOCO 62**: Edge Functions `create-payment` e `asaas-webhook` redeployadas
+- [x] **BLOCO 62**: ErrorBoundary adicionado ao App.tsx; AthleteDashboard com "Verificar status"
+
+### ITENS PENDENTES PRIORITÁRIOS (para BLOCO 64)
+
+**CRÍTICO:**
+1. ❌ **ConfirmationPage.tsx tela branca** — ainda importa `qrcode.react` (linha 6) e usa `[l, v]` (linha 93) — mesmas correções do PaymentPage
+2. ❌ **Webhook Asaas (item A)** — verificar coluna `asaas_payment_id` em `registrations`; configurar URL no painel Asaas (manual)
+3. ⚠️ **send-email não redeployada** — fazer deploy da Edge Function `send-email`; RESEND_API_KEY precisa estar nas secrets
+
+**ALTA:**
+4. ❌ **B — WhatsApp sobrepõe LEO no desktop** — `WhatsAppButton: bottom-6 right-6` vs `ChatBot: bottom:20px right:20px` — separar posições
+5. ❌ **15/C — Gerador de posts formato errado** — `htmlToPng` hardcoded 1080×1080; passar `format` e ajustar dimensões por formato (Feed/Stories/WhatsApp)
+6. ❌ **12.10 — Botão gerador no OrganizerDashboard** — verificar/adicionar link para `/gerador-social`
+
+**MÉDIA:**
+7. ⚠️ **13.11/18 — LEO** — confirmar `ANTHROPIC_API_KEY` nas secrets Supabase
+8. ⚠️ **8.6 — Número inscrição** — testável após fluxo completo
+9. ⚠️ **Boleto** — testar após PIX validado
