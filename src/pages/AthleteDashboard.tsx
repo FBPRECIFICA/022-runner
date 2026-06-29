@@ -32,6 +32,14 @@ export function AthleteDashboard() {
     setRegistrations(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelled' } : r));
   };
 
+  const handleCheckStatus = async (id: string) => {
+    const { data } = await supabase.from('registrations').select('status').eq('id', id).single();
+    if (data?.status) {
+      setRegistrations(prev => prev.map(r => r.id === id ? { ...r, status: data.status } : r));
+      if (data.status === 'paid') navigate(`/confirmacao/${id}`);
+    }
+  };
+
   const active = registrations.filter(r => r.status !== 'cancelled' && new Date((r.event?.date) || 0) >= new Date());
   const past = registrations.filter(r => r.status !== 'cancelled' && new Date((r.event?.date) || 0) < new Date());
   const totalKm = past.reduce((acc, r) => acc + (parseFloat(r.distance_name) || 0), 0);
@@ -119,10 +127,16 @@ export function AthleteDashboard() {
                       <span className="font-black font-mono text-xl leading-tight" style={{ color: '#C9A84C' }}>#{r.registration_number}</span>
                     </div>
                     {isPendingPayment(r.status) && (
-                      <button onClick={() => navigate(`/pagamento/${r.id}`)}
-                        className="flex items-center gap-1 text-xs font-semibold bg-[#C9A84C] text-black px-2 py-1 rounded-lg hover:bg-[#B8962E]">
-                        <CreditCard size={12} /> Continuar Pagamento
-                      </button>
+                      <div className="flex flex-col gap-1">
+                        <button onClick={() => navigate(`/pagamento/${r.id}`)}
+                          className="flex items-center gap-1 text-xs font-semibold bg-[#C9A84C] text-black px-2 py-1 rounded-lg hover:bg-[#B8962E]">
+                          <CreditCard size={12} /> Continuar Pagamento
+                        </button>
+                        <button onClick={() => handleCheckStatus(r.id)}
+                          className="text-xs text-green-600 hover:underline">
+                          Verificar status
+                        </button>
+                      </div>
                     )}
                     {r.status !== 'cancelled' && (
                       <button onClick={() => handleCancel(r.id)}

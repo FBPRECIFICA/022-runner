@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './contexts/AuthContext';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const HomePage           = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
 const LoginPage          = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -42,6 +43,7 @@ function App() {
     <HelmetProvider>
       <AuthProvider>
         <BrowserRouter>
+          <ErrorBoundary>
           <Suspense fallback={<PageSpinner />}>
             <Routes>
               <Route path="/" element={<Layout />}>
@@ -96,6 +98,7 @@ function App() {
               </Route>
             </Routes>
           </Suspense>
+          </ErrorBoundary>
         </BrowserRouter>
       </AuthProvider>
     </HelmetProvider>
