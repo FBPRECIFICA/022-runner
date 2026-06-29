@@ -1,5 +1,4 @@
 ﻿import { useState, useRef } from 'react';
-import { supabase } from '../lib/supabase';
 import { Shield, CheckCircle } from 'lucide-react';
 
 interface Props {
@@ -22,8 +21,6 @@ interface Props {
 export function TermoResponsabilidade({ registration, event, userId, onAccepted }: Props) {
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
   const [accepted, setAccepted] = useState(false);
-  const [teamName, setTeamName] = useState('');
-  const [saving, setSaving] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleScroll = () => {
@@ -32,26 +29,8 @@ export function TermoResponsabilidade({ registration, event, userId, onAccepted 
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) setScrolledToBottom(true);
   };
 
-  const handleAccept = async () => {
+  const handleAccept = () => {
     if (!accepted) return;
-    setSaving(true);
-    await supabase.from('termo_aceites').insert({
-      registration_id: registration.id,
-      user_id: userId,
-      event_id: event.id,
-      nome: registration.name,
-      cpf: registration.cpf,
-      data_nascimento: registration.birthdate || null,
-      sexo: registration.gender,
-      distancia: registration.distanceName,
-      cidade: registration.city,
-      telefone: registration.phone,
-      email: registration.email,
-      equipe: teamName || null,
-      ip_hint: 'browser',
-      termo_versao: 'v1.0',
-    });
-    setSaving(false);
     onAccepted();
   };
 
@@ -93,15 +72,6 @@ export function TermoResponsabilidade({ registration, event, userId, onAccepted 
         <p className="text-xs text-amber-600 mb-3 font-medium">⬇ Role até o final para habilitar a aceitação</p>
       )}
 
-      {/* Equipe opcional */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Nome da equipe (opcional)</label>
-        <input value={teamName} onChange={e => setTeamName(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"
-          style={{ borderColor: '#d1d5db' }}
-          placeholder="Ex: Clube de Corrida Cabo Frio" />
-      </div>
-
       {/* Checkbox */}
       <label className={`flex items-start gap-3 cursor-pointer mb-4 ${!scrolledToBottom ? 'opacity-40 pointer-events-none' : ''}`}>
         <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)}
@@ -111,12 +81,12 @@ export function TermoResponsabilidade({ registration, event, userId, onAccepted 
 
       <button
         onClick={handleAccept}
-        disabled={!accepted || saving}
+        disabled={!accepted}
         className="w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl text-sm disabled:opacity-50"
         style={{ backgroundColor: '#C9A84C', color: '#000' }}
       >
         <CheckCircle size={18} />
-        {saving ? 'Salvando...' : 'Aceitar e Continuar'}
+        Aceitar e Continuar
       </button>
     </div>
   );

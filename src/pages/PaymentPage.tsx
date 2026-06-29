@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { getPixQrCode } from '../lib/asaas';
 import { QRCodeSVG } from 'qrcode.react';
 import { CheckCircle, Clock, Copy, CreditCard, FileText, QrCode } from 'lucide-react';
 import { SecurityBadges } from '../components/SecurityBadges';
@@ -11,11 +10,13 @@ type PaymentMethod = 'PIX' | 'CREDIT_CARD' | 'BOLETO';
 interface PaymentResult {
   paymentId?: string;
   status?: string;
+  paymentLink?: string;
   invoiceUrl?: string;
   bankSlipUrl?: string;
   barCode?: string;
   qrCode?: string;
   qrCodeImage?: string;
+  pixQrCode?: { encodedImage?: string; payload?: string };
 }
 
 export function PaymentPage() {
@@ -77,12 +78,11 @@ export function PaymentPage() {
       });
       if (error) throw error;
 
-      if (data?.paymentId && method === 'PIX') {
-        const qrData = await getPixQrCode(data.paymentId as string);
+      if (data?.pixQrCode) {
         setPaymentResult({
           ...data,
-          qrCode: qrData?.payload as string | undefined,
-          qrCodeImage: qrData?.encodedImage as string | undefined,
+          qrCode: data.pixQrCode?.payload as string | undefined,
+          qrCodeImage: data.pixQrCode?.encodedImage as string | undefined,
         });
       } else {
         setPaymentResult(data);
@@ -212,21 +212,23 @@ export function PaymentPage() {
             </div>
             {paymentResult.qrCode && (
               <div>
-                <p className="text-xs text-gray-500 mb-2">Ou copie o código PIX:</p>
+                <p className="text-xs text-gray-500 mb-2">Código PIX copiável:</p>
                 <div className="flex items-center gap-2 bg-gray-50 border rounded-lg px-3 py-2">
                   <code className="flex-1 text-xs text-gray-700 text-left truncate">{paymentResult.qrCode}</code>
                   <button onClick={() => handleCopy(paymentResult.qrCode!)} className="text-[#C9A84C] flex-shrink-0">
                     {copied ? <CheckCircle size={16} className="text-green-500" /> : <Copy size={16} />}
                   </button>
                 </div>
+                <button
+                  onClick={() => handleCopy(paymentResult.qrCode!)}
+                  className="w-full mt-2 text-sm font-semibold border border-[#C9A84C] text-[#C9A84C] py-2 rounded-lg hover:bg-amber-50 flex items-center justify-center gap-2"
+                >
+                  <Copy size={14} /> {copied ? 'Copiado!' : 'Copiar código PIX'}
+                </button>
               </div>
             )}
-            <div className="bg-amber-50 rounded-lg p-3 text-xs text-[#B8962E] text-left space-y-1">
-              <p className="font-semibold">Como pagar:</p>
-              <p>1. Abra o app do seu banco</p>
-              <p>2. Acesse PIX → Pagar com QR Code</p>
-              <p>3. Escaneie ou cole o código acima</p>
-              <p>4. Confirme o valor de R$ {Number(reg.amount).toFixed(2).replace('.', ',')}</p>
+            <div className="bg-amber-50 rounded-lg p-3 text-xs text-[#B8962E] text-left">
+              <p>Abra seu app do banco e escaneie o QR Code ou cole o código PIX</p>
             </div>
             <p className="text-xs text-gray-400">O status será atualizado automaticamente após confirmação</p>
             <button onClick={handleConfirmPaid} className="w-full text-sm text-gray-500 underline">

@@ -9,9 +9,9 @@ const apiKey = Deno.env.get('ANTHROPIC_API_KEY') || ''
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://adorzqjhazsfvbttlfht.supabase.co'
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'sb_publishable_b098wEy_wai6_RWuR5pV7g_IAw-x86p'
 
-async function fetchActiveEvents(): Promise<string> {
+async function fetchAllEvents(): Promise<string> {
   try {
-    const url = `${SUPABASE_URL}/rest/v1/events?select=title,date,city,state,location,description,distances,prices,additional_info,slug&or=(status.eq.active,status.eq.published)&order=date.asc&limit=30`
+    const url = `${SUPABASE_URL}/rest/v1/events?select=id,title,date,location,city,description,distances,prices,additional_info,regulations,slug,status&order=date.asc&limit=50`
     const res = await fetch(url, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -20,26 +20,11 @@ async function fetchActiveEvents(): Promise<string> {
     })
     const data = await res.json()
     if (Array.isArray(data) && data.length > 0) {
-      return data.map((e: Record<string, unknown>) => {
-        const dateObj = e.date ? new Date(String(e.date)) : null
-        const dateStr = dateObj ? dateObj.toLocaleDateString('pt-BR') : 'a confirmar'
-        const timeStr = dateObj ? dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
-        const distances = Array.isArray(e.distances)
-          ? e.distances.map((d: Record<string, unknown>) => `${d.name} R$${d.price ?? d.lots?.[0]?.price ?? '?'}`).join(', ')
-          : ''
-        return [
-          `• ${e.title}`,
-          `  Data: ${dateStr}${timeStr ? ' às ' + timeStr : ''}`,
-          `  Local: ${e.location || e.city}${e.city ? ' — ' + e.city : ''}`,
-          distances ? `  Distâncias/Preços: ${distances}` : '',
-          e.additional_info ? `  Informações: ${e.additional_info}` : '',
-          `  Link: 022runners.com.br/evento/${e.slug}`,
-        ].filter(Boolean).join('\n')
-      }).join('\n\n')
+      return JSON.stringify(data)
     }
-    return 'No momento não há eventos publicados. Em breve novidades!'
+    return ''
   } catch {
-    return 'Não foi possível carregar os eventos agora.'
+    return ''
   }
 }
 
@@ -49,12 +34,13 @@ serve(async (req) => {
   try {
     const { type, eventData, platform, question } = await req.json()
 
-    const eventsInfo = await fetchActiveEvents()
+    const eventsJson = await fetchAllEvents()
 
-    const systemPrompt = `Você é LEO, assistente oficial da 022Runners, plataforma de eventos esportivos da Região dos Lagos, Rio de Janeiro.
+    const eventsSection = eventsJson
+      ? `Eventos disponíveis na plataforma: ${eventsJson}`
+      : `Olá! Sou o LEO, assistente da 022RUNNERS. No momento estamos preparando os próximos eventos da Região dos Lagos. Fique de olho em 022runners.com.br para não perder nenhuma novidade! Posso te ajudar com mais alguma coisa?`
 
-EVENTOS ATIVOS NA PLATAFORMA (use estes dados para responder perguntas sobre eventos):
-${eventsInfo}
+    const systemPrompt = `Você é LEO, assistente oficial da 022RUNNERS, plataforma de eventos esportivos da Região dos Lagos RJ. Responda sempre em português de forma simpática e objetiva. ${eventsSection} Use esses dados para responder sobre datas, locais, preços, regulamentos, distâncias e inscrições. Site: 022runners.com.br
 
 TOM E ESTILO:
 - Respostas CURTAS e diretas — máximo 2-3 linhas

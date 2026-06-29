@@ -1,11 +1,12 @@
 ﻿import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, Calendar, MapPin, Clock, XCircle, ArrowRight, Star, Heart } from 'lucide-react';
+import { Trophy, Calendar, MapPin, Clock, XCircle, ArrowRight, Star, Heart, CreditCard } from 'lucide-react';
 
 export function AthleteDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [recommended, setRecommended] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<any[]>([]);
@@ -38,11 +39,21 @@ export function AthleteDashboard() {
 
   const statusBadge = (s: string) => ({
     confirmed: 'bg-green-100 text-green-700',
+    paid: 'bg-green-100 text-green-700',
     pending: 'bg-yellow-100 text-yellow-700',
+    awaiting_payment: 'bg-yellow-100 text-yellow-700',
     cancelled: 'bg-red-100 text-red-700',
   }[s] || 'bg-gray-100 text-gray-600');
 
-  const statusLabel = (s: string) => ({ confirmed: 'Confirmado', pending: 'Pendente', cancelled: 'Cancelado' }[s] || s);
+  const statusLabel = (s: string) => ({
+    confirmed: 'Confirmado',
+    paid: 'Confirmado',
+    pending: 'Aguardando Pagamento',
+    awaiting_payment: 'Aguardando Pagamento',
+    cancelled: 'Cancelado',
+  }[s] || s);
+
+  const isPendingPayment = (s: string) => s === 'pending' || s === 'awaiting_payment';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,6 +118,12 @@ export function AthleteDashboard() {
                       <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#C9A84C66', fontSize: '9px' }}>Nº Peito</span>
                       <span className="font-black font-mono text-xl leading-tight" style={{ color: '#C9A84C' }}>#{r.registration_number}</span>
                     </div>
+                    {isPendingPayment(r.status) && (
+                      <button onClick={() => navigate(`/pagamento/${r.id}`)}
+                        className="flex items-center gap-1 text-xs font-semibold bg-[#C9A84C] text-black px-2 py-1 rounded-lg hover:bg-[#B8962E]">
+                        <CreditCard size={12} /> Continuar Pagamento
+                      </button>
+                    )}
                     {r.status !== 'cancelled' && (
                       <button onClick={() => handleCancel(r.id)}
                         className="flex items-center gap-1 text-xs text-red-500 hover:underline">

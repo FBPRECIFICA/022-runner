@@ -23,9 +23,11 @@ serve(async (req) => {
 
     const bgInstruction = imageBase64
       ? `Use a imagem fornecida como fundo (background-image com a base64 embutida diretamente no style). Aplique overlay escuro dramático sobre ela.`
-      : `Fundo: gradiente radial de #1a0800 no centro para #000000 nas bordas. Adicione círculos decorativos dourados semitransparentes nos cantos.`
+      : `Fundo: gradiente dramático linear de #000000 para #1a0800 (diagonal 135deg). Sobre o fundo, adicione 6 linhas diagonais finas douradas (width:1px, background:rgba(201,168,76,0.3), transform:rotate(-45deg), position:absolute, espalhadas pelo quadro).`
 
-    const divulgacaoPrompt = `Crie um post profissional para divulgação do seguinte evento de corrida:
+    const divulgacaoPrompt = `Crie um post HTML profissional de DIVULGAÇÃO para evento de corrida. Retorne APENAS HTML puro começando com <div, sem markdown, sem explicações.
+
+Dados do evento:
 Nome: ${eventData.title}
 Data: ${eventData.date}
 Local: ${eventData.location || eventData.city}
@@ -33,20 +35,32 @@ Distância: ${eventData.distance}
 Preço: R$ ${eventData.price}
 Cidade: ${eventData.city}
 
-ESTILO OBRIGATÓRIO:
-- Tamanho exato: width:1080px; height:1080px; overflow:hidden; position:relative
-- ${bgInstruction}
-- Overlay: gradiente linear de baixo para cima rgba(0,0,0,0.15) até rgba(0,0,0,0.9)
-- Logo 022RUNNERS: topo centro, texto branco Arial Black 52px com text-shadow outline, subtítulo 'RUNNING COMMUNITY' dourado #C9A84C 18px
-- Pincelada dourada: div com background #C9A84C, clip-path polygon irregular, transform rotate(-2deg), opacity 0.92, position absolute atrás do título
-- Título do evento: Arial Black bold 80px BRANCO, text-shadow preta 4px, centralizado, position:relative z-index acima da pincelada
-- Distância: Arial Black 100px cor #C9A84C, destaque enorme
-- Data com ícone 📅: 38px branco
-- Local com ícone 📍: 34px #CCCCCC
-- Faixa inferior: position absolute bottom:0, background #000 altura 130px, '022RUNNERS' branco 44px, '022runners.com.br' dourado #C9A84C 26px
-- Ícones corredores 🏃 nos cantos superiores 52px, position absolute
-- Layout DENSO sem espaço vazio, tudo com position absolute ou flex bem distribuído
-- Estilo visual: igual a flyers profissionais de corridas de rua brasileiras`
+ESTRUTURA HTML OBRIGATÓRIA (width:1080px; height:1080px; overflow:hidden; position:relative; font-family:Arial,sans-serif):
+
+1. FUNDO: ${bgInstruction}
+
+2. LOGO TOPO: position:absolute; top:40px; left:50%; transform:translateX(-50%); text-align:center
+   - "022RUNNERS" em font-size:56px; font-weight:900; color:#fff; text-shadow:-2px -2px 0 #000, 2px 2px 0 #000, -2px 2px 0 #000, 2px -2px 0 #000
+   - "RUNNING COMMUNITY" em font-size:18px; color:#C9A84C; letter-spacing:4px
+
+3. ÍCONES: 🏃 nos cantos superiores (position:absolute; top:30px; font-size:52px; left:30px e right:30px)
+
+4. PINCELADA DOURADA: position:absolute; top:320px; left:0; width:100%; height:160px; background:#C9A84C; clip-path:polygon(0% 20%, 100% 0%, 100% 80%, 0% 100%); opacity:0.92; z-index:1
+
+5. NOME DO EVENTO: position:absolute; top:330px; left:50%; transform:translateX(-50%); width:90%; text-align:center; z-index:2
+   - font-size:80px; font-weight:900; color:#FFFFFF; font-family:Arial Black,Arial,sans-serif; text-shadow:3px 3px 0 #000; text-transform:uppercase; line-height:1.1
+
+6. DISTÂNCIA: position:absolute; top:510px; left:50%; transform:translateX(-50%); font-size:90px; font-weight:900; color:#C9A84C; font-family:Arial Black,Arial,sans-serif; z-index:2; white-space:nowrap
+
+7. DATA: position:absolute; top:640px; left:50%; transform:translateX(-50%); font-size:36px; color:#fff; z-index:2; white-space:nowrap — "📅 ${eventData.date}"
+
+8. LOCAL: position:absolute; top:700px; left:50%; transform:translateX(-50%); font-size:32px; color:#CCCCCC; z-index:2; white-space:nowrap; text-align:center — "📍 ${eventData.location || eventData.city}"
+
+9. INSCRIÇÕES: position:absolute; top:770px; left:50%; transform:translateX(-50%); font-size:34px; font-weight:700; color:#C9A84C; z-index:2; letter-spacing:2px — "✅ INSCRIÇÕES ABERTAS"
+
+10. RODAPÉ: position:absolute; bottom:0; left:0; width:100%; height:130px; background:#000; border-top:3px solid #C9A84C; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:3
+    - "022RUNNERS" em font-size:40px; font-weight:900; color:#fff
+    - "022runners.com.br" em font-size:26px; color:#C9A84C`
 
     const resultadoPrompt = `Crie um post HTML profissional de RESULTADO para evento de corrida:
 Nome: ${eventData.title}

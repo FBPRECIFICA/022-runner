@@ -37,10 +37,6 @@ function birthdateToISO(v: string): string | null {
   if (p.length !== 3 || p[2].length !== 4) return null;
   return `${p[2]}-${p[1]}-${p[0]}`;
 }
-function generateRegistrationNumber() {
-  return `022-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-}
-
 export function RegistrationPage() {
   const { eventSlug } = useParams<{ eventSlug: string }>();
   const navigate = useNavigate();
@@ -104,7 +100,13 @@ export function RegistrationPage() {
       const distances = event.distances || [];
       const chosen = distances[form.distance_index] || distances[0];
       const price = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
-      const regNumber = generateRegistrationNumber();
+
+      const { count: existingCount } = await supabase
+        .from('registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', event.id)
+        .neq('status', 'cancelled');
+      const regNumber = String((existingCount || 0) + 1).padStart(3, '0');
 
       const { data, error: insertError } = await supabase.from('registrations').insert({
         event_id: event.id,
@@ -134,6 +136,24 @@ export function RegistrationPage() {
       trackRegistrationComplete(event.title, Number(price));
       localStorage.removeItem(LS_KEY);
       setRegistrationId(data.id);
+
+      // Salvar termo de aceite com ID real da inscrição
+      supabase.from('termo_aceites').insert({
+        registration_id: data.id,
+        user_id: user?.id || null,
+        event_id: event.id,
+        nome: form.name,
+        cpf: form.cpf.replace(/\D/g, ''),
+        data_nascimento: birthdateToISO(form.birthdate) || null,
+        sexo: form.gender,
+        distancia: chosen?.name || '',
+        cidade: form.city,
+        telefone: form.phone.replace(/\D/g, ''),
+        email: form.email,
+        equipe: form.team_name || null,
+        ip_hint: 'browser',
+        termo_versao: 'v1.0',
+      }).catch(() => {});
 
       // Notificar organizador — EMAIL 4
       const { count: totalRegs } = await supabase
