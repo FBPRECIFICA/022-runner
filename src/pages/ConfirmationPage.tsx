@@ -98,14 +98,19 @@ export function ConfirmationPage() {
           ))}
         </div>
 
-        {/* Aguardando Pagamento PIX */}
+        {/* Aguardando Pagamento */}
         {reg.status === 'pending' && (
-          <div className="bg-white rounded-xl border shadow-sm p-5 text-center">
-            <h2 className="font-bold text-gray-900 mb-3">Pagamento via PIX</h2>
+          <div className="bg-white rounded-xl border shadow-sm p-5 text-center space-y-3">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
               <p className="font-semibold">⚡ Aguardando Pagamento</p>
-              <p className="mt-1">Em breve você receberá o QR Code do PIX por e-mail. Sua vaga fica reservada por 24h.</p>
+              <p className="mt-1">Finalize o pagamento para garantir sua vaga no evento.</p>
             </div>
+            <Link
+              to={`/pagamento/${registrationId}`}
+              className="block w-full bg-[#C9A84C] text-black font-bold py-3 rounded-xl hover:bg-[#B8962E] text-sm"
+            >
+              💳 Ir para Pagamento
+            </Link>
           </div>
         )}
 

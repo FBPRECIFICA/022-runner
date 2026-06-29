@@ -80,6 +80,7 @@ serve(async (req) => {
       result.pixQrCode = {
         encodedImage: pixData.encodedImage ?? null,
         payload: pixData.payload ?? null,
+        expirationDate: pixData.expirationDate ?? null,
       }
     }
 
