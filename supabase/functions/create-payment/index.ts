@@ -1,7 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const ASAAS_API_KEY = Deno.env.get('ASAAS_API_KEY') ?? ''
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3'
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
 const asaasHeaders = {
   'Content-Type': 'application/json',
@@ -59,6 +62,20 @@ serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    // Salva asaas_payment_id na tabela registrations para o webhook encontrar
+    if (registrationId && payment.id) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+      const { error: updateErr } = await supabase
+        .from('registrations')
+        .update({ asaas_payment_id: payment.id })
+        .eq('id', registrationId)
+      if (updateErr) {
+        console.error('[create-payment] Erro ao salvar asaas_payment_id:', updateErr.message)
+      } else {
+        console.log('[create-payment] asaas_payment_id salvo:', payment.id, 'para registration:', registrationId)
+      }
     }
 
     const result: Record<string, unknown> = {

@@ -14,27 +14,59 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // Always return 200 to prevent Asaas from retrying
   try {
     const body = await req.json()
     const { event, payment } = body
 
+    console.log('[asaas-webhook] Evento recebido:', event, '| payment.id:', payment?.id, '| externalReference:', payment?.externalReference)
+
     if (event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED') {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+      const now = new Date().toISOString()
 
-      const registrationId = payment?.externalReference
+      let registrationId: string | null = null
+
+      // Tenta buscar pelo asaas_payment_id primeiro
+      if (payment?.id) {
+        const { data: byPaymentId } = await supabase
+          .from('registrations')
+          .select('id')
+          .eq('asaas_payment_id', payment.id)
+          .single()
+
+        if (byPaymentId?.id) {
+          registrationId = byPaymentId.id
+          console.log('[asaas-webhook] Encontrado por asaas_payment_id:', registrationId)
+        }
+      }
+
+      // Fallback: busca pelo externalReference
+      if (!registrationId && payment?.externalReference) {
+        registrationId = payment.externalReference
+        console.log('[asaas-webhook] Usando externalReference:', registrationId)
+      }
+
       if (!registrationId) {
-        return new Response(JSON.stringify({ received: true, warning: 'no externalReference' }), {
+        console.warn('[asaas-webhook] Nenhuma referência encontrada no pagamento:', JSON.stringify(payment))
+        return new Response(JSON.stringify({ received: true, warning: 'no reference found' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
 
-      // Update registration status
-      await supabase
+      // Atualiza status para 'paid' e registra paid_at
+      const { error: updateError } = await supabase
         .from('registrations')
-        .update({ status: 'paid' })
+        .update({ status: 'paid', paid_at: now })
         .eq('id', registrationId)
 
-      // Fetch registration + event data to send confirmation email
+      if (updateError) {
+        console.error('[asaas-webhook] Erro ao atualizar registration:', updateError.message)
+      } else {
+        console.log('[asaas-webhook] Registration atualizado para paid:', registrationId)
+      }
+
+      // Busca dados para enviar email de confirmação
       const { data: reg } = await supabase
         .from('registrations')
         .select('*, events(title, city, date)')
@@ -46,6 +78,8 @@ serve(async (req) => {
         const eventDate = eventData?.date
           ? new Date(String(eventData.date)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
           : ''
+
+        console.log('[asaas-webhook] Enviando email de confirmação para:', reg.email)
 
         await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
           method: 'POST',
@@ -66,16 +100,19 @@ serve(async (req) => {
               amount: Number(reg.amount).toFixed(2).replace('.', ','),
             },
           }),
-        })
+        }).catch(e => console.error('[asaas-webhook] Erro ao enviar email:', String(e)))
       }
+    } else {
+      console.log('[asaas-webhook] Evento ignorado:', event)
     }
 
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500,
+    console.error('[asaas-webhook] Erro geral:', String(e))
+    // Retorna 200 mesmo em erro para o Asaas não reenviar
+    return new Response(JSON.stringify({ received: true, error: String(e) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }

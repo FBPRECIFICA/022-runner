@@ -30,6 +30,7 @@ export function PaymentPage() {
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(30 * 60);
+  const [polling, setPolling] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -49,6 +50,25 @@ export function PaymentPage() {
     const id = setInterval(() => setSecondsLeft(s => s - 1), 1000);
     return () => clearInterval(id);
   }, [secondsLeft]);
+
+  // Polling: verifica status a cada 5s após mostrar QR Code PIX
+  useEffect(() => {
+    if (!paymentResult || method !== 'PIX' || expired) return;
+    setPolling(true);
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('registrations')
+        .select('status')
+        .eq('id', registrationId)
+        .single();
+      if (data?.status === 'paid') {
+        clearInterval(interval);
+        setPolling(false);
+        navigate(`/confirmacao/${registrationId}`);
+      }
+    }, 5000);
+    return () => { clearInterval(interval); setPolling(false); };
+  }, [paymentResult, method, expired, registrationId, navigate]);
 
   const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
   const secs = String(secondsLeft % 60).padStart(2, '0');
@@ -230,7 +250,15 @@ export function PaymentPage() {
             <div className="bg-amber-50 rounded-lg p-3 text-xs text-[#B8962E] text-left">
               <p>Abra seu app do banco e escaneie o QR Code ou cole o código PIX</p>
             </div>
-            <p className="text-xs text-gray-400">O status será atualizado automaticamente após confirmação</p>
+            {polling && (
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#C9A84C]" />
+                Aguardando confirmação do pagamento...
+              </div>
+            )}
+            {expired && (
+              <p className="text-sm text-red-500 font-medium">Tempo expirado. Gere um novo PIX.</p>
+            )}
             <button onClick={handleConfirmPaid} className="w-full text-sm text-gray-500 underline">
               Já paguei — confirmar inscrição
             </button>
