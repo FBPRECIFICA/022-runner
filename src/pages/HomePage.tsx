@@ -178,7 +178,7 @@ export function HomePage() {
                     <img 
                       src={cityEvents[0].banner || '/images/hero-bg.jpg'} 
                       alt={city}
-                      className="w-full h-32 object-cover"
+                      className="w-full h-32 object-cover object-top"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-4 left-4 right-4">

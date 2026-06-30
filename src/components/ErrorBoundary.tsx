@@ -12,6 +12,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error) {
     console.error('[ErrorBoundary]', error);
+    if (error.message?.includes('Failed to fetch dynamically imported module') ||
+        error.message?.includes('dynamically imported module') ||
+        error.message?.includes('Loading chunk')) {
+      window.location.reload();
+    }
   }
 
   render() {

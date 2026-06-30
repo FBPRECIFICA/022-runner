@@ -51,7 +51,7 @@ export function EventCard({ event }: EventCardProps) {
         <img
           src={event.banner || '/images/event-banner-praia.jpg'}
           alt={event.name}
-          className="w-full h-48 object-cover object-top"
+          className="w-full h-48 md:h-56 object-cover object-top"
         />
         {event.plan === 'premium' && (
           <span className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold">PREMIUM</span>

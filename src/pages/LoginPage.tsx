@@ -70,10 +70,17 @@ export function LoginPage() {
     setLoading(true);
     try {
       loginProfileRef.current = selectedProfile;
-      const success = await login(email, password);
-      if (!success) {
+      const result = await login(email, password);
+      if (!result.success) {
         loginProfileRef.current = null;
-        setError('E-mail ou senha incorretos. Verifique suas credenciais.');
+        const isUnconfirmed = result.errorCode === 'email_not_confirmed' ||
+          result.message?.toLowerCase().includes('email not confirmed') ||
+          result.message?.toLowerCase().includes('not confirmed');
+        if (isUnconfirmed) {
+          setError('__email_not_confirmed__');
+        } else {
+          setError('E-mail ou senha incorretos. Verifique suas credenciais.');
+        }
       }
     } catch {
       loginProfileRef.current = null;
@@ -159,8 +166,33 @@ export function LoginPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {error && (
+                  {error && error !== '__email_not_confirmed__' && (
                     <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">{error}</div>
+                  )}
+                  {error === '__email_not_confirmed__' && (
+                    <div className="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 rounded-lg text-sm space-y-2">
+                      <p className="font-semibold">📧 E-mail ainda não confirmado</p>
+                      <p>Verifique sua caixa de entrada (e spam) e clique no link de confirmação antes de fazer login.</p>
+                      <button
+                        type="button"
+                        className="text-xs underline font-medium mt-1"
+                        style={{ color: '#C9A84C' }}
+                        onClick={async () => {
+                          if (!email) return;
+                          await import('../lib/supabase').then(({ supabase: sb }) =>
+                            sb.auth.resend({ type: 'signup', email })
+                          );
+                          setError('__resent__');
+                        }}
+                      >
+                        Reenviar e-mail de confirmação
+                      </button>
+                    </div>
+                  )}
+                  {error === '__resent__' && (
+                    <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded-lg text-sm">
+                      ✅ E-mail de confirmação reenviado. Verifique sua caixa de entrada e spam.
+                    </div>
                   )}
 
                   <div>

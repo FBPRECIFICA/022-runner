@@ -56,17 +56,17 @@ export function RegisterPage() {
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#fff8e1', border: '2px solid #C9A84C' }}>
               <Mail className="w-8 h-8" style={{ color: '#C9A84C' }} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verifique seu e-mail</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Quase lá!</h2>
             <p className="text-gray-500 text-sm mb-4">
-              Enviamos um link de confirmação para:
+              Enviamos um e-mail de confirmação para:
             </p>
-            <p className="font-bold text-gray-800 mb-6 text-base break-all" style={{ color: '#C9A84C' }}>
+            <p className="font-bold mb-6 text-base break-all" style={{ color: '#C9A84C' }}>
               {registeredEmail}
             </p>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-left">
-              <p className="text-sm text-amber-800 font-semibold mb-1">⚠️ Confirme antes de fazer login</p>
+              <p className="text-sm text-amber-800 font-semibold mb-2">📧 Clique no link para ativar sua conta antes de fazer login.</p>
               <p className="text-sm text-amber-700">
-                Clique no link enviado por e-mail para ativar sua conta. Verifique também a caixa de spam ou lixo eletrônico.
+                Não encontrou? Verifique a caixa de spam/lixo eletrônico.
               </p>
             </div>
             <Link
@@ -74,11 +74,8 @@ export function RegisterPage() {
               className="block w-full py-3 rounded-xl font-semibold text-sm text-center transition-colors"
               style={{ backgroundColor: '#C9A84C', color: '#000' }}
             >
-              Ir para o Login
+              Ir para o login
             </Link>
-            <p className="text-xs text-gray-400 mt-4">
-              Não recebeu? Aguarde alguns minutos e verifique o spam.
-            </p>
           </div>
         </div>
       </div>

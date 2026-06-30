@@ -67,6 +67,25 @@ export function RegistrationPage() {
       .then(({ data }) => { setEvent(data); if (data) trackRegistrationStart(data.title); setLoading(false); });
   }, [eventSlug]);
 
+  // Pré-preenche campos com dados do perfil do usuário logado
+  useEffect(() => {
+    if (!user?.id) return;
+    const draft = localStorage.getItem(LS_KEY);
+    if (draft) return; // não sobrescreve rascunho já existente
+    supabase.from('users').select('name, email, phone, cpf, city').eq('id', user.id).single()
+      .then(({ data }) => {
+        if (!data) return;
+        setForm((prev: any) => ({
+          ...prev,
+          name: prev.name || data.name || '',
+          email: prev.email || data.email || '',
+          phone: prev.phone || (data.phone ? data.phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3') : ''),
+          cpf: prev.cpf || (data.cpf ? data.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : ''),
+          city: prev.city || data.city || '',
+        }));
+      });
+  }, [user?.id]);
+
   // Salvar rascunho no localStorage
   useEffect(() => {
     if (!loading) localStorage.setItem(LS_KEY, JSON.stringify(form));

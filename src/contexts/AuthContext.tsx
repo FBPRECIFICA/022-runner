@@ -8,7 +8,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isOrganizer: boolean;
   isAthlete: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; errorCode?: string; message?: string }>;
   loginWithGoogle: () => Promise<void>;
   register: (name: string, email: string, password: string, role?: string) => Promise<boolean>;
   logout: () => void;
@@ -77,9 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; errorCode?: string; message?: string }> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return !error;
+    if (!error) return { success: true };
+    return { success: false, errorCode: error.code ?? '', message: error.message ?? '' };
   };
 
   const loginWithGoogle = async (): Promise<void> => {
