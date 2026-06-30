@@ -217,10 +217,21 @@ supabase/functions/
   - **Login Google** — `signInWithOAuth({ provider: 'google' })` implementado. SEGURO.
 - [x] **TAREFA 5** — Build limpo (zero erros TS), commit `93ebb2cf`, push para main.
 
-### PENDENTES PARA BLOCO 68
+### ITENS RESOLVIDOS NO BLOCO 68 — 2026-06-30
 
-**MANUAIS OBRIGATÓRIOS (não automatizáveis):**
-1. ❌ **Webhook Asaas** — configurar URL no painel Asaas: `https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/asaas-webhook` (eventos: PAYMENT_CONFIRMED, PAYMENT_RECEIVED)
-2. ⚠️ **ANTHROPIC_API_KEY** — confirmar nas secrets Supabase (LEO + gerador de posts)
-3. ⚠️ **DNS Resend** — registros TXT/CNAME para `022runners.com.br` no registro.br (sem isso emails chegam como spam ou são rejeitados)
-4. ⚠️ **Vercel status** — banner "We are investigating a technical issue" é incidente da infraestrutura Vercel (não relacionado ao código do projeto). Verificar resolução em vercel-status.com.
+- [x] **TAREFA 1 — SMTP customizado Resend**: Configurado via Management API: `smtp_host=smtp.resend.com`, `smtp_port=465`, `smtp_user=resend`, `smtp_sender_name=022RUNNERS`, `smtp_admin_email=noreply@022runners.com.br`. Emails do Supabase Auth agora saem via Resend com remetente "022RUNNERS".
+- [x] **TAREFA 2 — Encoding UTF-8**: Templates Auth re-enviados com conteúdo ASCII-safe (sem acentos que corrompiam). `send-email`: adicionado `DOCTYPE html` + `<meta charset="UTF-8">` em todos os templates. Acentos removidos dos conteúdos de email para evitar garbling. Redeploy feito.
+- [x] **TAREFA 3 — Feedback cadastro**: `RegisterPage.tsx` título alterado para "Quase lá!" com texto atualizado conforme spec: "Enviamos um e-mail de confirmação para [email]. Clique no link para ativar sua conta antes de fazer login. Não encontrou? Verifique a caixa de spam/lixo eletrônico." Botão "Ir para o login".
+- [x] **TAREFA 4 — Erro email não confirmado**: `AuthContext.tsx`: `login()` agora retorna `{ success, errorCode, message }`. `LoginPage.tsx`: detecta `errorCode === 'email_not_confirmed'`, exibe aviso amarelo distinto com botão "Reenviar e-mail de confirmação" (usa `supabase.auth.resend()`). Após reenvio, mostra "E-mail de confirmação reenviado".
+- [x] **TAREFA 5 — Banner desktop**: `EventDetailPage.tsx`: `object-cover` com `style={{ objectPosition: 'top center' }}`. `EventCard.tsx`: `h-48 md:h-56 object-cover object-top` (mais altura em desktop). `HomePage.tsx`: city card image adicionado `object-top`.
+- [x] **TAREFA 6 — Failed to fetch dynamically imported module**: `ErrorBoundary.tsx`: detecta chunk load failure e executa `window.location.reload()` automaticamente. Build novo gera hashes diferentes — erro desaparece após deploy.
+- [x] **TAREFA 7 — Pré-preenchimento formulário**: `RegistrationPage.tsx`: `useEffect` busca perfil do usuário logado na tabela `users` (`name, email, phone, cpf, city`) e pré-preenche campos do formulário (formatando phone e CPF). Não sobrescreve rascunho já salvo no localStorage.
+- [x] **TAREFA 8** — Build limpo, commit `5108b207`, push para main.
+
+### PENDENTES PARA BLOCO 69
+
+**MANUAIS OBRIGATÓRIOS:**
+1. ❌ **Webhook Asaas** — configurar URL no painel Asaas: `https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/asaas-webhook` (eventos: PAYMENT_CONFIRMED, PAYMENT_RECEIVED) — **SEM ISSO PAGAMENTOS NÃO CONFIRMAM**
+2. ⚠️ **DNS Resend** — registros TXT/CNAME do domínio `022runners.com.br` no registro.br. Sem isso emails via Resend chegam como spam ou são rejeitados. Verificar no painel Resend quais registros adicionar.
+3. ⚠️ **ANTHROPIC_API_KEY** — confirmar no Supabase Dashboard → Edge Functions → Manage Secrets
+4. ⚠️ **Vercel status** — banner "We are investigating a technical issue" é incidente da infraestrutura Vercel (não do código). Verificar em vercel-status.com.
