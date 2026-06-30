@@ -1,9 +1,8 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Share2, Download, Home, MessageCircle } from 'lucide-react';
 import { confirmationMessage } from '../utils/whatsappNotifier';
-import { QRCodeSVG } from 'qrcode.react';
 
 export function ConfirmationPage() {
   const { registrationId } = useParams<{ registrationId: string }>();
@@ -40,6 +39,7 @@ export function ConfirmationPage() {
   const shareUrl = `${window.location.origin}/evento/${event.slug}`;
   const whatsappMsg = encodeURIComponent(`Acabei de me inscrever no ${event.title}! 🏃 Venha correr também: ${shareUrl}`);
   const qrValue = `${window.location.origin}/confirmacao/${registrationId}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(qrValue)}`;
 
   const handleDownload = () => {
     const lines = [
@@ -56,11 +56,23 @@ export function ConfirmationPage() {
       `Data Inscrição: ${new Date(reg.created_at).toLocaleDateString('pt-BR')}`,
     ].join('\n');
     const blob = new Blob([lines], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = `comprovante-${reg.registration_number}.txt`;
     a.click();
+    URL.revokeObjectURL(url);
   };
+
+  const summaryRows: [string, string][] = [
+    ['Evento', event.title],
+    ['Data', new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })],
+    ['Horário', new Date(event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })],
+    ['Local', `${event.location} — ${event.city}`],
+    ['Distância', reg.distance_name],
+    ['Valor', `R$ ${Number(reg.amount).toFixed(2).replace('.', ',')}`],
+    ['Status', reg.status === 'pending' ? '⏳ Aguardando Pagamento' : '✅ Confirmado'],
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -82,18 +94,10 @@ export function ConfirmationPage() {
         {/* Detalhes do evento */}
         <div className="bg-white rounded-xl border shadow-sm p-5 space-y-3">
           <h2 className="font-bold text-gray-900">Detalhes do Evento</h2>
-          {[
-            ['Evento', event.title],
-            ['Data', new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })],
-            ['Horário', new Date(event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })],
-            ['Local', `${event.location} — ${event.city}`],
-            ['Distância', reg.distance_name],
-            ['Valor', `R$ ${Number(reg.amount).toFixed(2).replace('.', ',')}`],
-            ['Status', reg.status === 'pending' ? '⏳ Aguardando Pagamento' : '✅ Confirmado'],
-          ].map(([l, v]) => (
-            <div key={l} className="flex justify-between text-sm border-b pb-2 last:border-0">
-              <span className="text-gray-500">{l}</span>
-              <span className="font-medium text-gray-900 text-right">{v}</span>
+          {summaryRows.map(([label, value]) => (
+            <div key={label} className="flex justify-between text-sm border-b pb-2 last:border-0">
+              <span className="text-gray-500">{label}</span>
+              <span className="font-medium text-gray-900 text-right">{value}</span>
             </div>
           ))}
         </div>
@@ -117,7 +121,7 @@ export function ConfirmationPage() {
         {/* QR Code */}
         <div className="bg-white rounded-xl border shadow-sm p-5 flex flex-col items-center gap-3">
           <h2 className="font-bold text-gray-900">QR Code da Inscrição</h2>
-          <QRCodeSVG value={qrValue} size={160} level="M" includeMargin />
+          <img src={qrSrc} alt="QR Code da inscrição" width={160} height={160} className="rounded-lg" />
           <p className="text-xs text-gray-400">Apresente este código no dia do evento</p>
         </div>
 

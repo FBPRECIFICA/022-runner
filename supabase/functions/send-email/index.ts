@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
-const FROM_EMAIL = 'noreply@022runners.com.br'
+const FROM_EMAIL = '022RUNNERS <noreply@022runners.com.br>'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

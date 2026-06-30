@@ -101,19 +101,27 @@ export function RegistrationPage() {
       const chosen = distances[form.distance_index] || distances[0];
       const price = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
 
-      const { count: existingCount } = await supabase
+      // Proteção contra inscrição duplicada pelo mesmo CPF no mesmo evento
+      const cleanCpf = form.cpf.replace(/\D/g, '');
+      const { count: dupCount } = await supabase
         .from('registrations')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', event.id)
+        .eq('cpf', cleanCpf)
         .neq('status', 'cancelled');
-      const regNumber = String((existingCount || 0) + 1).padStart(3, '0');
+      if ((dupCount ?? 0) > 0) {
+        setError('Este CPF já possui uma inscrição ativa para este evento.');
+        setStep('form');
+        setSubmitting(false);
+        return;
+      }
 
+      // registration_number gerado atomicamente pelo trigger trg_auto_registration_number no banco
       const { data, error: insertError } = await supabase.from('registrations').insert({
         event_id: event.id,
         user_id: user?.id || null,
-        registration_number: regNumber,
         name: form.name,
-        cpf: form.cpf.replace(/\D/g, ''),
+        cpf: cleanCpf,
         birth_date: birthdateToISO(form.birthdate) || null,
         phone: form.phone.replace(/\D/g, ''),
         email: form.email,
@@ -123,7 +131,7 @@ export function RegistrationPage() {
         distance_name: chosen?.name || null,
         distance_price: Number(price) || null,
         full_name: form.name,
-        document: form.cpf.replace(/\D/g, ''),
+        document: cleanCpf,
         amount: Number(price),
         status: 'pending',
         team_name: form.team_name || null,
