@@ -164,23 +164,27 @@ export function RegistrationPage() {
       localStorage.removeItem(LS_KEY);
       setRegistrationId(data.id);
 
-      // Salvar termo de aceite com ID real da inscrição
-      supabase.from('termo_aceites').insert({
-        registration_id: data.id,
-        user_id: user?.id || null,
-        event_id: event.id,
-        nome: form.name,
-        cpf: form.cpf.replace(/\D/g, ''),
-        data_nascimento: birthdateToISO(form.birthdate) || null,
-        sexo: form.gender,
-        distancia: chosen?.name || '',
-        cidade: form.city,
-        telefone: form.phone.replace(/\D/g, ''),
-        email: form.email,
-        equipe: form.team_name || null,
-        ip_hint: 'browser',
-        termo_versao: 'v1.0',
-      }).catch(() => {});
+      // Salvar termo de aceite — non-blocking: não interrompe fluxo se falhar
+      try {
+        await supabase.from('termo_aceites').insert({
+          registration_id: data.id,
+          user_id: user?.id || null,
+          event_id: event.id,
+          nome: form.name,
+          cpf: form.cpf.replace(/\D/g, ''),
+          data_nascimento: birthdateToISO(form.birthdate) || null,
+          sexo: form.gender,
+          distancia: chosen?.name || '',
+          cidade: form.city,
+          telefone: form.phone.replace(/\D/g, ''),
+          email: form.email,
+          equipe: form.team_name || null,
+          ip_hint: 'browser',
+          termo_versao: 'v1.0',
+        });
+      } catch (termoErr) {
+        console.error('Erro ao registrar termo_aceites (não bloqueante):', termoErr);
+      }
 
       // Notificar organizador — EMAIL 4
       const { count: totalRegs } = await supabase
@@ -194,21 +198,25 @@ export function RegistrationPage() {
         .eq('id', event.organizer_id)
         .single();
       if (organizer?.email) {
-        supabase.functions.invoke('send-email', {
-          body: {
-            templateType: 'organizador_nova_inscricao',
-            recipientEmail: organizer.email,
-            data: {
-              eventTitle: event.title,
-              athleteName: form.name,
-              athleteEmail: form.email,
-              distanceName: chosen?.name || '',
-              amount: Number(price).toFixed(2).replace('.', ','),
-              paymentStatus: 'pending',
-              totalRegistrations: (totalRegs ?? 0) + 1,
+        try {
+          await supabase.functions.invoke('send-email', {
+            body: {
+              templateType: 'organizador_nova_inscricao',
+              recipientEmail: organizer.email,
+              data: {
+                eventTitle: event.title,
+                athleteName: form.name,
+                athleteEmail: form.email,
+                distanceName: chosen?.name || '',
+                amount: Number(price).toFixed(2).replace('.', ','),
+                paymentStatus: 'pending',
+                totalRegistrations: (totalRegs ?? 0) + 1,
+              },
             },
-          },
-        }).catch(() => {});
+          });
+        } catch (emailErr) {
+          console.error('Erro ao notificar organizador (não bloqueante):', emailErr);
+        }
       }
 
       setStep('confirmação');
