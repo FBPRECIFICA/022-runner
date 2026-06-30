@@ -189,16 +189,38 @@ supabase/functions/
 - [x] **TAREFA 6** — OrganizerDashboard já tinha botão `<Link to="/gerador-social">` correto (confirmado na leitura do código).
 - [x] **TAREFA 7** — Build limpo, commit `39459810`, push para main. Edge functions `asaas-webhook`, `create-payment`, `generate-post` deployadas.
 
-### ITENS PENDENTES PRIORITÁRIOS (para BLOCO 66)
+### ITENS RESOLVIDOS NO BLOCO 66 — 2026-06-30
 
-**CRÍTICO:**
-1. ❌ **ConfirmationPage.tsx tela branca** — ainda importa `qrcode.react` (linha 6) e usa `[l, v]` (linha 93) — mesmas correções do PaymentPage
-2. ❌ **Webhook Asaas URL** — configurar URL `https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/asaas-webhook` no painel Asaas (passo manual obrigatório)
-3. ⚠️ **send-email não redeployada** — fazer deploy da Edge Function `send-email`; RESEND_API_KEY precisa estar nas secrets
+- [x] **TAREFA 1** — Site URL do Supabase Auth atualizado via Management API para `https://022runners.com.br`. Redirect URLs adicionados: `https://022runners.com.br/**`, `https://www.022runners.com.br/**`.
+- [x] **TAREFA 2** — `RegisterPage.tsx`: após cadastro bem-sucedido, exibe tela "Verifique seu e-mail" com o endereço do usuário, aviso de spam e botão "Ir para o Login". Sem redirect automático.
+- [x] **TAREFA 3** — Templates de email de Auth atualizados via Management API: assuntos em português ("Confirme seu email — 022RUNNERS", "Recuperar sua senha — 022RUNNERS"), HTML com identidade visual da marca (fundo preto, dourado #C9A84C, logotipo, corpo em PT-BR).
+- [x] **TAREFA 4** — `OrganizerDashboard.tsx`: card "Inscritos" agora lê de `allRegistrations.filter(r => r.status !== 'cancelled').length`. Card "Receita" também calculado dinamicamente dos status `paid`/`confirmed`.
+- [x] **TAREFA 5** — `ai-assistant`: campo `regulations` já estava na query SELECT. Prompt atualizado para instruir explicitamente o LEO a usar o campo `regulations` ao responder perguntas sobre regras. Redeploy feito.
+- [x] **TAREFA 6** — `EventCard.tsx` e `EventDetailPage.tsx`: `object-cover` substituído por `object-cover object-top` para não cortar cabeças nas fotos de banner.
+- [x] **TAREFA 7** — Build limpo, commit `d6b91359`, push para main.
 
-**ALTA:**
-4. ⚠️ **13.11/18 — LEO / ANTHROPIC_API_KEY** — confirmar chave nas secrets do Supabase Dashboard
+### ITENS RESOLVIDOS NO BLOCO 67 — 2026-06-30
 
-**MÉDIA:**
-5. ⚠️ **8.6 — Número inscrição** — testável após fluxo completo funcionar
-6. ⚠️ **Boleto** — testar após PIX validado
+- [x] **TAREFA 1** — `send-email` redeployado (RESEND_API_KEY já estava nas secrets). FROM_EMAIL atualizado para `022RUNNERS <noreply@022runners.com.br>` (nome do remetente aparece nos clientes de email).
+- [x] **TAREFA 2 — Auditoria Completa do Fluxo:**
+  - **ConfirmationPage.tsx CORRIGIDA** — `import { QRCodeSVG } from 'qrcode.react'` REMOVIDO (bug TDZ). QR code substituído por `<img src="https://api.qrserver.com/v1/...">`. `.map(([l, v]) =>` renomeado para `[label, value]` com tipagem `[string, string][]`. Build limpo.
+  - **Race condition número de peito CORRIGIDA** — criado trigger Postgres `trg_auto_registration_number` que usa `UPDATE events SET registration_counter = registration_counter + 1` (lock exclusivo da linha) para gerar número atômico. `RegistrationPage.tsx` removido o count client-side. Trigger inicializou contadores de todos os eventos existentes.
+  - **Proteção contra inscrição duplicada IMPLEMENTADA** — antes do INSERT, `RegistrationPage.tsx` verifica se mesmo CPF já tem inscrição ativa (não cancelada) no evento. Se sim, bloqueia com mensagem "Este CPF já possui uma inscrição ativa para este evento."
+  - **create-payment** — asaas_payment_id salvo corretamente após criação do pagamento. SEGURO.
+  - **asaas-webhook** — busca por asaas_payment_id primeiro, fallback por externalReference. SEMPRE retorna HTTP 200 (mesmo no catch). Email de confirmação disparado após payment. SEGURO.
+  - **OrganizerDashboard contador** — corrigido no BLOCO 66, dinâmico. SEGURO.
+  - **PaymentPage polling** — polling PIX a cada 5s + botão "Já paguei" com query direta ao banco. SEGURO.
+  - **Status constraint** — banco aceita: paid, pending, awaiting_payment, cancelled, presente. SEGURO.
+  - **Exportação Excel** — `xlsx` instalado, `exportExcel()` gera arquivo com todos os campos. SEGURO.
+  - **Cascade delete** — Admin apaga registrations, favorites, reviews, event_photos antes de deletar event. SEGURO.
+  - **Check-in** — atualiza `status='presente'` e `checkin_at`. SEGURO.
+  - **Login Google** — `signInWithOAuth({ provider: 'google' })` implementado. SEGURO.
+- [x] **TAREFA 5** — Build limpo (zero erros TS), commit `93ebb2cf`, push para main.
+
+### PENDENTES PARA BLOCO 68
+
+**MANUAIS OBRIGATÓRIOS (não automatizáveis):**
+1. ❌ **Webhook Asaas** — configurar URL no painel Asaas: `https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/asaas-webhook` (eventos: PAYMENT_CONFIRMED, PAYMENT_RECEIVED)
+2. ⚠️ **ANTHROPIC_API_KEY** — confirmar nas secrets Supabase (LEO + gerador de posts)
+3. ⚠️ **DNS Resend** — registros TXT/CNAME para `022runners.com.br` no registro.br (sem isso emails chegam como spam ou são rejeitados)
+4. ⚠️ **Vercel status** — banner "We are investigating a technical issue" é incidente da infraestrutura Vercel (não relacionado ao código do projeto). Verificar resolução em vercel-status.com.
