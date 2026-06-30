@@ -180,19 +180,25 @@ supabase/functions/
 - [x] **BLOCO 62**: Edge Functions `create-payment` e `asaas-webhook` redeployadas
 - [x] **BLOCO 62**: ErrorBoundary adicionado ao App.tsx; AthleteDashboard com "Verificar status"
 
-### ITENS PENDENTES PRIORITÁRIOS (para BLOCO 64)
+### ITENS RESOLVIDOS NO BLOCO 65 — 2026-06-29
+
+- [x] **TAREFA 1/2** — `asaas-webhook` e `create-payment` redeployados. Colunas `asaas_payment_id` e `paid_at` confirmadas existentes.
+- [x] **TAREFA 3** — Constraint `registrations_status_check` ampliada para incluir `paid`, `awaiting_payment`, `presente`. Inscrição de "fabio marques alexandre" (pay_8h0dhuupc9whomrl) atualizada para `paid`.
+- [x] **TAREFA 4** — `WhatsAppButton.tsx`: posição alterada de `right-6` para `left-6` (canto inferior esquerdo). LEO permanece no canto inferior direito.
+- [x] **TAREFA 5** — `generate-post/index.ts`: aceita `format` (feed/stories/whatsapp), gera HTML com dimensões corretas (1080×1080, 1080×1920, 800×800), usa `object-fit:contain`. `postGenerator.ts`: `htmlToPng` aceita `width/height` dinâmicos, passa `format` para a Edge Function. `SocialGeneratorPage.tsx`: passa `format` para `generateEventPost`.
+- [x] **TAREFA 6** — OrganizerDashboard já tinha botão `<Link to="/gerador-social">` correto (confirmado na leitura do código).
+- [x] **TAREFA 7** — Build limpo, commit `39459810`, push para main. Edge functions `asaas-webhook`, `create-payment`, `generate-post` deployadas.
+
+### ITENS PENDENTES PRIORITÁRIOS (para BLOCO 66)
 
 **CRÍTICO:**
 1. ❌ **ConfirmationPage.tsx tela branca** — ainda importa `qrcode.react` (linha 6) e usa `[l, v]` (linha 93) — mesmas correções do PaymentPage
-2. ❌ **Webhook Asaas (item A)** — verificar coluna `asaas_payment_id` em `registrations`; configurar URL no painel Asaas (manual)
+2. ❌ **Webhook Asaas URL** — configurar URL `https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/asaas-webhook` no painel Asaas (passo manual obrigatório)
 3. ⚠️ **send-email não redeployada** — fazer deploy da Edge Function `send-email`; RESEND_API_KEY precisa estar nas secrets
 
 **ALTA:**
-4. ❌ **B — WhatsApp sobrepõe LEO no desktop** — `WhatsAppButton: bottom-6 right-6` vs `ChatBot: bottom:20px right:20px` — separar posições
-5. ❌ **15/C — Gerador de posts formato errado** — `htmlToPng` hardcoded 1080×1080; passar `format` e ajustar dimensões por formato (Feed/Stories/WhatsApp)
-6. ❌ **12.10 — Botão gerador no OrganizerDashboard** — verificar/adicionar link para `/gerador-social`
+4. ⚠️ **13.11/18 — LEO / ANTHROPIC_API_KEY** — confirmar chave nas secrets do Supabase Dashboard
 
 **MÉDIA:**
-7. ⚠️ **13.11/18 — LEO** — confirmar `ANTHROPIC_API_KEY` nas secrets Supabase
-8. ⚠️ **8.6 — Número inscrição** — testável após fluxo completo
-9. ⚠️ **Boleto** — testar após PIX validado
+5. ⚠️ **8.6 — Número inscrição** — testável após fluxo completo funcionar
+6. ⚠️ **Boleto** — testar após PIX validado

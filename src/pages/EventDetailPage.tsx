@@ -119,7 +119,7 @@ export function EventDetailPage() {
       {/* Hero Banner — 500px */}
       <div className="relative w-full bg-gray-900" style={{ height: '500px' }}>
         {event.banner_url
-          ? <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover" />
+          ? <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover object-top" />
           : <div className="w-full h-full bg-gradient-to-br from-blue-800 to-[#C9A84C]" />
         }
         <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.20) 100%)' }} />

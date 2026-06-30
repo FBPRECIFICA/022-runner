@@ -18,6 +18,7 @@ export function RegisterPage() {
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,13 +37,53 @@ export function RegisterPage() {
         setError('Erro ao criar conta. Verifique se o e-mail já está cadastrado.');
         return;
       }
-      navigate(userType === 'organizer' ? '/organizador' : '/atleta');
+      setRegisteredEmail(email.trim());
     } catch {
       setError('Ocorreu um erro inesperado. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (registeredEmail) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-lg">
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div style={{ backgroundColor: '#000', borderRadius: '12px', padding: '20px', marginBottom: '24px', borderBottom: '3px solid #C9A84C' }}>
+              <img src="/images/logo-022runners.png" alt="022 RUNNER" className="h-12 w-auto mx-auto object-contain" />
+            </div>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#fff8e1', border: '2px solid #C9A84C' }}>
+              <Mail className="w-8 h-8" style={{ color: '#C9A84C' }} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verifique seu e-mail</h2>
+            <p className="text-gray-500 text-sm mb-4">
+              Enviamos um link de confirmação para:
+            </p>
+            <p className="font-bold text-gray-800 mb-6 text-base break-all" style={{ color: '#C9A84C' }}>
+              {registeredEmail}
+            </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-left">
+              <p className="text-sm text-amber-800 font-semibold mb-1">⚠️ Confirme antes de fazer login</p>
+              <p className="text-sm text-amber-700">
+                Clique no link enviado por e-mail para ativar sua conta. Verifique também a caixa de spam ou lixo eletrônico.
+              </p>
+            </div>
+            <Link
+              to="/login"
+              className="block w-full py-3 rounded-xl font-semibold text-sm text-center transition-colors"
+              style={{ backgroundColor: '#C9A84C', color: '#000' }}
+            >
+              Ir para o Login
+            </Link>
+            <p className="text-xs text-gray-400 mt-4">
+              Não recebeu? Aguarde alguns minutos e verifique o spam.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

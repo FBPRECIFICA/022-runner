@@ -392,13 +392,13 @@ export function OrganizerDashboard() {
           <div className="bg-white rounded-xl p-4 border">
             <div className="flex items-center gap-3">
               <div className="bg-green-100 p-2 rounded-lg"><Users className="text-green-600" size={20} /></div>
-              <div><p className="text-2xl font-bold">0</p><p className="text-sm text-gray-500">Inscritos</p></div>
+              <div><p className="text-2xl font-bold">{allRegistrations.filter(r => r.status !== 'cancelled').length}</p><p className="text-sm text-gray-500">Inscritos</p></div>
             </div>
           </div>
           <div className="bg-white rounded-xl p-4 border">
             <div className="flex items-center gap-3">
               <div className="bg-purple-100 p-2 rounded-lg"><TrendingUp className="text-purple-600" size={20} /></div>
-              <div><p className="text-2xl font-bold">R$ 0</p><p className="text-sm text-gray-500">Receita</p></div>
+              <div><p className="text-2xl font-bold">R$ {allRegistrations.filter(r => r.status === 'paid' || r.status === 'confirmed').reduce((s: number, r: any) => s + Number(r.amount || 0), 0).toFixed(2).replace('.', ',')}</p><p className="text-sm text-gray-500">Receita</p></div>
             </div>
           </div>
         </div>

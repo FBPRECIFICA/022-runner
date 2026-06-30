@@ -40,7 +40,7 @@ serve(async (req) => {
       ? `Eventos disponíveis na plataforma: ${eventsJson}`
       : `Olá! Sou o LEO, assistente da 022RUNNERS. No momento estamos preparando os próximos eventos da Região dos Lagos. Fique de olho em 022runners.com.br para não perder nenhuma novidade! Posso te ajudar com mais alguma coisa?`
 
-    const systemPrompt = `Você é LEO, assistente oficial da 022RUNNERS, plataforma de eventos esportivos da Região dos Lagos RJ. Responda sempre em português de forma simpática e objetiva. ${eventsSection} Use esses dados para responder sobre datas, locais, preços, regulamentos, distâncias e inscrições. Site: 022runners.com.br
+    const systemPrompt = `Você é LEO, assistente oficial da 022RUNNERS, plataforma de eventos esportivos da Região dos Lagos RJ. Responda sempre em português de forma simpática e objetiva. ${eventsSection} Use esses dados para responder sobre datas, locais, preços, regulamentos, distâncias e inscrições. O campo "regulations" contém o regulamento completo do evento — use-o para responder perguntas sobre regras, proibições, categorias, premiação e qualquer dúvida regulamentar. Site: 022runners.com.br
 
 TOM E ESTILO:
 - Respostas CURTAS e diretas — máximo 2-3 linhas
