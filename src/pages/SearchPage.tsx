@@ -17,7 +17,7 @@ function supabaseToEvent(e: any): Event {
     description: e.description || '', date: e.date,
     startTime: new Date(e.date).toTimeString().slice(0, 5),
     city: e.city, state: 'RJ', startLocation: e.location || '',
-    maxParticipants: e.max_participants || 0, currentParticipants: e.current_participants || 0,
+    maxParticipants: e.max_participants || 0, currentParticipants: e.registrations?.[0]?.count ?? e.current_participants ?? 0,
     banner: e.banner_url || '', distances,
     qualityScore: e.quality_score || 0, plan: e.plan || 'free',
     status: e.status === 'published' ? 'registration_open' : e.status,
@@ -49,7 +49,8 @@ export function SearchPage() {
     setSearched(true);
     setParams(q ? { q } : {});
 
-    let qb = supabase.from('events').select('*').eq('status', 'published');
+    let qb = supabase.from('events').select('*, registrations(count)').eq('status', 'published')
+      .in('registrations.status', ['paid', 'confirmed', 'presente']);
     if (q.trim()) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
     if (city) qb = qb.eq('city', city);
     if (type !== 'Todos') qb = qb.eq('event_type', type);

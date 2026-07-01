@@ -838,6 +838,11 @@ export function OrganizerDashboard() {
               {/* Distâncias com Lotes */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Distâncias e Lotes de Preço</label>
+                {editingEventId && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 text-xs text-amber-800">
+                    ℹ️ Você pode alterar o preço a qualquer momento, mesmo com o evento já publicado. As inscrições já realizadas mantêm o valor original — apenas novas inscrições usarão o novo valor.
+                  </div>
+                )}
                 <div className="space-y-4">
                   {form.distances.map((d, di) => (
                     <div key={di} className="border rounded-xl p-4 bg-gray-50">

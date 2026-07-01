@@ -47,7 +47,7 @@ function supabaseToEvent(e: any): Event {
     state: 'RJ',
     startLocation: e.location || '',
     maxParticipants: e.max_participants || 0,
-    currentParticipants: e.current_participants || 0,
+    currentParticipants: e.registrations?.[0]?.count ?? e.current_participants ?? 0,
     banner: e.banner_url || '',
     distances,
     qualityScore: e.quality_score || 0,
@@ -64,8 +64,9 @@ export function HomePage() {
   useEffect(() => {
     supabase
       .from('events')
-      .select('*')
+      .select('*, registrations(count)')
       .eq('status', 'published')
+      .in('registrations.status', ['paid', 'confirmed', 'presente'])
       .order('date', { ascending: true })
       .then(({ data }) => {
         if (data && data.length > 0) {

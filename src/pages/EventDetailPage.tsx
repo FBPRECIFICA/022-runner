@@ -39,7 +39,10 @@ export function EventDetailPage() {
 
   useEffect(() => {
     async function fetchEvent() {
-      const { data, error } = await supabase.from('events').select('*').eq('slug', slug).single();
+      const { data, error } = await supabase.from('events')
+        .select('*, registrations(count)')
+        .in('registrations.status', ['paid', 'confirmed', 'presente'])
+        .eq('slug', slug).single();
       if (error || !data) { setNotFound(true); setLoading(false); return; }
       setEvent(data);
       trackEventView(data.title);
@@ -85,7 +88,7 @@ export function EventDetailPage() {
   const deadline = event.registration_deadline ? new Date(event.registration_deadline) : null;
   const distances: { name: string; price: number }[] = event.distances || [];
   const maxP = event.max_participants || 0;
-  const currentP = event.current_participants || 0;
+  const currentP = event.registrations?.[0]?.count ?? event.current_participants ?? 0;
   const progressPct = maxP > 0 ? Math.min(Math.round((currentP / maxP) * 100), 100) : 0;
   const progressColor = progressPct >= 80 ? '#ef4444' : progressPct >= 50 ? '#f59e0b' : '#22c55e';
   const daysLeft = deadline ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000)) : null;

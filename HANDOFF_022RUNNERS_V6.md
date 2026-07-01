@@ -1,6 +1,6 @@
 # HANDOFF 022RUNNERS V6
 **Data:** 2026-07-01  
-**Último bloco executado:** BLOCO 73  
+**Último bloco executado:** BLOCO 74  
 **Stack:** React 19 + Vite + Tailwind v4 + TypeScript + Supabase + Vercel  
 
 ---
@@ -392,9 +392,26 @@ try {
 
 **Build e deploy:** `npm run build` limpo (zero erros novos — `npx tsc --noEmit` mostra só erros pré-existentes em arquivos não tocados neste bloco: `Header.tsx`, `vite.config.ts`, `services/*.ts`, etc., não fazem parte do escopo do BLOCO73). Edge functions `send-email` e `asaas-webhook` redeployadas.
 
-### PENDENTES PARA BLOCO 74
+### ITENS RESOLVIDOS NO BLOCO 74 — 2026-07-01
 
-**MANUAIS OBRIGATÓRIOS:**
+**TAREFA 1 — Taxa da Plataforma zerada no painel Admin:**
+- **Causa raiz:** as 2 inscrições reais pagas foram migradas no BLOCO73 com `platform_fee = 0` (dado histórico, pré-datam o modelo de taxa separada), e `AdminDashboard.tsx` somava exclusivamente a coluna `platform_fee`, resultando em R$0.
+- **Correção em `AdminDashboard.tsx`:** o card agora usa `platform_fee` gravado quando > 0 (inscrições novas, já corretas) e cai para `amount * 0.10` quando `platform_fee` é 0 (inscrições antigas ao modelo antigo), conforme fórmula pedida no bloco. Card renomeado para deixar claro que é a receita da própria plataforma.
+
+**TAREFA 2 — Contador de vagas zerado:**
+- **Causa raiz:** `HomePage.tsx`, `EventsPage.tsx`, `SearchPage.tsx` e `EventDetailPage.tsx` liam `event.current_participants` — uma coluna armazenada na tabela `events` que **nunca é incrementada em lugar nenhum do código** (nenhum trigger, nenhuma edge function atualiza essa coluna). Por isso sempre mostrava o valor inicial (0/500), independente de inscrições reais.
+- **Correção:** as 4 páginas agora buscam `registrations(count)` embutido na query do Supabase, filtrado por `status IN ('paid','confirmed','presente')` (`.in('registrations.status', [...])`, sem `!inner`, então eventos com zero inscritos continuam aparecendo normalmente). O valor exibido passou a ser `event.registrations?.[0]?.count ?? event.current_participants ?? 0` — sempre em tempo real a partir da tabela `registrations`, com fallback para a coluna antiga só em caso de erro na query. Testado diretamente via REST API contra o evento real: retornou `count: 2`, batendo com as 2 inscrições pagas.
+- Não foi criado nenhum trigger para manter `current_participants` sincronizado (para não repetir o padrão frágil trigger+RLS que já causou o bug do número de peito no BLOCO73) — o valor é sempre calculado ao vivo.
+
+**TAREFA 3 — Organizador editar valor da inscrição:**
+- **Investigação:** o campo de preço por lote/distância já era tecnicamente editável em `OrganizerDashboard.tsx` (botão "Editar" → aba "Criar Evento" com `editingEventId` setado → `handleSubmit` faz `UPDATE events` incluindo `distances`), mesmo com o evento já publicado — não havia nenhum bloqueio de código (`disabled` condicional a `status`). Inscrições já existentes não são afetadas porque `RegistrationPage.tsx` grava o preço (`distance_price`/`base_amount`/`amount`) na própria linha da inscrição no momento da inscrição, sem nunca reconsultar `event.distances` depois.
+- **O que faltava** (e foi adicionado): um aviso visível ao organizador confirmando esse comportamento, para que ele soubesse que pode editar o preço com segurança. Adicionado banner em `OrganizerDashboard.tsx` na seção "Distâncias e Lotes de Preço" (visível apenas ao editar um evento existente): *"Você pode alterar o preço a qualquer momento, mesmo com o evento já publicado. As inscrições já realizadas mantêm o valor original — apenas novas inscrições usarão o novo valor."*
+
+**Build e deploy:** `npm run build` limpo. Nenhuma edge function precisou de redeploy neste bloco (mudanças 100% no frontend).
+
+### PENDENTES PARA BLOCO 75
+
+**MANUAIS OBRIGATÓRIOS (arrastados de blocos anteriores, ainda não confirmados):**
 1. ⚠️ **Webhook Asaas** — confirmar no painel Asaas que a URL `https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/asaas-webhook` está configurada (eventos: PAYMENT_CONFIRMED, PAYMENT_RECEIVED). Já existem 2 inscrições reais com `status = 'paid'`, o que sugere que o webhook está funcionando, mas vale confirmar manualmente no painel.
 2. ⚠️ **DNS Resend** — registros TXT/CNAME do domínio `022runners.com.br` no registro.br. Sem isso emails via Resend chegam como spam ou são rejeitados.
 3. ⚠️ **ANTHROPIC_API_KEY** — confirmar no Supabase Dashboard → Edge Functions → Manage Secrets
@@ -402,4 +419,6 @@ try {
 **SUGESTÕES TÉCNICAS:**
 1. Considerar adicionar uma UI simples no painel do organizador para o organizador criar seus próprios cupons (hoje só é possível via SQL direto).
 2. O modelo de taxa (10% sobre `base_amount`) está fixo no código (`RegistrationPage.tsx` e na função `apply_coupon_to_registration`) — se a taxa mudar no futuro, precisa atualizar os dois lugares.
-3. Pré-existia (não corrigido neste bloco, fora de escopo): diversos erros de `tsc --noEmit` não relacionados aos arquivos alterados no BLOCO73 (ex: `vite.config.ts`, `src/lib/asaas.ts` usando `import.meta.env` sem os tipos do Vite, `src/components/Header.tsx` com variável não usada). Não bloqueiam o `npm run build` (que usa esbuild, não `tsc`), mas seria bom limpar em um bloco futuro dedicado a qualidade de código.
+3. Considerar, num bloco futuro dedicado, backfillar retroativamente `platform_fee` das 2 inscrições antigas (ou remover de vez a dependência da coluna `current_participants`/`platform_fee` como fallback, já que agora tudo é calculado ao vivo a partir de `registrations`).
+4. Pré-existia (não corrigido, fora de escopo): diversos erros de `tsc --noEmit` não relacionados aos arquivos alterados nos BLOCOS 73/74 (ex: `vite.config.ts`, `src/lib/asaas.ts` usando `import.meta.env` sem os tipos do Vite, `src/components/Header.tsx` com variável não usada). Não bloqueiam o `npm run build` (que usa esbuild, não `tsc`), mas seria bom limpar em um bloco futuro dedicado a qualidade de código.
+5. `OrganizerDashboard.tsx` mantém sua própria contagem de "X inscritos" (badge por evento) somando TODOS os status, incluindo pendentes/cancelados — diferente do contador público de vagas (que agora só conta paid/confirmed/presente). Isso é intencional (visão do organizador é mais ampla), mas vale documentar para não confundir em revisões futuras.

@@ -26,7 +26,7 @@ function supabaseToEvent(e: any): Event {
     state: 'RJ',
     startLocation: e.location || '',
     maxParticipants: e.max_participants || 0,
-    currentParticipants: e.current_participants || 0,
+    currentParticipants: e.registrations?.[0]?.count ?? e.current_participants ?? 0,
     banner: e.banner_url || '',
     distances,
     qualityScore: e.quality_score || 0,
@@ -74,8 +74,9 @@ export function EventsPage() {
     setLoading(true);
     let query = supabase
       .from('events')
-      .select('*', { count: 'exact' })
+      .select('*, registrations(count)', { count: 'exact' })
       .eq('status', 'published')
+      .in('registrations.status', ['paid', 'confirmed', 'presente'])
       .order('date', { ascending: true })
       .range((p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1);
 
