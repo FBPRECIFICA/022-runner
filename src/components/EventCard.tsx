@@ -47,6 +47,7 @@ export function EventCard({ event }: EventCardProps) {
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+      {/* Imagem — apenas badge de plano e botão favorito sobre a foto */}
       <div className="relative">
         <img
           src={event.banner || '/images/event-banner-praia.jpg'}
@@ -54,40 +55,50 @@ export function EventCard({ event }: EventCardProps) {
           className="w-full h-48 md:h-56 object-cover object-top"
         />
         {event.plan === 'premium' && (
-          <span className="absolute top-4 left-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold">PREMIUM</span>
+          <span className="absolute top-3 left-3 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">PREMIUM</span>
         )}
         {event.plan === 'featured' && (
-          <span className="absolute top-4 left-4 bg-[#C9A84C] text-white px-3 py-1 rounded-full text-xs font-bold">DESTAQUE</span>
-        )}
-        {event.status === 'registration_open' && (
-          <span className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium">Inscrições Abertas</span>
-        )}
-        {event.qualityScore > 0 && (
-          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-xl">
-            <span className="text-sm font-bold text-gray-800">{event.qualityScore}/100</span>
-          </div>
+          <span className="absolute top-3 left-3 bg-[#C9A84C] text-white px-2 py-0.5 rounded-full text-xs font-bold">DESTAQUE</span>
         )}
         {isAuthenticated && (
           <button
             onClick={toggleFavorite}
             disabled={toggling}
-            className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow hover:scale-110 transition-transform"
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow hover:scale-110 transition-transform"
             aria-label={favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
           >
-            <Heart size={18} fill={favorited ? '#ef4444' : 'none'} stroke={favorited ? '#ef4444' : '#6b7280'} />
+            <Heart size={16} fill={favorited ? '#ef4444' : 'none'} stroke={favorited ? '#ef4444' : '#6b7280'} />
           </button>
         )}
       </div>
-      <div className="p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">{event.name}</h3>
-        <p className="text-gray-600 text-sm mb-4">{event.subtitle}</p>
-        <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
-          <span>📅 {date}</span>
-          <span>📍 {event.city} - {event.state}</span>
-          <span>👥 {event.currentParticipants}/{event.maxParticipants}</span>
+
+      {/* Conteúdo abaixo da imagem */}
+      <div className="p-5">
+        {/* Status + qualityScore na mesma linha */}
+        <div className="flex items-center justify-between mb-3">
+          {event.status === 'registration_open' ? (
+            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">Inscrições Abertas</span>
+          ) : (
+            <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs font-semibold">Encerrado</span>
+          )}
+          {event.qualityScore > 0 && (
+            <span className="text-xs font-bold text-gray-500">⭐ {event.qualityScore}/100</span>
+          )}
         </div>
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <span className="text-[#C9A84C] font-bold text-lg">{priceRange}</span>
+
+        <h3 className="text-lg font-bold text-gray-900 mb-1 leading-snug">{event.name}</h3>
+        {event.subtitle && <p className="text-gray-500 text-sm mb-3 line-clamp-2">{event.subtitle}</p>}
+
+        <div className="space-y-1 text-sm text-gray-600 mb-4">
+          <div>📅 {date}</div>
+          <div>📍 {event.city} — {event.state}</div>
+          {event.maxParticipants > 0 && (
+            <div>👥 {event.currentParticipants}/{event.maxParticipants} vagas</div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+          <span className="text-[#C9A84C] font-bold text-base">{priceRange}</span>
           <Link to={`/evento/${event.slug}`} className="text-[#C9A84C] hover:text-[#B8962E] font-semibold text-sm">Ver detalhes →</Link>
         </div>
       </div>
