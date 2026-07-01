@@ -256,7 +256,7 @@ export function HomePage() {
                 Cada evento ganha uma página personalizada com URL amigável para divulgação nas redes sociais.
               </p>
               <span className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                GRÁTIS
+                INCLUSO
               </span>
             </div>
 
@@ -458,78 +458,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Estatísticas */}
-      <section className="py-14 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            {[
-              { value: '50+', label: 'Eventos realizados' },
-              { value: '3.000+', label: 'Atletas cadastrados' },
-              { value: '8', label: 'Cidades atendidas' },
-              { value: '100%', label: 'Gratuito para atletas' },
-            ].map((stat, i) => (
-              <div key={i}>
-                <p className="text-4xl font-bold" style={{ color: '#C9A84C' }}>{stat.value}</p>
-                <p className="text-gray-400 text-sm mt-1 font-medium">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Depoimentos */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-full mb-4">
-              <Star className="w-4 h-4" />
-              <span className="font-semibold">DEPOIMENTOS</span>
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900">O que os atletas dizem</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { name: 'Marcos Oliveira', city: 'Cabo Frio', text: 'A plataforma facilitou muito minha inscrição. Tudo em um só lugar, rápido e fácil. Já me inscrevi em 3 eventos!' },
-              { name: 'Ana Paula Silva', city: 'Búzios', text: 'Adoro o ranking! Me motiva a participar de mais corridas e acompanhar minha evolução. Excelente plataforma.' },
-              { name: 'Roberto Santos', city: 'São Pedro da Aldeia', text: 'Como organizador, a ferramenta de gestão é incrível. Consigo ver inscritos, exportar listas e muito mais.' },
-            ].map((t, i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm border p-6">
-                <p className="text-gray-600 text-sm leading-relaxed mb-4">"{t.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: 'linear-gradient(135deg, #C9A84C, #B8962E)' }}>
-                    {t.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.city}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Organizadores parceiros */}
-      <section className="py-12 bg-white">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-sm font-semibold tracking-widest text-gray-400 mb-8">ORGANIZADORES PARCEIROS</p>
-          <div className="flex flex-wrap justify-center gap-6">
-            {[
-              { name: 'Corrida dos Lagos', color: '#C9A84C' },
-              { name: 'Trail Búzios', color: '#16a34a' },
-              { name: 'Run Cabo Frio', color: '#dc2626' },
-              { name: 'Pedro Run', color: '#7c3aed' },
-              { name: 'Lagos Trail', color: '#ea580c' },
-            ].map((p, i) => (
-              <div key={i} className="w-24 h-16 rounded-xl flex items-center justify-center text-white text-xs font-bold text-center px-2" style={{ backgroundColor: p.color }}>
-                {p.name}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Como funciona */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
@@ -572,7 +500,7 @@ export function HomePage() {
           <div className="bg-gradient-to-r from-[#C9A84C] to-blue-800 rounded-2xl p-12 text-white text-center">
             <h2 className="text-3xl font-bold mb-4">Pronto para começar?</h2>
             <p className="text-xl text-amber-100 mb-8 max-w-2xl mx-auto">
-              Junte-se a milhares de atletas e organizadores na maior plataforma de eventos esportivos da Região dos Lagos!
+              Atletas e organizadores da Região dos Lagos já estão usando a plataforma. Faça parte você também!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 

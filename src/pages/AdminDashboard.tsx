@@ -55,12 +55,14 @@ export function AdminDashboard() {
   };
 
   const deleteEvent = async (id: string) => {
+    await supabase.from('termo_aceites').delete().eq('event_id', id);
     await supabase.from('registrations').delete().eq('event_id', id);
     await supabase.from('favorites').delete().eq('event_id', id);
     await supabase.from('reviews').delete().eq('event_id', id);
     await supabase.from('event_photos').delete().eq('event_id', id);
+    await supabase.from('coupons').delete().eq('event_id', id);
     const { error } = await supabase.from('events').delete().eq('id', id);
-    if (error) { toast.error('Erro ao excluir evento.'); return; }
+    if (error) { toast.error('Erro ao excluir evento: ' + error.message); return; }
     setEvents(prev => prev.filter(e => e.id !== id));
     setStats(prev => ({ ...prev, events: prev.events - 1 }));
     toast.success('Evento excluído com sucesso');
