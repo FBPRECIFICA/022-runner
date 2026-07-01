@@ -1,6 +1,6 @@
 # HANDOFF 022RUNNERS V6
-**Data:** 2026-06-22  
-**Último bloco executado:** BLOCO 54  
+**Data:** 2026-07-01  
+**Último bloco executado:** BLOCO 73  
 **Stack:** React 19 + Vite + Tailwind v4 + TypeScript + Supabase + Vercel  
 
 ---
@@ -43,8 +43,8 @@
 | `ai-assistant` | v11 | ✅ Deployada |
 | `generate-post` | v2 | ✅ Deployada |
 | `create-payment` | v1 | ✅ Deployada |
-| `asaas-webhook` | v2 | ✅ Deployada |
-| `send-email` | v1 | ✅ Deployada |
+| `asaas-webhook` | v3 (BLOCO73: fee breakdown + incremento de cupom) | ✅ Deployada |
+| `send-email` | v2 (BLOCO73: breakdown inscrição/taxa/desconto) | ✅ Deployada |
 
 ### Secrets a configurar no Supabase Dashboard → Edge Functions → Manage secrets:
 - `ANTHROPIC_API_KEY` — chave Anthropic (começa com sk-ant-api03-)
@@ -228,10 +228,178 @@ supabase/functions/
 - [x] **TAREFA 7 — Pré-preenchimento formulário**: `RegistrationPage.tsx`: `useEffect` busca perfil do usuário logado na tabela `users` (`name, email, phone, cpf, city`) e pré-preenche campos do formulário (formatando phone e CPF). Não sobrescreve rascunho já salvo no localStorage.
 - [x] **TAREFA 8** — Build limpo, commit `5108b207`, push para main.
 
-### PENDENTES PARA BLOCO 69
+### INCIDENTE CRÍTICO RESOLVIDO NO BLOCO 69 — 2026-06-30
+
+**Erro:** `new row violates row-level security policy for table 'registrations'`  
+**Impacto:** 100% das inscrições bloqueadas em produção.
+
+**Diagnóstico (Tarefa 1):**
+- `SELECT relrowsecurity FROM pg_class WHERE relname = 'registrations'` → `true` (RLS habilitado)
+- Policy INSERT existente: `"Usuários criam próprias inscrições"` com `WITH CHECK (auth.uid() = user_id)`
+- **Root cause:** `RegistrationPage.tsx` usa `user_id: user?.id || null`. Quando `user_id` é NULL (usuário anônimo) ou quando o contexto de auth ainda não carregou, `NULL = NULL` retorna NULL (não TRUE) → INSERT bloqueado pelo RLS.
+
+**Correção aplicada via Supabase Management API:**
+
+```sql
+-- 1. Removida a policy INSERT defeituosa via PL/pgSQL (nome com caracteres especiais):
+DO $$ DECLARE pol record; BEGIN
+  FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'registrations' AND cmd = 'INSERT'
+  LOOP EXECUTE format('DROP POLICY %I ON registrations', pol.policyname); END LOOP;
+END $$;
+
+-- 2. Nova policy INSERT correta — permite anon e authenticated:
+CREATE POLICY "Qualquer um pode criar inscricoes"
+ON registrations FOR INSERT TO anon, authenticated
+WITH CHECK (true);
+
+-- 3. Nova policy SELECT para inscrições anônimas (PaymentPage precisa ler após redirect):
+CREATE POLICY "Inscricoes anonimas visiveis por id"
+ON registrations FOR SELECT TO anon
+USING (user_id IS NULL);
+```
+
+**Confirmação do fluxo pós-correção (Tarefa 4):**
+1. ✅ INSERT em registrations — desbloqueado (WITH CHECK true para anon+authenticated)
+2. ✅ create-payment atualiza asaas_payment_id — usa SUPABASE_SERVICE_ROLE_KEY, bypassa RLS
+3. ✅ asaas-webhook atualiza status para 'paid' — usa SUPABASE_SERVICE_ROLE_KEY, bypassa RLS
+4. ✅ SELECT "Minhas Inscrições" — policy `auth.uid() = user_id` funciona para autenticados
+5. ✅ SELECT organizador — policy `events.organizer_id = auth.uid()` funciona
+
+**Auditoria tabelas críticas (Tarefa 3):**
+Todas as tabelas auditadas: `users`, `events`, `favorites`, `reviews`, `teams`, `team_members`, `notifications`, `newsletter`, `coupons`, `event_photos`, `termo_aceites`. Nenhuma policy crítica faltando — todas têm INSERT/SELECT/UPDATE adequados ao fluxo aprovado anteriormente.
+
+**Sem alteração de código** — correção foi 100% SQL no banco. Não há commit de código neste bloco.
+
+**⚠️ RECOMENDAÇÃO:** Pedir para um usuário real testar nova inscrição AGORA para confirmar que o erro não ocorre mais.
+
+### INCIDENTE CRÍTICO RESOLVIDO NO BLOCO 70 — 2026-06-30
+
+**Erro:** `h.from('termo_aceites').insert({...}).catch is not a function`  
+**Impacto:** Fluxo de inscrição travado na etapa do Termo de Aceite (Etapa 2), impedindo conclusão.
+
+**Diagnóstico:**
+- RLS do `termo_aceites` estava correto: policy INSERT `"Sistema insere aceites"` com `WITH CHECK (true)` para `{public}` — não era problema de banco.
+- **Root cause:** `RegistrationPage.tsx` usava `.insert({...}).catch(() => {})` diretamente. O `PostgrestFilterBuilder` do Supabase JS v2 é um thenable mas **não tem `.catch()` nativo** — apenas `.then().catch()` ou `await` dentro de `try/catch` funcionam de forma garantida em todos os ambientes.
+
+**Correção aplicada em `src/pages/RegistrationPage.tsx`:**
+
+```typescript
+// ANTES (bug):
+supabase.from('termo_aceites').insert({...}).catch(() => {});
+
+// DEPOIS (corrigido, non-blocking):
+try {
+  await supabase.from('termo_aceites').insert({...});
+} catch (termoErr) {
+  console.error('Erro ao registrar termo_aceites (não bloqueante):', termoErr);
+}
+
+// Mesmo padrão aplicado ao send-email invoke:
+try {
+  await supabase.functions.invoke('send-email', { body: {...} });
+} catch (emailErr) {
+  console.error('Erro ao notificar organizador (não bloqueante):', emailErr);
+}
+```
+
+**Auditoria (Tarefa 4):** Nenhum outro arquivo no projeto usa `.catch()` direto após `.insert()`/`.update()`/`.select()`. O bug era exclusivo do `RegistrationPage.tsx`.
+
+**Validação do fluxo:**
+1. ✅ Etapa 1 (Dados) — OK
+2. ✅ Etapa 2 (Termo) — termo_aceites inserido com `await` + `try/catch`, non-blocking
+3. ✅ Etapa 3 (Confirmação/Pagamento) — avança independentemente do resultado do termo
+
+**Build e deploy:** Build limpo (zero erros TS), commit `62ebd3d9`, push para main.
+
+**⚠️ RECOMENDAÇÃO:** Pedir para um usuário real testar uma inscrição completa AGORA, passando pela etapa do Termo de Aceite até chegar em Pagamento.
+
+### ITENS RESOLVIDOS NO BLOCO 71 — 2026-06-30
+
+**TAREFA 1 — "Gratuito para atletas" removido:**
+- `HomePage.tsx` linha 469: stat card `{ value: '100%', label: 'Gratuito para atletas' }` **REMOVIDO** junto com toda a seção de estatísticas fictícias (50+ eventos realizados, 3.000+ atletas cadastrados)
+- Badge "GRÁTIS" no card "Landing Page" (seção Diferenciais) alterado para "INCLUSO" — evita confusão com preço do evento para atletas
+- `plan: 'free'` nos arquivos internos é mapeamento de plano do organizador, não exibido diretamente ao atleta ✅
+
+**TAREFA 2 — Conteúdo fictício removido da HomePage:**
+- ❌ Seção "Estatísticas" (`50+`, `3.000+`, `8 cidades`, `100% Gratuito`) — removida
+- ❌ Seção "Depoimentos" (Marcos Oliveira, Ana Paula Silva, Roberto Santos) — removida
+- ❌ Seção "Organizadores Parceiros" (Corrida dos Lagos, Trail Búzios, etc.) — removida
+- ✏️ Texto CTA final: "Junte-se a milhares de atletas" → "Atletas e organizadores da Região dos Lagos já estão usando a plataforma" (factual)
+
+**TAREFA 3 — Botão excluir evento Admin corrigido:**
+- **Causa raiz:** RLS bloqueava DELETE em `favorites`, `reviews`, `event_photos`, `termo_aceites`, `coupons` para usuário admin — não havia policy de DELETE para admin nessas tabelas. O cascade falhava silenciosamente e a FK impedia o DELETE do event.
+- **SQL aplicado:** Policies `"Admin exclui favoritos"`, `"Admin exclui reviews"`, `"Admin exclui fotos"`, `"Admin exclui coupons"`, `"Admin exclui termo aceites"` criadas com `USING (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin'))`.
+- **Código corrigido** em `AdminDashboard.tsx`: cascade inclui `termo_aceites` e `coupons`; mensagem de erro mostra `error.message` detalhado.
+
+**TAREFA 3b — Eventos de teste deletados via SQL:**
+- `MM CORRIDA` (id: 9f38340a) — **DELETADO** com cascade completo
+- `Tainha Run` (id: 16b7d252) — **DELETADO** com cascade completo
+- Verificado: nenhum registro restante com esses títulos.
+
+**Build e deploy:** Build limpo (zero erros TS), commit `d0427e50`, push para main ✅
+
+### ITENS RESOLVIDOS NO BLOCO 72 — 2026-06-30
+
+**TAREFA 1 — Seção Parceiros restaurada:**
+- `HomePage.tsx`: seção "PARCEIROS OFICIAIS" restaurada após remoção do bloco 71
+- Conteúdo: fundo preto, título dourado `#C9A84C`, texto neutro "Em breve — parceiros oficiais da plataforma serão anunciados aqui."
+- Sem nenhum parceiro fictício — estrutura pronta para receber parceiros reais
+
+**TAREFA 2 — EventCard corrigido (sobreposição e corte):**
+- `src/components/EventCard.tsx` reestruturado:
+  - **Sobre a imagem:** apenas badge PREMIUM/DESTAQUE (top-3 left-3, menor) + botão favorito (top-3 right-3, menor) — sem sobreposição de texto
+  - **Abaixo da imagem (área de conteúdo):** "Inscrições Abertas" (badge verde) e score "⭐ 95/100" na mesma linha, sem sobrepor foto
+  - `line-clamp-2` no subtitle — textos não são cortados pelo overflow
+  - Vagas condicionais: só exibe `👥 X/Y vagas` se `maxParticipants > 0`
+  - Nenhum elemento cortado ou sobreposto
+
+**Build e deploy:** Build limpo (zero erros TS), commit `96b72810`, push para main ✅
+
+### ITENS RESOLVIDOS NO BLOCO 73 — 2026-07-01
+
+**TAREFA 1 — Cupom de desconto:**
+- Schema real da tabela `coupons` é diferente do assumido no bloco (`id, event_id, code, discount_type, discount_value, valid_until, max_uses, current_uses, created_at` — sem colunas `active`/`used_count`; `discount_type` tem CHECK constraint que só aceita `'percent'`/`'fixed'`, não `'percentage'`).
+- Cupons `ALUNOARENA15` (15%) e `CHEKINARENA10` (10%) inseridos via SQL, `event_id = NULL` (válidos para qualquer evento), `max_uses = 1000`.
+- Criada função `apply_coupon_to_registration(p_registration_id uuid, p_code text)` — `SECURITY DEFINER`, valida cupom (existe, não expirado, não esgotado) e recalcula `base_amount`/`platform_fee`/`amount` da inscrição. `GRANT EXECUTE` para `anon, authenticated` — evitou expor a tabela `coupons` inteira via RLS de SELECT.
+- `PaymentPage.tsx` (etapa de resumo antes do pagamento): campo de cupom com botão "Aplicar", chama a RPC, exibe mensagem de sucesso/erro e atualiza o resumo (Inscrição / Cupom aplicado / Taxa da plataforma / Total).
+- Uso do cupom (`current_uses`) só é incrementado em `asaas-webhook` quando o pagamento é confirmado (evita contabilizar cupons aplicados em carrinhos abandonados).
+- Testado end-to-end como role `anon`: R$99,90 - 15% = desconto R$14,99, base R$84,91, taxa R$8,49, total R$93,40.
+
+**TAREFA 2 — Número de peito "null" no email — CAUSA RAIZ ENCONTRADA (diferente do suspeitado):**
+- Não era bug em `send-email/index.ts` (que já recebia e usava `registrationNumber` corretamente).
+- **Causa real:** a função `fn_auto_registration_number()` (trigger `trg_auto_registration_number`, criada no BLOCO67) não era `SECURITY DEFINER`. Ela roda `UPDATE events SET registration_counter = ...` — como o INSERT de inscrição é feito pelo atleta anônimo (role `anon`), e a RLS de `events` só permite UPDATE para o organizador (`organizer_id = auth.uid()`), o UPDATE interno do trigger era silenciosamente bloqueado pela RLS (0 linhas afetadas), deixando `v_counter` NULL e `registration_number` NULL.
+- **Confirmado em produção:** as 2 inscrições reais existentes estavam com `registration_number = NULL`.
+- **Correção:** `ALTER FUNCTION fn_auto_registration_number() SECURITY DEFINER SET search_path = public;` — testado como role `anon`, agora gera `'001'`, `'002'`, etc. corretamente.
+- **Backfill:** as 2 inscrições reais existentes foram atualizadas para `'001'` e `'002'` (ordem por `created_at`), e `events.registration_counter` sincronizado para `2`.
+- Nenhum redeploy de edge function foi necessário para esta correção (a mudança foi 100% no banco).
+
+**TAREFA 3 — Sequência dos números de inscrição:**
+- Confirmado: após a correção acima, números são gerados sequencialmente e são únicos por evento (`SELECT event_id, registration_number, COUNT(*) ... HAVING COUNT(*) > 1` retornou vazio).
+- Trigger `trg_auto_registration_number` confirmado ativo (`tgenabled = 'O'`) e `BEFORE INSERT`.
+
+**TAREFA 4 — Exportação Excel:**
+- `OrganizerDashboard.tsx` → `exportExcel()`: colunas ajustadas para exatamente `Nº Peito | Nome Completo | CPF | Email | Telefone | Categoria | Distância | Tamanho Camiseta | Status Pagamento | Data Inscrição`, nessa ordem. `Status Pagamento` traduzido para texto legível (Pago/Aguardando Pagamento/Cancelado). Ordenado por `registration_number`.
+
+**TAREFA 5 — Taxa da plataforma separada:**
+- Novas colunas em `registrations`: `coupon_code`, `discount_amount`, `base_amount`, `platform_fee` (`amount` continua sendo o TOTAL cobrado do atleta — base + taxa).
+- `RegistrationPage.tsx`: ao criar a inscrição, calcula `platform_fee = 10% do valor da distância` e grava `amount = base + taxa` desde o início (mesmo sem cupom).
+- `PaymentPage.tsx` (resumo/pagamento): mostra "Inscrição", "Taxa da plataforma" e "Total" separados (e desconto do cupom, se houver). O valor enviado ao Asaas continua sendo `reg.amount` (o total), sem mudança no `create-payment`.
+- Email de confirmação (`send-email/index.ts`, template `atleta_confirmacao`): agora mostra o detalhamento Inscrição/Cupom/Taxa/Total quando `baseAmount` está presente (retrocompatível com chamadas antigas que só mandam `amount`).
+- `asaas-webhook/index.ts`: passa `baseAmount`, `platformFee`, `discountAmount`, `couponCode` para o email, e incrementa `coupons.current_uses` quando o pagamento é confirmado.
+- `OrganizerDashboard.tsx`: cards financeiros agora mostram "Sua Receita" (100% do `base_amount`, não desconta mais 10%) e "Taxa Plataforma" (soma de `platform_fee`, cobrada à parte do atleta, não do organizador).
+- `AdminDashboard.tsx`: adicionado card "Taxa da Plataforma" (receita da própria plataforma) e corrigido filtro de receita que só considerava `status === 'confirmed'` (nunca usado no app) para incluir também `status === 'paid'`.
+- Registros antigos (2 inscrições pré-BLOCO73) foram migrados com `base_amount = amount` e `platform_fee = 0` (não foi reconstruído retroativamente o novo modelo de taxa sobre pagamentos já concluídos sob o modelo antigo 90/10).
+
+**Build e deploy:** `npm run build` limpo (zero erros novos — `npx tsc --noEmit` mostra só erros pré-existentes em arquivos não tocados neste bloco: `Header.tsx`, `vite.config.ts`, `services/*.ts`, etc., não fazem parte do escopo do BLOCO73). Edge functions `send-email` e `asaas-webhook` redeployadas.
+
+### PENDENTES PARA BLOCO 74
 
 **MANUAIS OBRIGATÓRIOS:**
-1. ❌ **Webhook Asaas** — configurar URL no painel Asaas: `https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/asaas-webhook` (eventos: PAYMENT_CONFIRMED, PAYMENT_RECEIVED) — **SEM ISSO PAGAMENTOS NÃO CONFIRMAM**
-2. ⚠️ **DNS Resend** — registros TXT/CNAME do domínio `022runners.com.br` no registro.br. Sem isso emails via Resend chegam como spam ou são rejeitados. Verificar no painel Resend quais registros adicionar.
+1. ⚠️ **Webhook Asaas** — confirmar no painel Asaas que a URL `https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/asaas-webhook` está configurada (eventos: PAYMENT_CONFIRMED, PAYMENT_RECEIVED). Já existem 2 inscrições reais com `status = 'paid'`, o que sugere que o webhook está funcionando, mas vale confirmar manualmente no painel.
+2. ⚠️ **DNS Resend** — registros TXT/CNAME do domínio `022runners.com.br` no registro.br. Sem isso emails via Resend chegam como spam ou são rejeitados.
 3. ⚠️ **ANTHROPIC_API_KEY** — confirmar no Supabase Dashboard → Edge Functions → Manage Secrets
-4. ⚠️ **Vercel status** — banner "We are investigating a technical issue" é incidente da infraestrutura Vercel (não do código). Verificar em vercel-status.com.
+
+**SUGESTÕES TÉCNICAS:**
+1. Considerar adicionar uma UI simples no painel do organizador para o organizador criar seus próprios cupons (hoje só é possível via SQL direto).
+2. O modelo de taxa (10% sobre `base_amount`) está fixo no código (`RegistrationPage.tsx` e na função `apply_coupon_to_registration`) — se a taxa mudar no futuro, precisa atualizar os dois lugares.
+3. Pré-existia (não corrigido neste bloco, fora de escopo): diversos erros de `tsc --noEmit` não relacionados aos arquivos alterados no BLOCO73 (ex: `vite.config.ts`, `src/lib/asaas.ts` usando `import.meta.env` sem os tipos do Vite, `src/components/Header.tsx` com variável não usada). Não bloqueiam o `npm run build` (que usa esbuild, não `tsc`), mas seria bom limpar em um bloco futuro dedicado a qualidade de código.

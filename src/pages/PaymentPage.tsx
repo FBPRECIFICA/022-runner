@@ -36,6 +36,9 @@ export function PaymentPage() {
   const [secondsLeft, setSecondsLeft] = useState(30 * 60);
   const [polling, setPolling] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState('');
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [couponMessage, setCouponMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const expired = useMemo(() => secondsLeft <= 0, [secondsLeft]);
   const mins = useMemo(() => String(Math.floor(secondsLeft / 60)).padStart(2, '0'), [secondsLeft]);
@@ -127,6 +130,34 @@ export function PaymentPage() {
     }
   };
 
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim() || !registrationId) return;
+    setApplyingCoupon(true);
+    setCouponMessage(null);
+    try {
+      const { data, error } = await supabase.rpc('apply_coupon_to_registration', {
+        p_registration_id: registrationId,
+        p_code: couponInput.trim(),
+      });
+      if (error) throw new Error(error.message);
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!result?.ok) {
+        setCouponMessage({ type: 'error', text: result?.message || 'Cupom inválido.' });
+        return;
+      }
+      const { data: refreshed } = await supabase.from('registrations').select('*').eq('id', registrationId).single();
+      if (refreshed) setReg(refreshed);
+      setCouponMessage({
+        type: 'success',
+        text: `Cupom ${couponInput.trim().toUpperCase()} aplicado — De R$ ${Number(refreshed?.distance_price ?? 0).toFixed(2).replace('.', ',')} por R$ ${Number(result.base_amount).toFixed(2).replace('.', ',')}`,
+      });
+    } catch (err) {
+      setCouponMessage({ type: 'error', text: err instanceof Error ? err.message : 'Erro ao aplicar cupom.' });
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -182,6 +213,11 @@ export function PaymentPage() {
     ['Nº Inscrição', String(reg.registration_number ?? '')],
   ];
 
+  const baseAmount = Number(reg.base_amount ?? reg.distance_price ?? reg.amount ?? 0);
+  const discountAmount = Number(reg.discount_amount ?? 0);
+  const platformFee = Number(reg.platform_fee ?? 0);
+  const hasCoupon = !!reg.coupon_code;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-lg mx-auto px-4 space-y-5">
@@ -196,6 +232,20 @@ export function PaymentPage() {
                 <span className="font-medium text-gray-900">{value}</span>
               </div>
             ))}
+            <div className="flex justify-between border-b pb-1.5">
+              <span className="text-gray-500">Inscrição</span>
+              <span className="font-medium text-gray-900">R$ {baseAmount.toFixed(2).replace('.', ',')}</span>
+            </div>
+            {hasCoupon && discountAmount > 0 && (
+              <div className="flex justify-between border-b pb-1.5">
+                <span className="text-green-600">Cupom {String(reg.coupon_code ?? '')}</span>
+                <span className="font-medium text-green-600">- R$ {discountAmount.toFixed(2).replace('.', ',')}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-b pb-1.5">
+              <span className="text-gray-500">Taxa da plataforma</span>
+              <span className="font-medium text-gray-900">R$ {platformFee.toFixed(2).replace('.', ',')}</span>
+            </div>
             <div className="flex justify-between pt-1 font-bold text-lg">
               <span>Total</span>
               <span className="text-[#C9A84C]">
@@ -203,6 +253,33 @@ export function PaymentPage() {
               </span>
             </div>
           </div>
+
+          {/* Cupom de desconto */}
+          {!paymentResult && !expired && (
+            <div className="mt-4 pt-4 border-t">
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Cupom de desconto</label>
+              <div className="flex gap-2">
+                <input
+                  value={couponInput}
+                  onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                  placeholder="Digite o código"
+                  className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                />
+                <button
+                  onClick={handleApplyCoupon}
+                  disabled={applyingCoupon || !couponInput.trim()}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold border border-[#C9A84C] text-[#C9A84C] hover:bg-amber-50 disabled:opacity-50"
+                >
+                  {applyingCoupon ? 'Aplicando...' : 'Aplicar'}
+                </button>
+              </div>
+              {couponMessage && (
+                <p className={`text-xs mt-2 ${couponMessage.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                  {couponMessage.text}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Countdown */}

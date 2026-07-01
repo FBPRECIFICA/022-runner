@@ -220,19 +220,25 @@ export function OrganizerDashboard() {
     });
   };
 
+  const statusLabel = (status: string) => {
+    if (status === 'paid' || status === 'confirmed') return 'Pago';
+    if (status === 'pending' || status === 'awaiting_payment') return 'Aguardando Pagamento';
+    if (status === 'cancelled') return 'Cancelado';
+    return status;
+  };
+
   const exportExcel = async (event: any) => {
-    const { data } = await supabase.from('registrations').select('*').eq('event_id', event.id);
+    const { data } = await supabase.from('registrations').select('*').eq('event_id', event.id).order('registration_number');
     const rows = (data || []).map(r => ({
-      'Nº Inscrição': r.registration_number,
-      'Nome': r.name,
+      'Nº Peito': r.registration_number,
+      'Nome Completo': r.full_name || r.name,
       'CPF': r.cpf,
       'Email': r.email,
       'Telefone': r.phone,
-      'Cidade': r.city,
+      'Categoria': r.distance_name,
       'Distância': r.distance_name,
       'Tamanho Camiseta': r.shirt_size,
-      'Valor': r.amount,
-      'Status': r.status,
+      'Status Pagamento': statusLabel(r.status),
       'Data Inscrição': new Date(r.created_at).toLocaleDateString('pt-BR'),
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -398,7 +404,7 @@ export function OrganizerDashboard() {
           <div className="bg-white rounded-xl p-4 border">
             <div className="flex items-center gap-3">
               <div className="bg-purple-100 p-2 rounded-lg"><TrendingUp className="text-purple-600" size={20} /></div>
-              <div><p className="text-2xl font-bold">R$ {allRegistrations.filter(r => r.status === 'paid' || r.status === 'confirmed').reduce((s: number, r: any) => s + Number(r.amount || 0), 0).toFixed(2).replace('.', ',')}</p><p className="text-sm text-gray-500">Receita</p></div>
+              <div><p className="text-2xl font-bold">R$ {allRegistrations.filter(r => r.status === 'paid' || r.status === 'confirmed').reduce((s: number, r: any) => s + Number(r.base_amount ?? r.amount ?? 0), 0).toFixed(2).replace('.', ',')}</p><p className="text-sm text-gray-500">Receita</p></div>
             </div>
           </div>
         </div>
@@ -431,9 +437,9 @@ export function OrganizerDashboard() {
         {tab === 'eventos' && (() => {
           const paidRegs = allRegistrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
           const pendingRegs = allRegistrations.filter(r => r.status === 'pending');
-          const totalBruto = paidRegs.reduce((s, r) => s + Number(r.amount || 0), 0);
-          const taxaPlataforma = totalBruto * 0.1;
-          const valorLiquido = totalBruto * 0.9;
+          const totalBruto = paidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
+          const taxaPlataforma = paidRegs.reduce((s, r) => s + Number(r.platform_fee ?? 0), 0);
+          const valorLiquido = totalBruto;
 
           const weeklyData = (() => {
             const weeks: Record<string, number> = {};
@@ -454,7 +460,7 @@ export function OrganizerDashboard() {
                 <div className="bg-white rounded-xl p-4 border-2" style={{ borderColor: '#C9A84C' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign size={16} style={{ color: '#C9A84C' }} />
-                    <span className="text-xs font-medium text-gray-500">Total Bruto</span>
+                    <span className="text-xs font-medium text-gray-500">Sua Receita</span>
                   </div>
                   <p className="text-xl font-bold" style={{ color: '#C9A84C' }}>R$ {totalBruto.toFixed(2).replace('.', ',')}</p>
                   <p className="text-xs text-gray-400">{paidRegs.length} inscr. pagas</p>
@@ -462,18 +468,18 @@ export function OrganizerDashboard() {
                 <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#fca5a5' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingDown size={16} className="text-red-400" />
-                    <span className="text-xs font-medium text-gray-500">Taxa Plataforma (10%)</span>
+                    <span className="text-xs font-medium text-gray-500">Taxa Plataforma (cobrada à parte)</span>
                   </div>
                   <p className="text-xl font-bold text-red-400">R$ {taxaPlataforma.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-xs text-gray-400">10% sobre total bruto</p>
+                  <p className="text-xs text-gray-400">paga pelo atleta, não desconta sua receita</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#86efac' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp size={16} className="text-green-500" />
-                    <span className="text-xs font-medium text-gray-500">Valor Líquido Est.</span>
+                    <span className="text-xs font-medium text-gray-500">Você Recebe</span>
                   </div>
                   <p className="text-xl font-bold text-green-600">R$ {valorLiquido.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-xs text-gray-400">90% do total bruto</p>
+                  <p className="text-xs text-gray-400">100% do valor da inscrição</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#fde68a' }}>
                   <div className="flex items-center gap-2 mb-1">

@@ -66,6 +66,26 @@ serve(async (req) => {
         console.log('[asaas-webhook] Registration atualizado para paid:', registrationId)
       }
 
+      // Incrementa uso do cupom (se aplicado) agora que o pagamento foi confirmado
+      const { data: regForCoupon } = await supabase
+        .from('registrations')
+        .select('coupon_code')
+        .eq('id', registrationId)
+        .single()
+      if (regForCoupon?.coupon_code) {
+        const { data: coupon } = await supabase
+          .from('coupons')
+          .select('id, current_uses')
+          .eq('code', regForCoupon.coupon_code)
+          .single()
+        if (coupon?.id) {
+          await supabase
+            .from('coupons')
+            .update({ current_uses: (coupon.current_uses ?? 0) + 1 })
+            .eq('id', coupon.id)
+        }
+      }
+
       // Busca dados para enviar email de confirmação
       const { data: reg } = await supabase
         .from('registrations')
@@ -98,6 +118,10 @@ serve(async (req) => {
               distanceName: reg.distance_name,
               registrationNumber: reg.registration_number,
               amount: Number(reg.amount).toFixed(2).replace('.', ','),
+              baseAmount: Number(reg.base_amount ?? reg.amount).toFixed(2).replace('.', ','),
+              platformFee: Number(reg.platform_fee ?? 0).toFixed(2).replace('.', ','),
+              discountAmount: Number(reg.discount_amount ?? 0).toFixed(2).replace('.', ','),
+              couponCode: reg.coupon_code ?? '',
             },
           }),
         }).catch(e => console.error('[asaas-webhook] Erro ao enviar email:', String(e)))

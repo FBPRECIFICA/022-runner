@@ -17,7 +17,11 @@
       "Bash(npx vitest *)",
       "mcp__claude_ai_Supabase__deploy_edge_function",
       "Bash(npx supabase *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__get_edge_function",
+      "Bash(git reset *)",
+      "mcp__claude_ai_Supabase__list_tables"
     ]
   }
 }

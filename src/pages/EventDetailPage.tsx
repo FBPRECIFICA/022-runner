@@ -116,39 +116,40 @@ export function EventDetailPage() {
         <meta name="twitter:image" content={event.banner_url || '/images/hero-bg.jpg'} />
       </Helmet>
 
-      {/* Hero Banner — 500px */}
-      <div className="relative w-full bg-gray-900" style={{ height: '500px' }}>
+      {/* Hero Banner — foto limpa, sem texto sobreposto */}
+      <div className="w-full bg-gray-900" style={{ height: '380px' }}>
         {event.banner_url
-          ? <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover" style={{ objectPosition: 'top center' }} />
+          ? <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover block" style={{ objectPosition: 'top center' }} />
           : <div className="w-full h-full bg-gradient-to-br from-blue-800 to-[#C9A84C]" />
         }
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.20) 100%)' }} />
-        <div className="absolute top-4 left-4">
-          <Link to="/" className="inline-flex items-center gap-1 text-white/80 hover:text-white text-sm bg-black/30 px-3 py-1.5 rounded-full backdrop-blur-sm">
+      </div>
+
+      {/* Cabeçalho do evento — abaixo da foto, sem sobreposição */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-5">
+          <Link to="/" className="inline-flex items-center gap-1 text-gray-400 hover:text-gray-700 text-sm mb-3">
             <ChevronLeft size={16} /> Voltar
           </Link>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
           <div className="flex flex-wrap gap-2 mb-3">
             {event.status === 'published' && (
-              <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">INSCRIÇÕES ABERTAS</span>
+              <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Inscrições Abertas</span>
             )}
             {score > 0 && (() => {
               const b = scoreBadge(score);
               return (
-                <span className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1"
+                <span className="inline-block text-xs font-bold px-3 py-1 rounded-full"
                   style={{ backgroundColor: b.bg, color: b.color }}>
-                  <Star size={11} fill="currentColor" /> {b.label}
+                  ⭐ {b.label}
                 </span>
               );
             })()}
             {event.event_type && (
-              <span className="bg-[#C9A84C]/90 text-white text-xs font-semibold px-3 py-1 rounded-full">{event.event_type}</span>
+              <span className="inline-block bg-[#C9A84C]/20 text-[#8a6d20] text-xs font-semibold px-3 py-1 rounded-full">{event.event_type}</span>
             )}
           </div>
-          <h1 className="text-3xl md:text-5xl font-black text-white leading-tight drop-shadow-xl">{event.title}</h1>
-          <p className="text-white/75 mt-2 text-base md:text-lg flex items-center gap-1.5">
-            <MapPin size={16} /> {event.city} — RJ
+          <h1 className="text-2xl md:text-4xl font-black text-gray-900 leading-tight">{event.title}</h1>
+          <p className="text-gray-500 mt-1 flex items-center gap-1.5 text-sm">
+            <MapPin size={14} /> {event.city} — RJ
           </p>
         </div>
       </div>

@@ -119,6 +119,7 @@ export function RegistrationPage() {
       const distances = event.distances || [];
       const chosen = distances[form.distance_index] || distances[0];
       const price = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
+      const platformFee = Math.round(Number(price) * 0.10 * 100) / 100;
 
       // Proteção contra inscrição duplicada pelo mesmo CPF no mesmo evento
       const cleanCpf = form.cpf.replace(/\D/g, '');
@@ -151,7 +152,10 @@ export function RegistrationPage() {
         distance_price: Number(price) || null,
         full_name: form.name,
         document: cleanCpf,
-        amount: Number(price),
+        base_amount: Number(price),
+        platform_fee: platformFee,
+        discount_amount: 0,
+        amount: Number(price) + platformFee,
         status: 'pending',
         team_name: form.team_name || null,
         emergency_contact: form.emergency_contact || null,

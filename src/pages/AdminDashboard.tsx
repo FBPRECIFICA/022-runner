@@ -2,7 +2,7 @@
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2 } from 'lucide-react';
+import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign } from 'lucide-react';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 
@@ -10,7 +10,7 @@ type Tab = 'overview' | 'events' | 'users' | 'registrations';
 
 export function AdminDashboard() {
   const [tab, setTab] = useState<Tab>('overview');
-  const [stats, setStats] = useState({ events: 0, users: 0, registrations: 0, revenue: 0 });
+  const [stats, setStats] = useState({ events: 0, users: 0, registrations: 0, revenue: 0, platformRevenue: 0 });
   const [events, setEvents] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [registrations, setRegistrations] = useState<any[]>([]);
@@ -30,8 +30,10 @@ export function AdminDashboard() {
     setEvents(evts || []);
     setUsers(usrs || []);
     setRegistrations(regs || []);
-    const revenue = (regs || []).filter(r => r.status === 'confirmed').reduce((a, r) => a + Number(r.amount || 0), 0);
-    setStats({ events: evts?.length || 0, users: usrs?.length || 0, registrations: regs?.length || 0, revenue });
+    const paidRegs = (regs || []).filter(r => r.status === 'paid' || r.status === 'confirmed');
+    const revenue = paidRegs.reduce((a, r) => a + Number(r.base_amount ?? r.amount ?? 0), 0);
+    const platformRevenue = paidRegs.reduce((a, r) => a + Number(r.platform_fee ?? 0), 0);
+    setStats({ events: evts?.length || 0, users: usrs?.length || 0, registrations: regs?.length || 0, revenue, platformRevenue });
 
     // Monthly chart
     const months: Record<string, number> = {};
@@ -129,7 +131,8 @@ export function AdminDashboard() {
                       { icon: <Calendar size={20} />, label: 'Eventos', value: stats.events, color: '#C9A84C' },
                       { icon: <Users size={20} />, label: 'Usuários', value: stats.users, color: '#C9A84C' },
                       { icon: <Award size={20} />, label: 'Inscrições', value: stats.registrations, color: '#16a34a' },
-                      { icon: <TrendingUp size={20} />, label: 'Receita', value: `R$ ${stats.revenue.toFixed(0)}`, color: '#7c3aed' },
+                      { icon: <TrendingUp size={20} />, label: 'Receita Organizadores', value: `R$ ${stats.revenue.toFixed(0)}`, color: '#7c3aed' },
+                      { icon: <DollarSign size={20} />, label: 'Taxa da Plataforma', value: `R$ ${stats.platformRevenue.toFixed(0)}`, color: '#16a34a' },
                     ].map((s, i) => (
                       <div key={i} className="rounded-xl p-4" style={{ backgroundColor: '#1e293b' }}>
                         <div className="flex items-center gap-2 mb-2" style={{ color: s.color }}>{s.icon}</div>
