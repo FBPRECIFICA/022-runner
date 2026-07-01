@@ -47,24 +47,28 @@ export function EventCard({ event }: EventCardProps) {
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Imagem — apenas badge de plano e botão favorito sobre a foto */}
+      {/* Imagem */}
       <div className="relative">
         <img
           src={event.banner || '/images/event-banner-praia.jpg'}
           alt={event.name}
-          className="w-full h-48 md:h-56 object-cover object-top"
+          className="w-full h-44 object-cover object-top block"
         />
         {event.plan === 'premium' && (
-          <span className="absolute top-3 left-3 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">PREMIUM</span>
+          <span className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold leading-none">
+            PREMIUM
+          </span>
         )}
         {event.plan === 'featured' && (
-          <span className="absolute top-3 left-3 bg-[#C9A84C] text-white px-2 py-0.5 rounded-full text-xs font-bold">DESTAQUE</span>
+          <span className="absolute top-2 left-2 bg-[#C9A84C] text-white px-2 py-1 rounded-full text-xs font-bold leading-none">
+            DESTAQUE
+          </span>
         )}
         {isAuthenticated && (
           <button
             onClick={toggleFavorite}
             disabled={toggling}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow hover:scale-110 transition-transform"
+            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow"
             aria-label={favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
           >
             <Heart size={16} fill={favorited ? '#ef4444' : 'none'} stroke={favorited ? '#ef4444' : '#6b7280'} />
@@ -72,34 +76,55 @@ export function EventCard({ event }: EventCardProps) {
         )}
       </div>
 
-      {/* Conteúdo abaixo da imagem */}
-      <div className="p-5">
-        {/* Status + qualityScore na mesma linha */}
-        <div className="flex items-center justify-between mb-3">
+      {/* Conteúdo */}
+      <div className="p-4">
+        {/* Badge status — bloco isolado, nunca comprimido */}
+        <div className="mb-2">
           {event.status === 'registration_open' ? (
-            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">Inscrições Abertas</span>
+            <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+              Inscrições Abertas
+            </span>
           ) : (
-            <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs font-semibold">Encerrado</span>
+            <span className="inline-block bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-semibold">
+              Encerrado
+            </span>
+          )}
+        </div>
+
+        {/* Nome */}
+        <h3 className="font-bold text-gray-900 text-base mb-1" style={{ lineHeight: '1.35' }}>
+          {event.name}
+        </h3>
+
+        {/* Subtitle com clamp seguro */}
+        {event.subtitle && (
+          <p className="text-gray-500 text-sm mb-3"
+            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {event.subtitle}
+          </p>
+        )}
+
+        {/* Infos em lista vertical — sem flex-row que comprime */}
+        <div className="text-sm text-gray-600 mb-3 space-y-1">
+          <p>📅 {date}</p>
+          <p>📍 {event.city} — {event.state}</p>
+          {event.maxParticipants > 0 && (
+            <p>👥 {event.currentParticipants}/{event.maxParticipants} vagas</p>
           )}
           {event.qualityScore > 0 && (
-            <span className="text-xs font-bold text-gray-500">⭐ {event.qualityScore}/100</span>
+            <p>⭐ Score {event.qualityScore}/100</p>
           )}
         </div>
 
-        <h3 className="text-lg font-bold text-gray-900 mb-1 leading-snug">{event.name}</h3>
-        {event.subtitle && <p className="text-gray-500 text-sm mb-3 line-clamp-2">{event.subtitle}</p>}
-
-        <div className="space-y-1 text-sm text-gray-600 mb-4">
-          <div>📅 {date}</div>
-          <div>📍 {event.city} — {event.state}</div>
-          {event.maxParticipants > 0 && (
-            <div>👥 {event.currentParticipants}/{event.maxParticipants} vagas</div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <span className="text-[#C9A84C] font-bold text-base">{priceRange}</span>
-          <Link to={`/evento/${event.slug}`} className="text-[#C9A84C] hover:text-[#B8962E] font-semibold text-sm">Ver detalhes →</Link>
+        {/* Preço + link — flex-shrink-0 nos dois para nunca sobrepor */}
+        <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100">
+          <span className="text-[#C9A84C] font-bold text-base flex-shrink-0">{priceRange}</span>
+          <Link
+            to={`/evento/${event.slug}`}
+            className="text-[#C9A84C] hover:text-[#B8962E] font-semibold text-sm flex-shrink-0 whitespace-nowrap"
+          >
+            Ver detalhes →
+          </Link>
         </div>
       </div>
     </div>
