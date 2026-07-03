@@ -28,6 +28,7 @@ interface EventForm {
   additional_info: string;
   sponsors: { name: string; logo_url: string }[];
   distances: DistanceWithLots[];
+  link_percurso: string;
 }
 
 const emptyForm: EventForm = {
@@ -44,6 +45,7 @@ const emptyForm: EventForm = {
   additional_info: '',
   sponsors: [],
   distances: [{ name: '5km', lots: [{ price: '', qty: '' }] }],
+  link_percurso: '',
 };
 
 function calcScore(form: EventForm, hasPhotos: boolean): number {
@@ -273,6 +275,7 @@ export function OrganizerDashboard() {
       additional_info: event.additional_info || '',
       sponsors: event.sponsors || [],
       distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }] }],
+      link_percurso: event.link_percurso || '',
     });
     setEditingEventId(event.id);
     setPhotos([]);
@@ -325,6 +328,7 @@ export function OrganizerDashboard() {
         kit_items: form.kit_items.length > 0 ? form.kit_items : null,
         additional_info: form.additional_info || null,
         sponsors: form.sponsors.length > 0 ? form.sponsors : null,
+        link_percurso: form.link_percurso || null,
         quality_score: score,
       };
 
@@ -749,6 +753,13 @@ export function OrganizerDashboard() {
                     </label>
                   ))}
                 </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Link do Percurso (Garmin, Strava, Komoot...)</label>
+                <input type="url" value={form.link_percurso} onChange={e => setForm(p => ({ ...p, link_percurso: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  placeholder="https://connect.garmin.com/modern/course/..." />
               </div>
 
               <div className="md:col-span-2">

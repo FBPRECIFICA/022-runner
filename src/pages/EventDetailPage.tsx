@@ -221,7 +221,7 @@ export function EventDetailPage() {
             )}
 
             {/* Percurso */}
-            {(event.route_description || event.location) && (
+            {(event.route_description || event.location || event.link_percurso) && (
               <div className="bg-white rounded-xl border p-5 shadow-sm">
                 <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-2">
                   <MapPin size={15} /> Percurso
@@ -232,17 +232,40 @@ export function EventDetailPage() {
                 {event.total_distance_km && (
                   <p className="text-sm text-gray-600 mb-3 font-medium">Distância total: <span style={{ color: '#C9A84C' }}>{event.total_distance_km} km</span></p>
                 )}
-                <div className="rounded-xl overflow-hidden border" style={{ height: '220px' }}>
-                  <iframe
-                    title="Mapa do percurso"
-                    width="100%"
-                    height="220"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={`https://maps.google.com/maps?q=${encodeURIComponent((event.location || '') + ' ' + (event.city || ''))}&output=embed`}
-                  />
-                </div>
+                {event.link_percurso && event.link_percurso.includes('connect.garmin.com') ? (
+                  <>
+                    <div className="rounded-xl overflow-hidden mb-3">
+                      <iframe
+                        title="Percurso no Garmin Connect"
+                        src={`https://connect.garmin.com/modern/course/${event.link_percurso.split('/').filter(Boolean).pop()}/embed`}
+                        width="100%"
+                        height="400"
+                        style={{ borderRadius: '8px', border: '2px solid #C9A84C' }}
+                      />
+                    </div>
+                    <a
+                      href={event.link_percurso}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border hover:bg-amber-50 transition-colors"
+                      style={{ borderColor: '#C9A84C', color: '#C9A84C' }}
+                    >
+                      Ver no Garmin
+                    </a>
+                  </>
+                ) : event.link_percurso ? (
+                  <a
+                    href={event.link_percurso}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg text-white transition-colors"
+                    style={{ backgroundColor: '#C9A84C' }}
+                  >
+                    🗺️ Ver Percurso Completo
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">Percurso será divulgado em breve</p>
+                )}
               </div>
             )}
 
