@@ -7,6 +7,8 @@ import { Helmet } from 'react-helmet-async';
 import { trackEventView, trackShare } from '../utils/analytics';
 import { ReviewSection } from '../components/ReviewSection';
 
+const GOOGLE_STATIC_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_STATIC_KEY || '';
+
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   useEffect(() => {
@@ -232,37 +234,43 @@ export function EventDetailPage() {
                 {event.total_distance_km && (
                   <p className="text-sm text-gray-600 mb-3 font-medium">Distância total: <span style={{ color: '#C9A84C' }}>{event.total_distance_km} km</span></p>
                 )}
-                {event.link_percurso && event.link_percurso.includes('connect.garmin.com') ? (
+                {event.link_percurso ? (
                   <>
-                    <div className="rounded-xl overflow-hidden mb-3">
-                      <iframe
-                        title="Percurso no Garmin Connect"
-                        src={`https://connect.garmin.com/modern/course/${event.link_percurso.split('/').filter(Boolean).pop()}/embed`}
-                        width="100%"
-                        height="400"
-                        style={{ borderRadius: '8px', border: '2px solid #C9A84C' }}
-                      />
-                    </div>
                     <a
                       href={event.link_percurso}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border hover:bg-amber-50 transition-colors"
-                      style={{ borderColor: '#C9A84C', color: '#C9A84C' }}
+                      className="relative block rounded-xl overflow-hidden mb-3 group"
+                      style={{ height: '220px' }}
                     >
-                      Ver no Garmin
+                      <img
+                        src={`https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(
+                          `${event.location || ''} ${event.city || ''}`
+                        )}&zoom=13&size=800x400&maptype=roadmap&style=feature:poi|visibility:off${
+                          GOOGLE_STATIC_MAPS_KEY ? `&key=${GOOGLE_STATIC_MAPS_KEY}` : ''
+                        }`}
+                        alt="Mapa da região do evento"
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                        <span
+                          className="inline-flex items-center gap-2 text-base font-bold px-6 py-3 rounded-lg text-white shadow-lg"
+                          style={{ backgroundColor: '#C9A84C' }}
+                        >
+                          🗺️ Ver Percurso Completo no Garmin
+                        </span>
+                      </div>
                     </a>
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
+                      {event.total_distance_km && (
+                        <span>Distância: <span className="font-medium" style={{ color: '#C9A84C' }}>{event.total_distance_km} km</span></span>
+                      )}
+                      {event.event_type && (
+                        <span>Modalidade: <span className="font-medium text-gray-700">{event.event_type}</span></span>
+                      )}
+                    </div>
                   </>
-                ) : event.link_percurso ? (
-                  <a
-                    href={event.link_percurso}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg text-white transition-colors"
-                    style={{ backgroundColor: '#C9A84C' }}
-                  >
-                    🗺️ Ver Percurso Completo
-                  </a>
                 ) : (
                   <p className="text-sm text-gray-500 italic">Percurso será divulgado em breve</p>
                 )}
