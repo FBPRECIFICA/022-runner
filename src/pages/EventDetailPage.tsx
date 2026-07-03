@@ -7,8 +7,6 @@ import { Helmet } from 'react-helmet-async';
 import { trackEventView, trackShare } from '../utils/analytics';
 import { ReviewSection } from '../components/ReviewSection';
 
-const GOOGLE_STATIC_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_STATIC_KEY || '';
-
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   useEffect(() => {
@@ -236,39 +234,26 @@ export function EventDetailPage() {
                 )}
                 {event.link_percurso ? (
                   <>
+                    <img
+                      src="/percurso-arena-mmp.png"
+                      alt="Mapa do percurso"
+                      width="100%"
+                      style={{ width: '100%', borderRadius: '8px', border: '2px solid #C9A84C' }}
+                      className="mb-3"
+                    />
                     <a
                       href={event.link_percurso}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="relative block rounded-xl overflow-hidden mb-3 group"
-                      style={{ height: '220px' }}
+                      className="inline-flex items-center gap-2 text-base font-bold px-6 py-3 rounded-lg text-white shadow-sm mb-3"
+                      style={{ backgroundColor: '#C9A84C' }}
                     >
-                      <img
-                        src={`https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(
-                          `${event.location || ''} ${event.city || ''}`
-                        )}&zoom=13&size=800x400&maptype=roadmap&style=feature:poi|visibility:off${
-                          GOOGLE_STATIC_MAPS_KEY ? `&key=${GOOGLE_STATIC_MAPS_KEY}` : ''
-                        }`}
-                        alt="Mapa da região do evento"
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                        <span
-                          className="inline-flex items-center gap-2 text-base font-bold px-6 py-3 rounded-lg text-white shadow-lg"
-                          style={{ backgroundColor: '#C9A84C' }}
-                        >
-                          🗺️ Ver Percurso Completo no Garmin
-                        </span>
-                      </div>
+                      🗺️ Ver Percurso Completo no Garmin
                     </a>
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
-                      {event.total_distance_km && (
-                        <span>Distância: <span className="font-medium" style={{ color: '#C9A84C' }}>{event.total_distance_km} km</span></span>
-                      )}
-                      {event.event_type && (
-                        <span>Modalidade: <span className="font-medium text-gray-700">{event.event_type}</span></span>
-                      )}
+                      <span>Distância: <span className="font-medium" style={{ color: '#C9A84C' }}>5.01km</span></span>
+                      <span>Subida: <span className="font-medium text-gray-700">27m</span></span>
+                      <span>Descida: <span className="font-medium text-gray-700">28m</span></span>
                     </div>
                   </>
                 ) : (
