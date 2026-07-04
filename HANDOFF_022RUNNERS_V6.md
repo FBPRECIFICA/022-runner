@@ -1,6 +1,6 @@
 # HANDOFF 022RUNNERS V6
 **Data:** 2026-07-04  
-**Último bloco executado:** BLOCO 83  
+**Último bloco executado:** BLOCO 84  
 **Stack:** React 19 + Vite + Tailwind v4 + TypeScript + Supabase + Vercel  
 
 ---
@@ -445,6 +445,18 @@ try {
 **TAREFA 4 — Deploy `ai-assistant`:** feito via Supabase Management API (MCP), não pelo Supabase CLI local pedido no bloco — equivalente funcional, sem expor o access token em comando de shell. Versão 18 ativa.
 
 **Build e deploy:** `npm run build` limpo. Commit `e405d90b`, push para main.
+
+### ITENS RESOLVIDOS NO BLOCO 84 — 2026-07-04
+
+**Modelo financeiro corrigido (Admin + Organizador consistentes):**
+- **Taxa 022Runners** deixou de ser a soma do `platform_fee` gravado por inscrição (ficava zerado nas 2 inscrições antigas migradas no BLOCO73) e passou a ser **sempre 10% do Total Bruto** — `taxaPlataforma = totalBruto * 0.10` — mesma fórmula em `OrganizerDashboard.tsx` e `AdminDashboard.tsx`.
+- `OrganizerDashboard.tsx` cards renomeados: "Total Bruto", "Taxa 022Runners (10%)", "Est. a Receber*" (bruto − taxa 10% − 1,5% Asaas estimado, em verde), "Aguardando" (agora inclui `pending` **e** `awaiting_payment`, antes só contava `pending`). Nota de rodapé deixa claro que é estimativa e a taxa Asaas real varia por forma de pagamento (PIX 0,99% / Cartão 2,99%).
+- Tabela de transações do organizador: colunas `Valor Inscrição | Taxa 022 (10%) | Taxa Asaas | Est. Líquido | Forma Pgto | Status | Data`. Taxa Asaas e Est. Líquido mostram "-" quando a forma de pagamento é desconhecida (inscrições antigas, criadas antes desta coluna existir).
+- `AdminDashboard.tsx`: `platformRevenue` recalculado como `revenue * 0.10`, idêntico ao organizador — os dois painéis agora sempre batem.
+
+**Nova coluna `registrations.payment_method`:** sem essa coluna não era possível saber a forma de pagamento real por inscrição para calcular a taxa Asaas variável pedida na TAREFA 2. Adicionada via migration e passada a ser gravada por `create-payment` (junto com `asaas_payment_id`) a partir do `billingType` (`PIX`/`CREDIT_CARD`/`BOLETO`) escolhido em `PaymentPage.tsx`. Inscrições criadas antes deste bloco ficam com `payment_method = NULL` (mostram "-" nas colunas de taxa Asaas).
+
+**Build e deploy:** `npm run build` limpo. Edge function `create-payment` redeployada (v11) para persistir `payment_method`. Commit `cfa4df69`, push para main.
 
 ### PENDENTES PARA BLOCO 75
 
