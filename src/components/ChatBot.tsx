@@ -1,5 +1,6 @@
 ﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const AI_FUNCTION_URL = 'https://adorzqjhazsfvbttlfht.supabase.co/functions/v1/ai-assistant';
 const ANON_KEY = 'sb_publishable_b098wEy_wai6_RWuR5pV7g_IAw-x86p';
@@ -16,14 +17,14 @@ interface Message {
   text: string;
 }
 
-async function askAI(question: string): Promise<string> {
+async function askAI(question: string, userId: string | null, pageUrl: string): Promise<string> {
   const res = await fetch(AI_FUNCTION_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${ANON_KEY}`,
     },
-    body: JSON.stringify({ type: 'chat', question }),
+    body: JSON.stringify({ type: 'chat', question, userId, pageUrl }),
   });
   if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
   const data = await res.json();
@@ -32,6 +33,7 @@ async function askAI(question: string): Promise<string> {
 }
 
 export function ChatBot() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', text: 'Eai povo! 🏃 Sou o LEO 022RUNNERS! Na pista ou na dúvida, tô aqui! Como posso ajudar?' },
@@ -75,7 +77,7 @@ export function ChatBot() {
     setInput('');
     setLoading(true);
     try {
-      const reply = await askAI(text);
+      const reply = await askAI(text, user?.id ?? null, window.location.pathname);
       await new Promise(r => setTimeout(r, 800));
       setLoading(false);
       await typeMessage(reply);

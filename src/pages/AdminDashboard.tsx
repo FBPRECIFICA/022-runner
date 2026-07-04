@@ -2,11 +2,12 @@
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign } from 'lucide-react';
+import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle } from 'lucide-react';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
+const LEO_PAGE_SIZE = 20;
 
-type Tab = 'overview' | 'events' | 'users' | 'registrations';
+type Tab = 'overview' | 'events' | 'users' | 'registrations' | 'leo';
 
 export function AdminDashboard() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -18,8 +19,31 @@ export function AdminDashboard() {
   const [cityData, setCityData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  const [leoConversations, setLeoConversations] = useState<any[]>([]);
+  const [leoTotal, setLeoTotal] = useState(0);
+  const [leoPage, setLeoPage] = useState(0);
+  const [leoExpanded, setLeoExpanded] = useState<string | null>(null);
+  const [leoLoading, setLeoLoading] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
+
+  useEffect(() => {
+    if (tab === 'leo') loadLeoConversations(leoPage);
+  }, [tab, leoPage]);
+
+  const loadLeoConversations = async (page: number) => {
+    setLeoLoading(true);
+    const from = page * LEO_PAGE_SIZE;
+    const to = from + LEO_PAGE_SIZE - 1;
+    const { data, count } = await supabase
+      .from('leo_conversations')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    setLeoConversations(data || []);
+    setLeoTotal(count || 0);
+    setLeoLoading(false);
+  };
 
   const loadAll = async () => {
     const [{ data: evts }, { data: usrs }, { data: regs }] = await Promise.all([
@@ -86,6 +110,7 @@ export function AdminDashboard() {
     { key: 'events', label: 'Eventos' },
     { key: 'users', label: 'Usuários' },
     { key: 'registrations', label: 'Inscrições' },
+    { key: 'leo', label: 'LEO — Conversas' },
   ];
 
   return (
@@ -277,6 +302,80 @@ export function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
+
+              {/* LEO CONVERSATIONS */}
+              {tab === 'leo' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold text-white flex items-center gap-2"><MessageCircle size={22} style={{ color: '#C9A84C' }} /> LEO — Conversas</h1>
+                    <span className="text-sm" style={{ color: '#94a3b8' }}>{leoTotal} conversas no total</span>
+                  </div>
+                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1e293b' }}>
+                    <table className="w-full text-sm">
+                      <thead style={{ backgroundColor: '#0f172a' }}>
+                        <tr className="text-left" style={{ color: '#94a3b8' }}>
+                          {['Data/Hora', 'Pergunta', 'Resposta', 'Página'].map(h => (
+                            <th key={h} className="px-4 py-3 font-medium">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leoLoading ? (
+                          <tr><td colSpan={4} className="px-4 py-8 text-center" style={{ color: '#94a3b8' }}>Carregando...</td></tr>
+                        ) : leoConversations.length === 0 ? (
+                          <tr><td colSpan={4} className="px-4 py-8 text-center" style={{ color: '#94a3b8' }}>Nenhuma conversa registrada ainda.</td></tr>
+                        ) : leoConversations.map(c => {
+                          const isExpanded = leoExpanded === c.id;
+                          const answer = String(c.answer || '');
+                          const truncated = answer.length > 100 && !isExpanded ? `${answer.slice(0, 100)}...` : answer;
+                          return (
+                            <tr key={c.id} style={{ borderTop: '1px solid #334155' }}>
+                              <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: '#94a3b8' }}>{new Date(c.created_at).toLocaleString('pt-BR')}</td>
+                              <td className="px-4 py-3 text-white">{c.question}</td>
+                              <td className="px-4 py-3" style={{ color: '#94a3b8' }}>
+                                {truncated}
+                                {answer.length > 100 && (
+                                  <button
+                                    onClick={() => setLeoExpanded(isExpanded ? null : c.id)}
+                                    className="ml-2 text-xs font-medium hover:underline"
+                                    style={{ color: '#C9A84C' }}
+                                  >
+                                    {isExpanded ? 'ver menos' : 'ver mais'}
+                                  </button>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-xs" style={{ color: '#94a3b8' }}>{c.page_url || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {leoTotal > LEO_PAGE_SIZE && (
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => setLeoPage(p => Math.max(0, p - 1))}
+                        disabled={leoPage === 0}
+                        className="text-sm px-3 py-1.5 rounded-lg disabled:opacity-40"
+                        style={{ backgroundColor: '#334155', color: '#fff' }}
+                      >
+                        Anterior
+                      </button>
+                      <span className="text-sm" style={{ color: '#94a3b8' }}>
+                        Página {leoPage + 1} de {Math.ceil(leoTotal / LEO_PAGE_SIZE)}
+                      </span>
+                      <button
+                        onClick={() => setLeoPage(p => (p + 1) * LEO_PAGE_SIZE < leoTotal ? p + 1 : p)}
+                        disabled={(leoPage + 1) * LEO_PAGE_SIZE >= leoTotal}
+                        className="text-sm px-3 py-1.5 rounded-lg disabled:opacity-40"
+                        style={{ backgroundColor: '#334155', color: '#fff' }}
+                      >
+                        Próxima
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </>

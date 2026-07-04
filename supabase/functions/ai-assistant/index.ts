@@ -8,6 +8,24 @@ const corsHeaders = {
 const apiKey = Deno.env.get('ANTHROPIC_API_KEY') || ''
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://adorzqjhazsfvbttlfht.supabase.co'
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'sb_publishable_b098wEy_wai6_RWuR5pV7g_IAw-x86p'
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+
+async function saveConversation(userId: string | null, question: string, answer: string, pageUrl: string | null) {
+  if (!SUPABASE_SERVICE_ROLE_KEY || !question) return
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/leo_conversations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({ user_id: userId, question, answer, page_url: pageUrl }),
+    })
+  } catch (e) {
+    console.error('[ai-assistant] Erro ao salvar conversa:', String(e))
+  }
+}
 
 async function fetchAllEvents(): Promise<string> {
   try {
@@ -32,7 +50,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { type, eventData, platform, question } = await req.json()
+    const { type, eventData, platform, question, userId, pageUrl } = await req.json()
 
     const eventsJson = await fetchAllEvents()
 
@@ -108,6 +126,11 @@ Hashtags: #022runners #regiãodoslagos #corridaderua #cabofrio #buzios #saopedro
     const data = await response.json()
     if (!data.content?.[0]?.text) throw new Error('Resposta inválida da IA: ' + JSON.stringify(data))
     const text = data.content[0].text
+
+    if (type !== 'post') {
+      const userQuestion = question || eventData?.question || ''
+      await saveConversation(userId || null, userQuestion, text, pageUrl || null)
+    }
 
     return new Response(JSON.stringify({ text }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
