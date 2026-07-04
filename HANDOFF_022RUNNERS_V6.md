@@ -1,6 +1,6 @@
 # HANDOFF 022RUNNERS V6
-**Data:** 2026-07-01  
-**Último bloco executado:** BLOCO 74  
+**Data:** 2026-07-04  
+**Último bloco executado:** BLOCO 82  
 **Stack:** React 19 + Vite + Tailwind v4 + TypeScript + Supabase + Vercel  
 
 ---
@@ -408,6 +408,31 @@ try {
 - **O que faltava** (e foi adicionado): um aviso visível ao organizador confirmando esse comportamento, para que ele soubesse que pode editar o preço com segurança. Adicionado banner em `OrganizerDashboard.tsx` na seção "Distâncias e Lotes de Preço" (visível apenas ao editar um evento existente): *"Você pode alterar o preço a qualquer momento, mesmo com o evento já publicado. As inscrições já realizadas mantêm o valor original — apenas novas inscrições usarão o novo valor."*
 
 **Build e deploy:** `npm run build` limpo. Nenhuma edge function precisou de redeploy neste bloco (mudanças 100% no frontend).
+
+### ITENS RESOLVIDOS NO BLOCO 82 — 2026-07-04
+
+**TAREFA 1 — Verificação de schema `coupons`:** confirmado (mesmo schema documentado no BLOCO73): `id, event_id, code, discount_type (check: percent/fixed), discount_value, valid_until, max_uses, current_uses, created_at`. `code` já tinha UNIQUE constraint.
+
+**TAREFA 2 — Colunas adicionadas via migration `bloco82_coupons_organizer_management`:**
+- `coupons.organizer_id UUID REFERENCES users(id)` — necessário para cupons "todos os eventos" (`event_id = NULL`) criados pelo organizador, já que a policy antiga só reconhecia cupons vinculados a um evento específico.
+- `coupons.active BOOLEAN DEFAULT true`.
+- Não foram adicionadas `used_count`/`expires_at`/`discount_type DEFAULT 'percentage'` pedidas literalmente no bloco — colidiam com o schema real (`current_uses`, `valid_until`, CHECK `percent`/`fixed`). UI e função adaptadas ao schema real.
+
+**TAREFA 3 — Nova aba "Cupons" no `OrganizerDashboard.tsx`:**
+- Formulário: código (uppercase automático, valida `^[A-Z0-9+]+$`), tipo (Percentual %/Valor fixo R$ → `percent`/`fixed`), valor, limite de usos opcional, válido até opcional, aplicar a evento específico ou "Todos os eventos" (`event_id = NULL`).
+- Validações: duplicidade (checagem client-side + unique constraint no banco), percentual máximo 100%, valor fixo não pode exceder o menor preço de lote do evento selecionado (pulado quando "Todos os eventos", por não haver preço de referência único).
+- Listagem: código | desconto | usos/limite | válido até | evento | badge Ativo/Inativo | Ativar-Desativar | Excluir (com `window.confirm`, seguindo o padrão já usado em `ProfilePage.tsx`).
+- RLS: policy `"Organizadores gerenciam cupons"` recriada para reconhecer tanto cupons vinculados a evento do organizador quanto cupons com `organizer_id = auth.uid()`.
+
+**TAREFA 4 — Aplicar cupom no fluxo:** já existia em `PaymentPage.tsx` (implementado no BLOCO73, na etapa de pagamento em vez de `RegistrationPage.tsx` — decisão mantida por ser o ponto correto para recalcular o valor antes da cobrança Asaas). Função `apply_coupon_to_registration` **atualizada** para validar `active`, validar se o cupom é aplicável ao evento da inscrição (`event_id IS NULL` ou igual ao evento da inscrição), e suportar corretamente desconto `fixed` (antes só calculava percentual, ignorando `discount_type`).
+
+**TAREFA 5 — Colunas em `registrations`:** `coupon_code`, `discount_amount`, `base_amount`, `platform_fee` já existiam desde o BLOCO73. Nenhuma alteração necessária.
+
+**TAREFA 6 — Desconto na tela de pagamento:** já implementado em `PaymentPage.tsx` desde o BLOCO73 (linha "Cupom {code}: -R$ XX,XX" em verde antes do total). Nenhuma alteração necessária.
+
+**Incremento de uso do cupom:** mantido em `asaas-webhook` (incrementa `current_uses` só na confirmação de pagamento, evitando contabilizar cupons aplicados em carrinhos abandonados) — não foi movido para o momento da inscrição como o bloco sugeria, por ser o design já validado no BLOCO73.
+
+**Build e deploy:** `npm run build` limpo (só o pré-existente `RegistrationPage.tsx(245): 'chosenPrice' declared but never read`, não relacionado a este bloco). Commit `19c7ab9e`, push para main. Nenhuma edge function precisou de redeploy (mudança de banco via migration MCP + frontend apenas).
 
 ### PENDENTES PARA BLOCO 75
 
