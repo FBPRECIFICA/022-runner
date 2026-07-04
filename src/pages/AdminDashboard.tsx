@@ -1,13 +1,27 @@
 ﻿import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle } from 'lucide-react';
+import { Users, Calendar, TrendingUp, TrendingDown, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 const LEO_PAGE_SIZE = 20;
 
-type Tab = 'overview' | 'events' | 'users' | 'registrations' | 'leo';
+type Tab = 'overview' | 'events' | 'users' | 'registrations' | 'leo' | 'organizers';
+
+function statusLabel(status: string) {
+  if (status === 'paid' || status === 'confirmed') return 'Pago';
+  if (status === 'pending' || status === 'awaiting_payment') return 'Aguardando Pagamento';
+  if (status === 'cancelled') return 'Cancelado';
+  return status;
+}
+
+function statusBadgeClass(status: string) {
+  if (status === 'paid' || status === 'confirmed') return 'bg-green-900 text-green-300';
+  if (status === 'cancelled') return 'bg-red-900 text-red-300';
+  return 'bg-yellow-900 text-yellow-300';
+}
 
 export function AdminDashboard() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -24,12 +38,32 @@ export function AdminDashboard() {
   const [leoPage, setLeoPage] = useState(0);
   const [leoExpanded, setLeoExpanded] = useState<string | null>(null);
   const [leoLoading, setLeoLoading] = useState(false);
+  const [selectedOrganizerId, setSelectedOrganizerId] = useState<string | null>(null);
+  const [selectedEventPreview, setSelectedEventPreview] = useState<any | null>(null);
+  const [eventCoupons, setEventCoupons] = useState<any[]>([]);
+  const [loadingEventCoupons, setLoadingEventCoupons] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
 
   useEffect(() => {
     if (tab === 'leo') loadLeoConversations(leoPage);
   }, [tab, leoPage]);
+
+  useEffect(() => {
+    if (!selectedEventPreview) { setEventCoupons([]); return; }
+    loadEventCoupons(selectedEventPreview.id);
+  }, [selectedEventPreview]);
+
+  const loadEventCoupons = async (eventId: string) => {
+    setLoadingEventCoupons(true);
+    const { data } = await supabase
+      .from('coupons')
+      .select('*')
+      .or(`event_id.eq.${eventId},event_id.is.null`)
+      .eq('active', true);
+    setEventCoupons(data || []);
+    setLoadingEventCoupons(false);
+  };
 
   const loadLeoConversations = async (page: number) => {
     setLeoLoading(true);
@@ -103,9 +137,33 @@ export function AdminDashboard() {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
   };
 
+  const exportEventExcel = (event: any) => {
+    const evtRegs = registrations
+      .filter(r => r.event_id === event.id)
+      .sort((a, b) => (a.registration_number || '').localeCompare(b.registration_number || ''));
+    const rows = evtRegs.map(r => ({
+      'Nº Peito': r.registration_number,
+      'Nome Completo': r.full_name || r.name,
+      'CPF': r.cpf,
+      'Email': r.email,
+      'Telefone': r.phone,
+      'Categoria': r.distance_name,
+      'Distância': r.distance_name,
+      'Tamanho Camiseta': r.shirt_size,
+      'Status Pagamento': statusLabel(r.status),
+      'Data Inscrição': new Date(r.created_at).toLocaleDateString('pt-BR'),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
+    const date = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Visão Geral' },
     { key: 'events', label: 'Eventos' },
+    { key: 'organizers', label: 'Organizadores' },
     { key: 'users', label: 'Usuários' },
     { key: 'registrations', label: 'Inscrições' },
     { key: 'leo', label: 'LEO — Conversas' },
@@ -221,6 +279,8 @@ export function AdminDashboard() {
                             <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full bg-[#1A1A1A] text-amber-300">{e.plan}</span></td>
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
+                                <a href={`/evento/${e.slug}`} target="_blank" rel="noreferrer" className="text-xs px-2 py-1 rounded bg-blue-800 text-white hover:bg-blue-700 flex items-center gap-1" title="Ver como Atleta"><Eye size={12} /> Atleta</a>
+                                <button onClick={() => setSelectedEventPreview(e)} className="text-xs px-2 py-1 rounded bg-indigo-800 text-white hover:bg-indigo-700 flex items-center gap-1" title="Ver como Organizador"><BarChart3 size={12} /> Org.</button>
                                 <button onClick={() => updateEventPlan(e.id, 'featured')} className="text-xs px-2 py-1 rounded bg-yellow-700 text-white hover:bg-yellow-600" title="Destacar"><Star size={12} /></button>
                                 <button onClick={() => updateEventPlan(e.id, 'premium')} className="text-xs px-2 py-1 rounded bg-purple-700 text-white hover:bg-purple-600" title="Premium"><Award size={12} /></button>
                                 <button onClick={() => setConfirmDelete({ id: e.id, title: e.title })} className="text-xs px-2 py-1 rounded bg-red-800 text-white hover:bg-red-700" title="Excluir"><Trash2 size={12} /></button>
@@ -233,6 +293,56 @@ export function AdminDashboard() {
                   </div>
                 </div>
               )}
+
+              {/* ORGANIZERS */}
+              {tab === 'organizers' && (() => {
+                const organizerRows = users.filter(u => u.role === 'organizer' || events.some(e => e.organizer_id === u.id));
+                return (
+                  <div className="space-y-4">
+                    <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Briefcase size={22} style={{ color: '#C9A84C' }} /> Organizadores</h1>
+                    <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1e293b' }}>
+                      <table className="w-full text-sm">
+                        <thead style={{ backgroundColor: '#0f172a' }}>
+                          <tr className="text-left" style={{ color: '#94a3b8' }}>
+                            {['Nome', 'Email', 'Eventos', 'Inscrições', 'Receita Bruta', 'Ações'].map(h => (
+                              <th key={h} className="px-4 py-3 font-medium">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {organizerRows.length === 0 ? (
+                            <tr><td colSpan={6} className="px-4 py-8 text-center" style={{ color: '#94a3b8' }}>Nenhum organizador cadastrado ainda.</td></tr>
+                          ) : organizerRows.map(u => {
+                            const orgEvents = events.filter(e => e.organizer_id === u.id);
+                            const orgEventIds = orgEvents.map(e => e.id);
+                            const orgRegs = registrations.filter(r => orgEventIds.includes(r.event_id));
+                            const orgPaidRegs = orgRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
+                            const orgRevenue = orgPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
+                            return (
+                              <tr key={u.id} style={{ borderTop: '1px solid #334155' }}>
+                                <td className="px-4 py-3 text-white font-medium">{u.name}</td>
+                                <td className="px-4 py-3" style={{ color: '#94a3b8' }}>{u.email}</td>
+                                <td className="px-4 py-3 text-center font-bold" style={{ color: '#C9A84C' }}>{orgEvents.length}</td>
+                                <td className="px-4 py-3 text-center" style={{ color: '#94a3b8' }}>{orgRegs.filter(r => r.status !== 'cancelled').length}</td>
+                                <td className="px-4 py-3 font-medium text-green-400">R$ {orgRevenue.toFixed(2).replace('.', ',')}</td>
+                                <td className="px-4 py-3">
+                                  <button
+                                    onClick={() => setSelectedOrganizerId(u.id)}
+                                    className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                                    style={{ backgroundColor: '#C9A84C', color: '#fff' }}
+                                  >
+                                    Ver Painel
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* USERS */}
               {tab === 'users' && (
@@ -380,6 +490,202 @@ export function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {/* Modal Visão do Organizador */}
+      {selectedOrganizerId && (() => {
+        const org = users.find(u => u.id === selectedOrganizerId);
+        const orgEvents = events.filter(e => e.organizer_id === selectedOrganizerId);
+        const orgEventIds = orgEvents.map(e => e.id);
+        const orgRegs = registrations.filter(r => orgEventIds.includes(r.event_id));
+        const orgPaidRegs = orgRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
+        const totalBruto = orgPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
+        const taxa10 = totalBruto * 0.10;
+        const estimado = totalBruto - taxa10 - totalBruto * 0.015;
+        const recentRegs = [...orgRegs]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 20);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setSelectedOrganizerId(null)}>
+            <div className="w-full max-w-3xl max-h-[90vh] rounded-2xl flex flex-col" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#334155' }}>
+                <h3 className="text-lg font-bold text-white">Visão do Organizador: {org?.name}</h3>
+                <button onClick={() => setSelectedOrganizerId(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
+              </div>
+              <div className="p-5 overflow-y-auto space-y-6">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
+                    <div className="flex items-center gap-2 mb-1" style={{ color: '#C9A84C' }}><DollarSign size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Total Bruto</span></div>
+                    <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>R$ {totalBruto.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
+                    <div className="flex items-center gap-2 mb-1 text-red-400"><TrendingDown size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Taxa 10%</span></div>
+                    <p className="text-lg font-bold text-red-400">R$ {taxa10.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
+                    <div className="flex items-center gap-2 mb-1 text-green-400"><TrendingUp size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Est. a Receber*</span></div>
+                    <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                </div>
+                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor estimado, descontando 10% da plataforma e ~1,5% de taxa Asaas (varia por forma de pagamento).</p>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-white mb-2">Eventos ({orgEvents.length})</h4>
+                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0f172a' }}>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left" style={{ color: '#94a3b8' }}>
+                          {['Evento', 'Data', 'Inscritos', 'Receita'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orgEvents.length === 0 ? (
+                          <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum evento.</td></tr>
+                        ) : orgEvents.map(ev => {
+                          const evRegs = registrations.filter(r => r.event_id === ev.id);
+                          const evRevenue = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed').reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
+                          return (
+                            <tr key={ev.id} style={{ borderTop: '1px solid #334155' }}>
+                              <td className="px-3 py-2 text-white">{ev.title}</td>
+                              <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{new Date(ev.date).toLocaleDateString('pt-BR')}</td>
+                              <td className="px-3 py-2 text-center" style={{ color: '#94a3b8' }}>{evRegs.filter(r => r.status !== 'cancelled').length}</td>
+                              <td className="px-3 py-2 text-green-400">R$ {evRevenue.toFixed(2).replace('.', ',')}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-white mb-2">Inscrições Recentes</h4>
+                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0f172a' }}>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left" style={{ color: '#94a3b8' }}>
+                          {['Atleta', 'Evento', 'Status', 'Data'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recentRegs.length === 0 ? (
+                          <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhuma inscrição.</td></tr>
+                        ) : recentRegs.map(r => (
+                          <tr key={r.id} style={{ borderTop: '1px solid #334155' }}>
+                            <td className="px-3 py-2 text-white">{r.name}</td>
+                            <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{orgEvents.find(e => e.id === r.event_id)?.title || '—'}</td>
+                            <td className="px-3 py-2"><span className={`text-xs px-2 py-1 rounded-full ${statusBadgeClass(r.status)}`}>{statusLabel(r.status)}</span></td>
+                            <td className="px-3 py-2 text-xs" style={{ color: '#94a3b8' }}>{new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Modal Ver como Organizador (evento específico) */}
+      {selectedEventPreview && (() => {
+        const ev = selectedEventPreview;
+        const evRegs = registrations.filter(r => r.event_id === ev.id);
+        const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
+        const bruto = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
+        const taxa10 = bruto * 0.10;
+        const estimado = bruto - taxa10 - bruto * 0.015;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setSelectedEventPreview(null)}>
+            <div className="w-full max-w-3xl max-h-[90vh] rounded-2xl flex flex-col" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#334155' }}>
+                <h3 className="text-lg font-bold text-white">Painel do Organizador: {ev.title}</h3>
+                <button onClick={() => setSelectedEventPreview(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
+              </div>
+              <div className="p-5 overflow-y-auto space-y-6">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
+                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Bruto</p>
+                    <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>R$ {bruto.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
+                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Taxa 10%</p>
+                    <p className="text-lg font-bold text-red-400">R$ {taxa10.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
+                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Estimado</p>
+                    <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-white">Cupons Ativos</h4>
+                  </div>
+                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0f172a' }}>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left" style={{ color: '#94a3b8' }}>
+                          {['Código', 'Desconto', 'Usos'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingEventCoupons ? (
+                          <tr><td colSpan={3} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Carregando...</td></tr>
+                        ) : eventCoupons.length === 0 ? (
+                          <tr><td colSpan={3} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum cupom ativo.</td></tr>
+                        ) : eventCoupons.map(c => (
+                          <tr key={c.id} style={{ borderTop: '1px solid #334155' }}>
+                            <td className="px-3 py-2 font-mono font-bold text-white">{c.code}</td>
+                            <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{c.discount_type === 'percent' ? `${c.discount_value}%` : `R$ ${Number(c.discount_value).toFixed(2).replace('.', ',')}`}</td>
+                            <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{c.current_uses ?? 0}{c.max_uses ? ` de ${c.max_uses}` : ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-white">Inscrições ({evRegs.length})</h4>
+                    <button
+                      onClick={() => exportEventExcel(ev)}
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5"
+                      style={{ backgroundColor: '#16a34a', color: '#fff' }}
+                    >
+                      <Download size={13} /> Exportar Excel
+                    </button>
+                  </div>
+                  <div className="rounded-xl overflow-hidden overflow-x-auto" style={{ backgroundColor: '#0f172a' }}>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left" style={{ color: '#94a3b8' }}>
+                          {['Nº Peito', 'Nome', 'Categoria', 'Status'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {evRegs.length === 0 ? (
+                          <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhuma inscrição.</td></tr>
+                        ) : evRegs.map(r => (
+                          <tr key={r.id} style={{ borderTop: '1px solid #334155' }}>
+                            <td className="px-3 py-2 font-mono font-bold" style={{ color: '#C9A84C' }}>{r.registration_number}</td>
+                            <td className="px-3 py-2 text-white">{r.name}</td>
+                            <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{r.distance_name}</td>
+                            <td className="px-3 py-2"><span className={`text-xs px-2 py-1 rounded-full ${statusBadgeClass(r.status)}`}>{statusLabel(r.status)}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal confirmação exclusão */}
       {confirmDelete && (
