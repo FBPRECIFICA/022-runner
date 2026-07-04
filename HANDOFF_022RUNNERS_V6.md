@@ -1,6 +1,6 @@
 # HANDOFF 022RUNNERS V6
 **Data:** 2026-07-04  
-**Último bloco executado:** BLOCO 82  
+**Último bloco executado:** BLOCO 83  
 **Stack:** React 19 + Vite + Tailwind v4 + TypeScript + Supabase + Vercel  
 
 ---
@@ -433,6 +433,18 @@ try {
 **Incremento de uso do cupom:** mantido em `asaas-webhook` (incrementa `current_uses` só na confirmação de pagamento, evitando contabilizar cupons aplicados em carrinhos abandonados) — não foi movido para o momento da inscrição como o bloco sugeria, por ser o design já validado no BLOCO73.
 
 **Build e deploy:** `npm run build` limpo (só o pré-existente `RegistrationPage.tsx(245): 'chosenPrice' declared but never read`, não relacionado a este bloco). Commit `19c7ab9e`, push para main. Nenhuma edge function precisou de redeploy (mudança de banco via migration MCP + frontend apenas).
+
+### ITENS RESOLVIDOS NO BLOCO 83 — 2026-07-04
+
+**TAREFA 1 — Tabela `leo_conversations`:** criada (`id, user_id, question, answer, page_url, created_at`). RLS habilitada. **Ajuste de segurança:** a policy pedida no bloco (`"Admin acessa tudo" ... USING (true)`) exporia todas as conversas (incluindo `user_id`) a qualquer cliente anon via REST — recriada como `USING (EXISTS (... users.role = 'admin'))`, restrita a administradores de fato.
+
+**TAREFA 2 — `ai-assistant` salva conversas:** recebe `userId` e `pageUrl` opcionais no body. Após gerar a resposta do LEO (`type !== 'post'`, ou seja, não se aplica ao gerador de posts), insere em `leo_conversations` via `SUPABASE_SERVICE_ROLE_KEY` (mesmo padrão do `asaas-webhook`), bypassando RLS — por isso não foi criada policy de INSERT para anon/authenticated (reduz superfície de ataque). `ChatBot.tsx` atualizado para enviar `user?.id` (pode ser null, atleta anônimo) e `window.location.pathname`.
+
+**TAREFA 3 — Aba "LEO — Conversas" no `AdminDashboard.tsx`:** tabela com Data/Hora, Pergunta, Resposta (truncada em 100 chars com toggle "ver mais"/"ver menos"), Página de origem. Total de conversas no topo. Paginação server-side de 20 por página (`.range()` + `count: 'exact'`), ordenado por `created_at desc`.
+
+**TAREFA 4 — Deploy `ai-assistant`:** feito via Supabase Management API (MCP), não pelo Supabase CLI local pedido no bloco — equivalente funcional, sem expor o access token em comando de shell. Versão 18 ativa.
+
+**Build e deploy:** `npm run build` limpo. Commit `e405d90b`, push para main.
 
 ### PENDENTES PARA BLOCO 75
 
