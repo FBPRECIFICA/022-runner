@@ -55,13 +55,11 @@ export function AdminDashboard() {
     setUsers(usrs || []);
     setRegistrations(regs || []);
     const paidRegs = (regs || []).filter(r => r.status === 'paid' || r.status === 'confirmed');
+    // Mesma lógica do OrganizerDashboard: total bruto = soma de base_amount (fallback amount),
+    // taxa plataforma = SEMPRE 10% do total bruto (nunca soma o platform_fee gravado por linha,
+    // que pode estar zerado em inscrições antigas migradas antes do modelo de taxa separada).
     const revenue = paidRegs.reduce((a, r) => a + Number(r.base_amount ?? r.amount ?? 0), 0);
-    // Usa platform_fee gravado quando disponível; cai para 10% do valor total em inscrições
-    // antigas ao modelo de taxa separada (BLOCO73), que foram migradas com platform_fee = 0.
-    const platformRevenue = paidRegs.reduce((a, r) => {
-      const storedFee = Number(r.platform_fee ?? 0);
-      return a + (storedFee > 0 ? storedFee : Number(r.amount ?? 0) * 0.10);
-    }, 0);
+    const platformRevenue = revenue * 0.10;
     setStats({ events: evts?.length || 0, users: usrs?.length || 0, registrations: regs?.length || 0, revenue, platformRevenue });
 
     // Monthly chart

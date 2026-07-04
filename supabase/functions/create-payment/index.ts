@@ -64,12 +64,12 @@ serve(async (req) => {
       })
     }
 
-    // Salva asaas_payment_id na tabela registrations para o webhook encontrar
+    // Salva asaas_payment_id e forma de pagamento na tabela registrations para o webhook encontrar
     if (registrationId && payment.id) {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
       const { error: updateErr } = await supabase
         .from('registrations')
-        .update({ asaas_payment_id: payment.id })
+        .update({ asaas_payment_id: payment.id, payment_method: billingType })
         .eq('id', registrationId)
       if (updateErr) {
         console.error('[create-payment] Erro ao salvar asaas_payment_id:', updateErr.message)
