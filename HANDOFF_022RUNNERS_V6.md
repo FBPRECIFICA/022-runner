@@ -1,6 +1,6 @@
 # HANDOFF 022RUNNERS V6
 **Data:** 2026-07-04  
-**Último bloco executado:** BLOCO 84  
+**Último bloco executado:** BLOCO 85  
 **Stack:** React 19 + Vite + Tailwind v4 + TypeScript + Supabase + Vercel  
 
 ---
@@ -457,6 +457,16 @@ try {
 **Nova coluna `registrations.payment_method`:** sem essa coluna não era possível saber a forma de pagamento real por inscrição para calcular a taxa Asaas variável pedida na TAREFA 2. Adicionada via migration e passada a ser gravada por `create-payment` (junto com `asaas_payment_id`) a partir do `billingType` (`PIX`/`CREDIT_CARD`/`BOLETO`) escolhido em `PaymentPage.tsx`. Inscrições criadas antes deste bloco ficam com `payment_method = NULL` (mostram "-" nas colunas de taxa Asaas).
 
 **Build e deploy:** `npm run build` limpo. Edge function `create-payment` redeployada (v11) para persistir `payment_method`. Commit `cfa4df69`, push para main.
+
+### ITENS RESOLVIDOS NO BLOCO 85 — 2026-07-04
+
+**TAREFA 1 — Aba "Organizadores" no `AdminDashboard.tsx`:** lista todos os usuários com `role='organizer'` (ou que já possuem algum evento), mostrando nome, email, qtd de eventos, total de inscrições (não canceladas) e receita bruta total. Botão "Ver Painel" abre modal "Visão do Organizador: [Nome]" com os mesmos cards financeiros do `OrganizerDashboard` (Total Bruto / Taxa 10% / Est. a Receber — mesma fórmula do BLOCO84: sempre 10% do bruto + ~1,5% Asaas estimado), tabela de eventos do organizador (inscritos/receita por evento) e as 20 inscrições mais recentes com status. Todos os dados vêm dos arrays já carregados em `loadAll()` (`events`, `users`, `registrations`) — sem queries extras.
+
+**TAREFA 2 — Preview de evento na aba Eventos:** dois botões novos por linha — "👁️ Atleta" (`<a target="_blank">` para `/evento/[slug]`) e "📊 Org." (abre modal "Painel do Organizador: [Evento]" com financeiro do evento, cupons ativos aplicáveis àquele evento — busca `event_id.eq.X OR event_id.is.null` com `active=true` — inscrições do evento (nº peito, nome, categoria, status) e botão "Exportar Excel" reaproveitando o padrão do `OrganizerDashboard`).
+
+**RLS necessária e não existente:** não havia policy de `SELECT` em `coupons` para admin (só existiam `"Admin exclui coupons"` para DELETE e `"Organizadores gerenciam cupons"` restrita ao dono do evento) — o preview de cupons do admin ficaria vazio sem isso. Criada `"Admin visualiza coupons"` (SELECT, `users.role = 'admin'`).
+
+**Build e deploy:** `npm run build` limpo (erro pré-existente de `tsc --noEmit` no `PieChart` da Visão Geral, não relacionado a este bloco). Commit `c59e0f7e`, push para main. Nenhuma edge function alterada.
 
 ### PENDENTES PARA BLOCO 75
 
