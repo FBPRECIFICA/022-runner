@@ -212,13 +212,14 @@ export function AdminDashboard() {
               {tab === 'overview' && (
                 <div className="space-y-6">
                   <h1 className="text-2xl font-bold text-white">Visão Geral</h1>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     {[
                       { icon: <Calendar size={20} />, label: 'Eventos', value: stats.events, color: '#C9A84C' },
                       { icon: <Users size={20} />, label: 'Usuários', value: stats.users, color: '#C9A84C' },
                       { icon: <Award size={20} />, label: 'Inscrições', value: stats.registrations, color: '#16a34a' },
-                      { icon: <TrendingUp size={20} />, label: 'Receita Organizadores', value: `R$ ${stats.revenue.toFixed(0)}`, color: '#7c3aed' },
-                      { icon: <DollarSign size={20} />, label: 'Taxa da Plataforma', value: `R$ ${stats.platformRevenue.toFixed(0)}`, color: '#16a34a' },
+                      { icon: <TrendingUp size={20} />, label: 'Total Bruto Inscrições', value: `R$ ${stats.revenue.toFixed(0)}`, color: '#C9A84C' },
+                      { icon: <DollarSign size={20} />, label: 'Taxa 022Runners (10%)', value: `R$ ${stats.platformRevenue.toFixed(0)}`, color: '#f87171' },
+                      { icon: <TrendingUp size={20} />, label: 'Est. Repasse*', value: `R$ ${(stats.revenue - stats.platformRevenue - stats.revenue * 0.015).toFixed(0)}`, color: '#22c55e' },
                     ].map((s, i) => (
                       <div key={i} className="rounded-xl p-4" style={{ backgroundColor: '#1e293b' }}>
                         <div className="flex items-center gap-2 mb-2" style={{ color: s.color }}>{s.icon}</div>
@@ -227,6 +228,9 @@ export function AdminDashboard() {
                       </div>
                     ))}
                   </div>
+                  <p className="text-xs -mt-2" style={{ color: '#64748b' }}>
+                    * Valor estimado. Taxa Asaas varia: PIX 0,99% | Cartão 2,99%
+                  </p>
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="rounded-xl p-5" style={{ backgroundColor: '#1e293b' }}>
