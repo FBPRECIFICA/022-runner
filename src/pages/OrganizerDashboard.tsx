@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
-import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, TrendingDown, ClipboardCheck, Search } from 'lucide-react';
+import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, TrendingDown, ClipboardCheck, Search, Tag } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import * as XLSX from 'xlsx';
@@ -65,6 +65,24 @@ function calcScore(form: EventForm, hasPhotos: boolean): number {
   return Math.min(score, 100);
 }
 
+interface CouponForm {
+  code: string;
+  discount_type: 'percent' | 'fixed';
+  discount_value: string;
+  max_uses: string;
+  valid_until: string;
+  event_id: string;
+}
+
+const emptyCouponForm: CouponForm = {
+  code: '',
+  discount_type: 'percent',
+  discount_value: '',
+  max_uses: '',
+  valid_until: '',
+  event_id: '',
+};
+
 function generateSlug(title: string) {
   return title
     .toLowerCase()
@@ -77,8 +95,13 @@ function generateSlug(title: string) {
 
 export function OrganizerDashboard() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<'eventos' | 'criar'>('eventos');
+  const [tab, setTab] = useState<'eventos' | 'criar' | 'cupons'>('eventos');
   const [events, setEvents] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponForm, setCouponForm] = useState<CouponForm>(emptyCouponForm);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
   const [form, setForm] = useState<EventForm>(emptyForm);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
@@ -93,7 +116,7 @@ export function OrganizerDashboard() {
   const [allRegistrations, setAllRegistrations] = useState<any[]>([]);
   const [regSearch, setRegSearch] = useState('');
 
-  useEffect(() => { loadEvents(); }, []);
+  useEffect(() => { loadEvents(); loadCoupons(); }, []);
 
   const toggleInscritos = async (eventId: string) => {
     if (expandedEventId === eventId) {
@@ -133,6 +156,77 @@ export function OrganizerDashboard() {
     } else {
       setAllRegistrations([]);
     }
+  };
+
+  const loadCoupons = async () => {
+    const { data } = await supabase
+      .from('coupons')
+      .select('*, events(title)')
+      .order('created_at', { ascending: false });
+    setCoupons(data || []);
+  };
+
+  const handleCreateCoupon = async () => {
+    setCouponError('');
+    setCouponSuccess('');
+    const code = couponForm.code.trim().toUpperCase();
+    const value = parseFloat(couponForm.discount_value);
+
+    if (!code) { setCouponError('Informe o código do cupom.'); return; }
+    if (!/^[A-Z0-9+]+$/.test(code)) { setCouponError('Código deve conter apenas letras maiúsculas, números e +.'); return; }
+    if (!value || value <= 0) { setCouponError('Informe um valor de desconto válido.'); return; }
+    if (couponForm.discount_type === 'percent' && value > 100) { setCouponError('Desconto percentual não pode ser maior que 100%.'); return; }
+
+    if (couponForm.discount_type === 'fixed' && couponForm.event_id) {
+      const ev = events.find(e => e.id === couponForm.event_id);
+      const prices = (ev?.distances || []).flatMap((d: any) => (d.lots || []).map((l: any) => Number(l.price) || Infinity));
+      const minPrice = prices.length > 0 ? Math.min(...prices) : Infinity;
+      if (Number.isFinite(minPrice) && value > minPrice) {
+        setCouponError('Desconto em valor fixo não pode ser maior que o preço da inscrição.');
+        return;
+      }
+    }
+
+    if (coupons.some(c => String(c.code).toUpperCase() === code)) {
+      setCouponError('Este código de cupom já está em uso.');
+      return;
+    }
+
+    setCouponLoading(true);
+    try {
+      const { error } = await supabase.from('coupons').insert({
+        code,
+        discount_type: couponForm.discount_type,
+        discount_value: value,
+        max_uses: couponForm.max_uses ? parseInt(couponForm.max_uses) : null,
+        valid_until: couponForm.valid_until || null,
+        event_id: couponForm.event_id || null,
+        organizer_id: user?.id,
+        active: true,
+      });
+      if (error) {
+        if (error.code === '23505') throw new Error('Este código de cupom já está em uso.');
+        throw error;
+      }
+      setCouponSuccess('Cupom criado com sucesso!');
+      setCouponForm(emptyCouponForm);
+      loadCoupons();
+    } catch (err: any) {
+      setCouponError(err.message || 'Erro ao criar cupom.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const toggleCouponActive = async (coupon: any) => {
+    await supabase.from('coupons').update({ active: !coupon.active }).eq('id', coupon.id);
+    loadCoupons();
+  };
+
+  const deleteCoupon = async (coupon: any) => {
+    if (!window.confirm(`Excluir o cupom ${coupon.code}? Esta ação não pode ser desfeita.`)) return;
+    await supabase.from('coupons').delete().eq('id', coupon.id);
+    loadCoupons();
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -435,6 +529,7 @@ export function OrganizerDashboard() {
         <div className="flex gap-2 mb-6">
           <button onClick={() => setTab('eventos')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'eventos' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Meus Eventos</button>
           <button onClick={() => setTab('criar')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'criar' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Criar Evento</button>
+          <button onClick={() => setTab('cupons')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'cupons' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Cupons</button>
         </div>
 
         {/* Lista de Eventos */}
@@ -658,6 +753,157 @@ export function OrganizerDashboard() {
             </>
           );
         })()}
+
+        {/* Cupons */}
+        {tab === 'cupons' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border p-6">
+              <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Tag size={18} style={{ color: '#C9A84C' }} /> Criar Cupom</h2>
+
+              {couponError && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">{couponError}</div>}
+              {couponSuccess && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">{couponSuccess}</div>}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código do Cupom</label>
+                  <input
+                    value={couponForm.code}
+                    onChange={e => setCouponForm(p => ({ ...p, code: e.target.value.toUpperCase() }))}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                    placeholder="Ex: CORRIDAFREE10"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Desconto</label>
+                  <select
+                    value={couponForm.discount_type}
+                    onChange={e => setCouponForm(p => ({ ...p, discount_type: e.target.value as 'percent' | 'fixed' }))}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  >
+                    <option value="percent">Percentual %</option>
+                    <option value="fixed">Valor fixo R$</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor do Desconto</label>
+                  <input
+                    type="number"
+                    value={couponForm.discount_value}
+                    onChange={e => setCouponForm(p => ({ ...p, discount_value: e.target.value }))}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                    placeholder={couponForm.discount_type === 'percent' ? 'Ex: 10 (para 10%)' : 'Ex: 15 (para R$15)'}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Limite de Usos (opcional)</label>
+                  <input
+                    type="number"
+                    value={couponForm.max_uses}
+                    onChange={e => setCouponForm(p => ({ ...p, max_uses: e.target.value }))}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                    placeholder="Deixe vazio para ilimitado"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Válido até (opcional)</label>
+                  <input
+                    type="date"
+                    value={couponForm.valid_until}
+                    onChange={e => setCouponForm(p => ({ ...p, valid_until: e.target.value }))}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Aplicar a</label>
+                  <select
+                    value={couponForm.event_id}
+                    onChange={e => setCouponForm(p => ({ ...p, event_id: e.target.value }))}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  >
+                    <option value="">Todos os eventos</option>
+                    {events.map(ev => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCreateCoupon}
+                disabled={couponLoading}
+                className="mt-5 bg-[#C9A84C] text-white px-5 py-2.5 rounded-lg hover:bg-[#B8962E] font-medium disabled:opacity-50"
+              >
+                {couponLoading ? 'Criando...' : 'Criar Cupom'}
+              </button>
+            </div>
+
+            <div className="bg-white rounded-xl border overflow-hidden">
+              <div className="px-4 py-3 border-b">
+                <h3 className="text-sm font-semibold text-gray-700">Cupons Criados</h3>
+              </div>
+              {coupons.length === 0 ? (
+                <p className="text-center text-gray-400 text-sm py-8">Nenhum cupom criado ainda.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b text-gray-500">
+                        <th className="px-4 py-2 font-medium">Código</th>
+                        <th className="px-4 py-2 font-medium">Desconto</th>
+                        <th className="px-4 py-2 font-medium">Usos</th>
+                        <th className="px-4 py-2 font-medium">Válido até</th>
+                        <th className="px-4 py-2 font-medium">Evento</th>
+                        <th className="px-4 py-2 font-medium">Status</th>
+                        <th className="px-4 py-2 font-medium">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coupons.map(c => (
+                        <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50">
+                          <td className="px-4 py-2 font-mono font-bold text-gray-900">{c.code}</td>
+                          <td className="px-4 py-2 text-gray-700">
+                            {c.discount_type === 'percent' ? `${c.discount_value}%` : `R$ ${Number(c.discount_value).toFixed(2).replace('.', ',')}`}
+                          </td>
+                          <td className="px-4 py-2 text-gray-500">
+                            {c.current_uses ?? 0}{c.max_uses ? ` de ${c.max_uses} usos` : ''}
+                          </td>
+                          <td className="px-4 py-2 text-gray-500">
+                            {c.valid_until ? new Date(c.valid_until).toLocaleDateString('pt-BR') : '—'}
+                          </td>
+                          <td className="px-4 py-2 text-gray-500">{c.events?.title || 'Todos'}</td>
+                          <td className="px-4 py-2">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {c.active ? 'Ativo' : 'Inativo'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => toggleCouponActive(c)}
+                                className="text-xs px-2 py-1 rounded-lg border text-gray-600 hover:bg-gray-50"
+                              >
+                                {c.active ? 'Desativar' : 'Ativar'}
+                              </button>
+                              <button
+                                onClick={() => deleteCoupon(c)}
+                                className="text-xs px-2 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Criar Evento */}
         {tab === 'criar' && (
