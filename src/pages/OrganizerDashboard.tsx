@@ -7,6 +7,7 @@ import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import * as XLSX from 'xlsx';
+import toast from 'react-hot-toast';
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
 const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Bag', 'Squeeze (Garrafinha de água)', 'Outros'];
@@ -224,8 +225,17 @@ export function OrganizerDashboard() {
   };
 
   const deleteCoupon = async (coupon: any) => {
-    if (!window.confirm(`Excluir o cupom ${coupon.code}? Esta ação não pode ser desfeita.`)) return;
-    await supabase.from('coupons').delete().eq('id', coupon.id);
+    if (!window.confirm(`Tem certeza que deseja excluir o cupom ${coupon.code}?`)) return;
+    const { error } = await supabase
+      .from('coupons')
+      .delete()
+      .eq('id', coupon.id)
+      .eq('organizer_id', user?.id);
+    if (error) {
+      toast.error('Erro ao excluir cupom: ' + error.message);
+      return;
+    }
+    toast.success('Cupom excluído com sucesso');
     loadCoupons();
   };
 
