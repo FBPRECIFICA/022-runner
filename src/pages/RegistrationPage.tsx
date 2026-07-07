@@ -48,6 +48,7 @@ export function RegistrationPage() {
   const [step, setStep] = useState<Step>('form');
   const [error, setError] = useState('');
   const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [pendingDup, setPendingDup] = useState<{ id: string; status: string } | null>(null);
 
   const [form, setForm] = useState(() => {
     try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null') || defaultForm(user); }
@@ -123,14 +124,20 @@ export function RegistrationPage() {
 
       // Proteção contra inscrição duplicada pelo mesmo CPF no mesmo evento
       const cleanCpf = form.cpf.replace(/\D/g, '');
-      const { count: dupCount } = await supabase
+      const { data: existingRegs } = await supabase
         .from('registrations')
-        .select('*', { count: 'exact', head: true })
+        .select('id, status')
         .eq('event_id', event.id)
         .eq('cpf', cleanCpf)
-        .neq('status', 'cancelled');
-      if ((dupCount ?? 0) > 0) {
-        setError('Este CPF já possui uma inscrição ativa para este evento.');
+        .neq('status', 'cancelled')
+        .limit(1);
+      const existingReg = existingRegs?.[0];
+      if (existingReg) {
+        if (existingReg.status === 'paid') {
+          setError('Você já está inscrito e com pagamento confirmado!');
+        } else {
+          setPendingDup(existingReg);
+        }
         setStep('form');
         setSubmitting(false);
         return;
@@ -413,6 +420,28 @@ export function RegistrationPage() {
           </div>
         )}
       </div>
+
+      {/* Modal: inscrição pendente já existente com o mesmo CPF */}
+      {pendingDup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setPendingDup(null)}>
+          <div className="w-full max-w-sm bg-white rounded-2xl p-6 text-center space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto" style={{ backgroundColor: '#fef9ec' }}>
+              <span className="text-2xl">⏳</span>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Inscrição pendente encontrada</h3>
+            <p className="text-sm text-gray-500">Você já tem uma inscrição pendente para este evento. Deseja continuar o pagamento?</p>
+            <div className="grid grid-cols-1 gap-2">
+              <button onClick={() => navigate(`/pagamento/${pendingDup.id}`)}
+                className="w-full font-bold py-3 rounded-xl" style={{ backgroundColor: '#C9A84C', color: '#000' }}>
+                💳 Continuar Pagamento
+              </button>
+              <button onClick={() => setPendingDup(null)} className="w-full border text-gray-600 py-2.5 rounded-xl font-medium hover:bg-gray-50">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
