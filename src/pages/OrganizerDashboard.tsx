@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
-import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, TrendingDown, ClipboardCheck, Search, Tag } from 'lucide-react';
+import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, TrendingDown, ClipboardCheck, Search, Tag, X, Percent } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import * as XLSX from 'xlsx';
@@ -103,6 +103,9 @@ export function OrganizerDashboard() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
+  const [couponUsages, setCouponUsages] = useState<any[]>([]);
+  const [couponUsageModal, setCouponUsageModal] = useState<any | null>(null);
+  const [loadingCouponUsages, setLoadingCouponUsages] = useState(false);
   const [form, setForm] = useState<EventForm>(emptyForm);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
@@ -165,6 +168,15 @@ export function OrganizerDashboard() {
       .select('*, events(title)')
       .order('created_at', { ascending: false });
     setCoupons(data || []);
+
+    setLoadingCouponUsages(true);
+    const { data: usages } = await supabase
+      .from('registrations')
+      .select('name, full_name, email, created_at, discount_amount, coupon_code, events(title)')
+      .not('coupon_code', 'is', null)
+      .order('created_at', { ascending: false });
+    setCouponUsages(usages || []);
+    setLoadingCouponUsages(false);
   };
 
   const handleCreateCoupon = async () => {
@@ -794,8 +806,39 @@ export function OrganizerDashboard() {
         })()}
 
         {/* Cupons */}
-        {tab === 'cupons' && (
+        {tab === 'cupons' && (() => {
+          const activeCouponsCount = coupons.filter(c => c.active).length;
+          const today = new Date().toDateString();
+          const usesToday = couponUsages.filter(u => new Date(u.created_at).toDateString() === today).length;
+          const totalDiscountGranted = couponUsages.reduce((s, u) => s + Number(u.discount_amount || 0), 0);
+
+          return (
           <div className="space-y-6">
+            {/* Resumo de cupons */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#C9A84C' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <Tag size={16} style={{ color: '#C9A84C' }} />
+                  <span className="text-xs font-medium text-gray-500">Cupons Ativos</span>
+                </div>
+                <p className="text-xl font-bold" style={{ color: '#C9A84C' }}>{activeCouponsCount}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#86efac' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp size={16} className="text-green-500" />
+                  <span className="text-xs font-medium text-gray-500">Usos Hoje</span>
+                </div>
+                <p className="text-xl font-bold text-green-600">{usesToday}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#fca5a5' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <Percent size={16} className="text-red-400" />
+                  <span className="text-xs font-medium text-gray-500">Descontos Concedidos</span>
+                </div>
+                <p className="text-xl font-bold text-red-400">R$ {totalDiscountGranted.toFixed(2).replace('.', ',')}</p>
+              </div>
+            </div>
+
             <div className="bg-white rounded-xl border p-6">
               <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Tag size={18} style={{ color: '#C9A84C' }} /> Criar Cupom</h2>
 
@@ -906,8 +949,14 @@ export function OrganizerDashboard() {
                           <td className="px-4 py-2 text-gray-700">
                             {c.discount_type === 'percent' ? `${c.discount_value}%` : `R$ ${Number(c.discount_value).toFixed(2).replace('.', ',')}`}
                           </td>
-                          <td className="px-4 py-2 text-gray-500">
-                            {c.current_uses ?? 0}{c.max_uses ? ` de ${c.max_uses} usos` : ''}
+                          <td className="px-4 py-2">
+                            <button
+                              onClick={() => setCouponUsageModal(c)}
+                              disabled={!c.current_uses}
+                              className="text-gray-700 underline decoration-dotted hover:text-[#C9A84C] disabled:text-gray-400 disabled:no-underline disabled:cursor-default"
+                            >
+                              {c.current_uses ?? 0}{c.max_uses ? ` de ${c.max_uses} usos` : ''}
+                            </button>
                           </td>
                           <td className="px-4 py-2 text-gray-500">
                             {c.valid_until ? new Date(c.valid_until).toLocaleDateString('pt-BR') : '—'}
@@ -941,8 +990,56 @@ export function OrganizerDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Modal de uso do cupom */}
+            {couponUsageModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setCouponUsageModal(null)}>
+                <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl bg-white flex flex-col" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between p-5 border-b">
+                    <h3 className="text-lg font-bold text-gray-900">Quem usou o cupom {couponUsageModal.code}</h3>
+                    <button onClick={() => setCouponUsageModal(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
+                  </div>
+                  <div className="p-5 overflow-y-auto">
+                    {loadingCouponUsages ? (
+                      <p className="text-center text-gray-400 text-sm py-8">Carregando...</p>
+                    ) : (() => {
+                      const usages = couponUsages.filter(u => u.coupon_code === couponUsageModal.code);
+                      return usages.length === 0 ? (
+                        <p className="text-center text-gray-400 text-sm py-8">Nenhum uso registrado ainda.</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-left border-b text-gray-500">
+                                <th className="px-3 py-2 font-medium">Atleta</th>
+                                <th className="px-3 py-2 font-medium">Email</th>
+                                <th className="px-3 py-2 font-medium">Evento</th>
+                                <th className="px-3 py-2 font-medium">Data</th>
+                                <th className="px-3 py-2 font-medium">Desconto</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {usages.map((u, i) => (
+                                <tr key={i} className="border-b last:border-0">
+                                  <td className="px-3 py-2 font-medium text-gray-900">{u.name || u.full_name}</td>
+                                  <td className="px-3 py-2 text-gray-500">{u.email}</td>
+                                  <td className="px-3 py-2 text-gray-500">{u.events?.title || '—'}</td>
+                                  <td className="px-3 py-2 text-gray-500">{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+                                  <td className="px-3 py-2 text-gray-700">R$ {Number(u.discount_amount || 0).toFixed(2).replace('.', ',')}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+          );
+        })()}
 
         {/* Criar Evento */}
         {tab === 'criar' && (
