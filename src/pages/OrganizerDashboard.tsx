@@ -172,7 +172,7 @@ export function OrganizerDashboard() {
     setLoadingCouponUsages(true);
     const { data: usages } = await supabase
       .from('registrations')
-      .select('name, full_name, email, created_at, discount_amount, coupon_code, events(title)')
+      .select('name, full_name, email, created_at, discount_amount, coupon_code, status, events(title)')
       .not('coupon_code', 'is', null)
       .order('created_at', { ascending: false });
     setCouponUsages(usages || []);
@@ -950,13 +950,17 @@ export function OrganizerDashboard() {
                             {c.discount_type === 'percent' ? `${c.discount_value}%` : `R$ ${Number(c.discount_value).toFixed(2).replace('.', ',')}`}
                           </td>
                           <td className="px-4 py-2">
-                            <button
-                              onClick={() => setCouponUsageModal(c)}
-                              disabled={!c.current_uses}
-                              className="text-gray-700 underline decoration-dotted hover:text-[#C9A84C] disabled:text-gray-400 disabled:no-underline disabled:cursor-default"
-                            >
-                              {c.current_uses ?? 0}{c.max_uses ? ` de ${c.max_uses} usos` : ''}
-                            </button>
+                            {c.current_uses > 0 ? (
+                              <button
+                                onClick={() => setCouponUsageModal(c)}
+                                className="font-semibold underline decoration-dotted hover:opacity-80"
+                                style={{ color: '#C9A84C' }}
+                              >
+                                {c.current_uses}{c.max_uses ? ` de ${c.max_uses} usos` : ''}
+                              </button>
+                            ) : (
+                              <span className="text-gray-400">0</span>
+                            )}
                           </td>
                           <td className="px-4 py-2 text-gray-500">
                             {c.valid_until ? new Date(c.valid_until).toLocaleDateString('pt-BR') : '—'}
@@ -1015,6 +1019,7 @@ export function OrganizerDashboard() {
                                 <th className="px-3 py-2 font-medium">Email</th>
                                 <th className="px-3 py-2 font-medium">Evento</th>
                                 <th className="px-3 py-2 font-medium">Data</th>
+                                <th className="px-3 py-2 font-medium">Status</th>
                                 <th className="px-3 py-2 font-medium">Desconto</th>
                               </tr>
                             </thead>
@@ -1025,6 +1030,11 @@ export function OrganizerDashboard() {
                                   <td className="px-3 py-2 text-gray-500">{u.email}</td>
                                   <td className="px-3 py-2 text-gray-500">{u.events?.title || '—'}</td>
                                   <td className="px-3 py-2 text-gray-500">{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+                                  <td className="px-3 py-2">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.status === 'paid' || u.status === 'confirmed' ? 'bg-green-100 text-green-700' : u.status === 'cancelled' ? 'bg-gray-100 text-gray-600' : 'bg-yellow-100 text-yellow-700'}`}>
+                                      {statusLabel(u.status)}
+                                    </span>
+                                  </td>
                                   <td className="px-3 py-2 text-gray-700">R$ {Number(u.discount_amount || 0).toFixed(2).replace('.', ',')}</td>
                                 </tr>
                               ))}
