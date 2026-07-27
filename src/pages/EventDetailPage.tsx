@@ -88,9 +88,6 @@ export function EventDetailPage() {
   const deadline = event.registration_deadline ? new Date(event.registration_deadline) : null;
   const distances: { name: string; price: number }[] = event.distances || [];
   const maxP = event.max_participants || 0;
-  const currentP = event.registrations?.[0]?.count ?? event.current_participants ?? 0;
-  const progressPct = maxP > 0 ? Math.min(Math.round((currentP / maxP) * 100), 100) : 0;
-  const progressColor = progressPct >= 80 ? '#ef4444' : progressPct >= 50 ? '#f59e0b' : '#22c55e';
   const daysLeft = deadline ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000)) : null;
   const score = event.quality_score || 0;
   const isPast = eventDate.getTime() < Date.now();
@@ -167,7 +164,7 @@ export function EventDetailPage() {
                 { icon: <Calendar size={20} className="text-[#C9A84C]" />, label: 'Data', value: eventDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) },
                 { icon: <Clock size={20} className="text-[#C9A84C]" />, label: 'Horário', value: eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) },
                 { icon: <MapPin size={20} className="text-[#C9A84C]" />, label: 'Cidade', value: event.city },
-                { icon: <Users size={20} className="text-[#C9A84C]" />, label: 'Vagas', value: maxP > 0 ? `${currentP}/${maxP}` : 'Ilimitado' },
+                { icon: <Users size={20} className="text-[#C9A84C]" />, label: 'Vagas', value: maxP > 0 ? 'Limitadas' : 'Ilimitado' },
               ].map((item, i) => (
                 <div key={i} className="bg-white rounded-xl border p-3 flex flex-col items-center text-center gap-1 shadow-sm">
                   {item.icon}
@@ -405,17 +402,11 @@ export function EventDetailPage() {
 
           {/* COLUNA LATERAL — CTA */}
           <div className="space-y-4">
-            {/* Barra de Progresso */}
+            {/* Vagas */}
             {maxP > 0 && (
               <div className="bg-white rounded-xl border p-5 shadow-sm">
-                <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide mb-3">Vagas Preenchidas</h3>
-                <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
-                  <div className="h-3 rounded-full transition-all" style={{ width: `${progressPct}%`, backgroundColor: progressColor }} />
-                </div>
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span className="font-bold" style={{ color: progressColor }}>{progressPct}%</span>
-                  <span>{maxP - currentP} restantes</span>
-                </div>
+                <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide mb-1">Vagas</h3>
+                <p className="font-bold text-gray-900">Vagas limitadas</p>
               </div>
             )}
 

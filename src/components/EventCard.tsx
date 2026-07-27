@@ -109,7 +109,7 @@ export function EventCard({ event }: EventCardProps) {
           <p>📅 {date}</p>
           <p>📍 {event.city} — {event.state}</p>
           {event.maxParticipants > 0 && (
-            <p>👥 {event.currentParticipants}/{event.maxParticipants} vagas</p>
+            <p>👥 Vagas limitadas</p>
           )}
           {event.qualityScore > 0 && (
             <p>⭐ Score {event.qualityScore}/100</p>
