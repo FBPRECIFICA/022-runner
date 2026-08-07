@@ -8,7 +8,7 @@ import { Camera, Save, LogOut, Trash2 } from 'lucide-react';
 export function ProfilePage() {
   const { user, logout, isOrganizer } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', phone: '', city: '', bio: '', birthdate: '', cpf: '' });
+  const [form, setForm] = useState({ name: '', phone: '', city: '', bio: '', birthdate: '', cpf: '', display_email: '' });
   const [avatar, setAvatar] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -17,7 +17,7 @@ export function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     supabase.from('users').select('*').eq('id', user.id).single().then(({ data }) => {
-      if (data) setForm({ name: data.name || '', phone: data.phone || '', city: data.city || '', bio: data.bio || '', birthdate: data.birthdate || '', cpf: data.cpf || '' });
+      if (data) setForm({ name: data.name || '', phone: data.phone || '', city: data.city || '', bio: data.bio || '', birthdate: data.birthdate || '', cpf: data.cpf || '', display_email: data.display_email || '' });
       if (data?.avatar_url) setAvatar(data.avatar_url);
     });
   }, [user]);
@@ -48,6 +48,7 @@ export function ProfilePage() {
     const { error } = await supabase.from('users').upsert({
       id: user.id, email: user.email, role: user.role,
       name: form.name, phone: form.phone, city: form.city, bio: form.bio, birthdate: form.birthdate || null, cpf: form.cpf || null,
+      display_email: form.display_email || null,
     }, { onConflict: 'id' });
     if (error) toast.error('Erro ao salvar.');
     else toast.success('Perfil atualizado!');
@@ -118,6 +119,16 @@ export function ProfilePage() {
                     style={{ borderColor: '#d1d5db' }} />
                 </div>
               ))}
+              {isOrganizer && (
+                <div className="col-span-2">
+                  <label className="block text-xs text-gray-500 font-medium mb-1">E-mail de exibição pública (opcional)</label>
+                  <input type="email" value={form.display_email}
+                    onChange={e => setForm(p => ({ ...p, display_email: e.target.value }))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                    style={{ borderColor: '#d1d5db' }} placeholder={`Em branco = usa ${user?.email}`} />
+                  <p className="text-xs text-gray-400 mt-1">Mostrado pros inscritos na página do evento, no lugar do seu e-mail de login. Não afeta login nem recuperação de senha.</p>
+                </div>
+              )}
               <div className="col-span-2">
                 <label className="block text-xs text-gray-500 font-medium mb-1">Bio</label>
                 <textarea value={form.bio} onChange={e => setForm(p => ({ ...p, bio: e.target.value }))}

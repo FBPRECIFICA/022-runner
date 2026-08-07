@@ -48,7 +48,7 @@ export function EventDetailPage() {
       setEvent(data);
       trackEventView(data.title);
       if (data.organizer_id) {
-        const { data: org } = await supabase.from('users').select('name, email').eq('id', data.organizer_id).single();
+        const { data: org } = await supabase.from('users').select('name, email, display_email').eq('id', data.organizer_id).single();
         setOrganizer(org);
       }
       const { data: photos } = await supabase.from('event_photos').select('*').eq('event_id', data.id);
@@ -378,7 +378,7 @@ export function EventDetailPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{organizer.name}</p>
-                    <p className="text-sm text-gray-500">{organizer.email}</p>
+                    <p className="text-sm text-gray-500">{organizer.display_email || organizer.email}</p>
                   </div>
                 </div>
               </div>
