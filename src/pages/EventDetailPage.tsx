@@ -33,6 +33,7 @@ export function EventDetailPage() {
   const [event, setEvent] = useState<any>(null);
   const [organizer, setOrganizer] = useState<any>(null);
   const [eventPhotos, setEventPhotos] = useState<any[]>([]);
+  const [registrationTypes, setRegistrationTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -52,6 +53,8 @@ export function EventDetailPage() {
       }
       const { data: photos } = await supabase.from('event_photos').select('*').eq('event_id', data.id);
       setEventPhotos(photos || []);
+      const { data: types } = await supabase.from('registration_types').select('*').eq('event_id', data.id).order('sort_order');
+      setRegistrationTypes(types || []);
       setLoading(false);
     }
     fetchEvent();
@@ -273,12 +276,16 @@ export function EventDetailPage() {
               </div>
             )}
 
-            {/* Distâncias — cards premium */}
-            {distances.length > 0 && (
+            {/* Tipos de Inscrição (Kits) ou Distâncias — cards premium.
+                Quando o evento tem kits cadastrados, o preço vem do kit escolhido no
+                checkout, não da distância/lote — por isso os kits têm prioridade aqui. */}
+            {(registrationTypes.length > 0 || distances.length > 0) && (
               <div className="bg-white rounded-xl border p-5 shadow-sm">
-                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4">Distâncias e Preços</h2>
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4">
+                  {registrationTypes.length > 0 ? 'Tipos de Inscrição e Preços' : 'Distâncias e Preços'}
+                </h2>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {distances.map((d, i) => (
+                  {(registrationTypes.length > 0 ? registrationTypes : distances).map((d, i) => (
                     <div key={i}
                       className="rounded-xl p-4 flex flex-col gap-2 cursor-pointer transition-all hover:shadow-md"
                       style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 100%)', border: '1px solid #C9A84C44' }}
@@ -287,7 +294,9 @@ export function EventDetailPage() {
                       <span className="text-white/60 text-xs uppercase tracking-widest">Inscrição</span>
                       <span className="text-2xl font-black text-white">R$ {Number(d.price).toFixed(2).replace('.', ',')}</span>
                       <button
-                        onClick={() => navigate(`/inscricao/${event.slug}`)}
+                        onClick={() => navigate(`/inscricao/${event.slug}`, {
+                          state: registrationTypes.length > 0 ? { registrationTypeIndex: i } : { distanceIndex: i },
+                        })}
                         className="w-full py-2 rounded-lg text-xs font-bold mt-1 transition-all hover:opacity-90"
                         style={{ backgroundColor: '#C9A84C', color: '#000' }}
                       >

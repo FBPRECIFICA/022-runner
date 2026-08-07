@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronLeft, Loader2 } from 'lucide-react';
@@ -40,6 +40,7 @@ function birthdateToISO(v: string): string | null {
 export function RegistrationPage() {
   const { eventSlug } = useParams<{ eventSlug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [event, setEvent] = useState<any>(null);
@@ -102,6 +103,14 @@ export function RegistrationPage() {
   }, [form, loading]);
 
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
+
+  // Kit/distância pré-selecionados ao vir do botão "INSCREVER" de um card específico na página do evento.
+  useEffect(() => {
+    const state = location.state as { registrationTypeIndex?: number; distanceIndex?: number } | null;
+    if (!state) return;
+    if (typeof state.registrationTypeIndex === 'number') set('registration_type_index', state.registrationTypeIndex);
+    if (typeof state.distanceIndex === 'number') set('distance_index', state.distanceIndex);
+  }, [location.state]);
 
   const validate = () => {
     if (!form.name.trim()) return 'Informe seu nome completo.';
@@ -347,7 +356,9 @@ export function RegistrationPage() {
               <Field label="Distância *">
                 <select className={inp} value={form.distance_index} onChange={e => set('distance_index', Number(e.target.value))}>
                   {distances.map((d: any, i: number) => (
-                    <option key={i} value={i}>{d.name} — R$ {Number(d.lots?.[0]?.price ?? d.price ?? 0).toFixed(2).replace('.', ',')}</option>
+                    <option key={i} value={i}>
+                      {registrationTypes.length > 0 ? d.name : `${d.name} — R$ ${Number(d.lots?.[0]?.price ?? d.price ?? 0).toFixed(2).replace('.', ',')}`}
+                    </option>
                   ))}
                 </select>
               </Field>
