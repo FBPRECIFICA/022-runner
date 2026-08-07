@@ -48,11 +48,17 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       {/* Imagem */}
-      <div className="relative">
+      <div className="relative h-44 overflow-hidden bg-gray-900">
+        <img
+          src={event.banner || '/images/event-banner-praia.jpg'}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover blur-lg scale-110 opacity-50"
+        />
         <img
           src={event.banner || '/images/event-banner-praia.jpg'}
           alt={event.name}
-          className="w-full h-44 object-cover object-top block"
+          className="relative w-full h-full object-contain"
         />
         {event.plan === 'premium' && (
           <span className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold leading-none">

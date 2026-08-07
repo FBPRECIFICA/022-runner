@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { Camera, Save, LogOut, Trash2 } from 'lucide-react';
 
 export function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isOrganizer } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', phone: '', city: '', bio: '', birthdate: '', cpf: '' });
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -43,9 +43,12 @@ export function ProfilePage() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('users').update({
+    // upsert (não update): usuários logados via Google OAuth ainda não têm linha em `users`
+    // na primeira vez — um update() nessa linha inexistente não altera nada e não retorna erro.
+    const { error } = await supabase.from('users').upsert({
+      id: user.id, email: user.email, role: user.role,
       name: form.name, phone: form.phone, city: form.city, bio: form.bio, birthdate: form.birthdate || null, cpf: form.cpf || null,
-    }).eq('id', user.id);
+    }, { onConflict: 'id' });
     if (error) toast.error('Erro ao salvar.');
     else toast.success('Perfil atualizado!');
     setSaving(false);
@@ -101,7 +104,7 @@ export function ProfilePage() {
             <h2 className="font-bold text-gray-900 mb-4">Dados Pessoais</h2>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { label: 'Nome completo', key: 'name', type: 'text' },
+                { label: isOrganizer ? 'Nome / Nome da Empresa (exibido publicamente)' : 'Nome completo', key: 'name', type: 'text' },
                 { label: 'Telefone', key: 'phone', type: 'tel' },
                 { label: 'CPF', key: 'cpf', type: 'text' },
                 { label: 'Cidade', key: 'city', type: 'text' },

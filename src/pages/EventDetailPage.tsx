@@ -117,9 +117,13 @@ export function EventDetailPage() {
       </Helmet>
 
       {/* Hero Banner — foto limpa, sem texto sobreposto */}
-      <div className="w-full bg-gray-900" style={{ height: '380px' }}>
+      <div className="relative w-full bg-gray-900 overflow-hidden" style={{ height: '380px' }}>
         {event.banner_url
-          ? <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover block" style={{ objectPosition: 'top center' }} />
+          ? <>
+              <img src={event.banner_url} alt="" aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover blur-lg scale-110 opacity-50" />
+              <img src={event.banner_url} alt={event.title} className="relative w-full h-full object-contain" />
+            </>
           : <div className="w-full h-full bg-gradient-to-br from-blue-800 to-[#C9A84C]" />
         }
       </div>
