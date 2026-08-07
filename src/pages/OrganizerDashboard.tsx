@@ -111,6 +111,7 @@ export function OrganizerDashboard() {
   const [loadingCouponUsages, setLoadingCouponUsages] = useState(false);
   const [form, setForm] = useState<EventForm>(emptyForm);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editingEventStatus, setEditingEventStatus] = useState<string>('published');
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [sponsorUploading, setSponsorUploading] = useState<boolean[]>([]);
@@ -419,6 +420,7 @@ export function OrganizerDashboard() {
       })),
     });
     setEditingEventId(event.id);
+    setEditingEventStatus(event.status || 'published');
     setPhotos([]);
     setPhotoPreviews([]);
     setSponsorUploading([]);
@@ -488,7 +490,7 @@ export function OrganizerDashboard() {
       if (editingEventId) {
         const { error: updateError } = await supabase
           .from('events')
-          .update(payload)
+          .update({ ...payload, status: publishStatus })
           .eq('id', editingEventId);
         if (updateError) throw updateError;
         setSuccess('Evento atualizado com sucesso!');
@@ -529,6 +531,7 @@ export function OrganizerDashboard() {
       setPhotoPreviews([]);
       setSponsorUploading([]);
       setEditingEventId(null);
+      setEditingEventStatus('published');
       loadEvents();
       setTab('eventos');
     } catch (err: any) {
@@ -1401,8 +1404,8 @@ export function OrganizerDashboard() {
             </div>
 
             <div className="flex gap-3 mt-6 flex-wrap">
-              <button onClick={() => { setTab('eventos'); setEditingEventId(null); setForm(emptyForm); setSponsorUploading([]); }} className="border text-gray-600 py-3 px-5 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
-              {!editingEventId && (
+              <button onClick={() => { setTab('eventos'); setEditingEventId(null); setEditingEventStatus('published'); setForm(emptyForm); setSponsorUploading([]); }} className="border text-gray-600 py-3 px-5 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
+              {(!editingEventId || editingEventStatus === 'draft') && (
                 <button onClick={() => handleSubmit('draft')} disabled={loading}
                   className="flex-1 border-2 text-gray-700 py-3 rounded-lg font-medium disabled:opacity-50 hover:bg-gray-50"
                   style={{ borderColor: '#C9A84C' }}>
@@ -1411,7 +1414,7 @@ export function OrganizerDashboard() {
               )}
               <button onClick={() => handleSubmit('published')} disabled={loading}
                 className="flex-1 bg-[#C9A84C] text-white py-3 rounded-lg hover:bg-[#B8962E] font-medium disabled:opacity-50">
-                {loading ? 'Salvando...' : editingEventId ? '💾 Salvar Alterações' : '🚀 Publicar Evento'}
+                {loading ? 'Salvando...' : (!editingEventId || editingEventStatus === 'draft') ? '🚀 Publicar Evento' : '💾 Salvar Alterações'}
               </button>
             </div>
           </div>
