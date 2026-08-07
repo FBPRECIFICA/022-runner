@@ -14,6 +14,7 @@ const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Bag', 'Squeeze 
 
 interface Lot { price: string; qty: string; }
 interface DistanceWithLots { name: string; lots: Lot[]; }
+interface RegistrationTypeForm { id?: string; name: string; description: string; price: string; }
 
 interface EventForm {
   title: string;
@@ -30,6 +31,7 @@ interface EventForm {
   sponsors: { name: string; logo_url: string }[];
   distances: DistanceWithLots[];
   link_percurso: string;
+  registrationTypes: RegistrationTypeForm[];
 }
 
 const emptyForm: EventForm = {
@@ -47,6 +49,7 @@ const emptyForm: EventForm = {
   sponsors: [],
   distances: [{ name: '5km', lots: [{ price: '', qty: '' }] }],
   link_percurso: '',
+  registrationTypes: [],
 };
 
 function calcScore(form: EventForm, hasPhotos: boolean): number {
@@ -368,6 +371,7 @@ export function OrganizerDashboard() {
       'Telefone': r.phone,
       'Categoria': r.distance_name,
       'Distância': r.distance_name,
+      'Kit': r.registration_type_name || '-',
       'Tamanho Camiseta': r.shirt_size,
       'Status Pagamento': statusLabel(r.status),
       'Data Inscrição': new Date(r.created_at).toLocaleDateString('pt-BR'),
@@ -379,7 +383,7 @@ export function OrganizerDashboard() {
     XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
   };
 
-  const openEdit = (event: any) => {
+  const openEdit = async (event: any) => {
     const dateObj = new Date(event.date);
     const dateStr = dateObj.toISOString().split('T')[0];
     const timeStr = dateObj.toTimeString().slice(0, 5);
@@ -388,6 +392,11 @@ export function OrganizerDashboard() {
       lots: d.lots ? d.lots.map((l: any) => ({ price: String(l.price || ''), qty: String(l.qty || '') }))
         : [{ price: String(d.price || ''), qty: '' }],
     }));
+    const { data: regTypes } = await supabase
+      .from('registration_types')
+      .select('*')
+      .eq('event_id', event.id)
+      .order('sort_order');
     setForm({
       title: event.title || '',
       description: event.description || '',
@@ -405,6 +414,9 @@ export function OrganizerDashboard() {
       sponsors: event.sponsors || [],
       distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }] }],
       link_percurso: event.link_percurso || '',
+      registrationTypes: (regTypes || []).map((t: any) => ({
+        id: t.id, name: t.name || '', description: t.description || '', price: String(t.price ?? ''),
+      })),
     });
     setEditingEventId(event.id);
     setPhotos([]);
@@ -419,6 +431,11 @@ export function OrganizerDashboard() {
     setError('');
     if (!form.title || !form.date || !form.city || !form.location) {
       setError('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    const registrationTypesToSave = form.registrationTypes.filter(t => t.name.trim());
+    if (registrationTypesToSave.some(t => !t.price || parseFloat(t.price) <= 0)) {
+      setError('Todo tipo de inscrição (kit) precisa de um valor válido.');
       return;
     }
     setLoading(true);
@@ -466,6 +483,8 @@ export function OrganizerDashboard() {
         payload.banner_url = photoUrls[0];
       }
 
+      let savedEventId = editingEventId;
+
       if (editingEventId) {
         const { error: updateError } = await supabase
           .from('events')
@@ -475,17 +494,34 @@ export function OrganizerDashboard() {
         setSuccess('Evento atualizado com sucesso!');
       } else {
         const slug = generateSlug(form.title);
-        const { error: insertError } = await supabase.from('events').insert({
+        const { data: insertedEvent, error: insertError } = await supabase.from('events').insert({
           ...payload,
           slug,
           organizer_id: user?.id,
           status: publishStatus,
           plan: 'free',
-        });
+        }).select().single();
         if (insertError) throw insertError;
+        savedEventId = insertedEvent.id;
         setSuccess(publishStatus === 'draft'
           ? '💾 Rascunho salvo! O evento não aparece publicamente ainda.'
           : `✅ Evento publicado! Link: https://022runners.com.br/evento/${slug}`);
+      }
+
+      // Tipos de inscrição (kits) — recurso independente da distância/lote: substitui
+      // a lista inteira a cada salvamento (nenhuma inscrição referencia essas linhas ainda).
+      await supabase.from('registration_types').delete().eq('event_id', savedEventId);
+      if (registrationTypesToSave.length > 0) {
+        const { error: typesError } = await supabase.from('registration_types').insert(
+          registrationTypesToSave.map((t, i) => ({
+            event_id: savedEventId,
+            name: t.name.trim(),
+            description: t.description.trim() || null,
+            price: parseFloat(t.price),
+            sort_order: i,
+          }))
+        );
+        if (typesError) throw typesError;
       }
 
       setForm(emptyForm);
@@ -763,23 +799,41 @@ export function OrganizerDashboard() {
                       </div>
                     ) : (eventRegistrations[event.id] || []).length === 0 ? (
                       <p className="text-center text-gray-400 text-sm py-6">Nenhum inscrito ainda.</p>
-                    ) : (
+                    ) : (() => {
+                      const regs = eventRegistrations[event.id] || [];
+                      const kitCounts = regs.reduce((acc: Record<string, number>, r) => {
+                        if (r.registration_type_name) acc[r.registration_type_name] = (acc[r.registration_type_name] || 0) + 1;
+                        return acc;
+                      }, {});
+                      const kitEntries = Object.entries(kitCounts);
+                      return (
                       <div className="overflow-x-auto">
+                        {kitEntries.length > 0 && (
+                          <div className="px-4 pt-3 flex flex-wrap gap-2">
+                            {kitEntries.map(([name, count]) => (
+                              <span key={name} className="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 font-medium">
+                                {name}: {count}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="text-left border-b" style={{ color: '#6b7280' }}>
                               <th className="px-4 py-2 font-medium">Nº Peito</th>
                               <th className="px-4 py-2 font-medium">Nome</th>
                               <th className="px-4 py-2 font-medium">Categoria</th>
+                              <th className="px-4 py-2 font-medium">Kit</th>
                               <th className="px-4 py-2 font-medium">Pagamento</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {(eventRegistrations[event.id] || []).map(r => (
+                            {regs.map(r => (
                               <tr key={r.id} className="border-b last:border-0 hover:bg-white transition-colors">
                                 <td className="px-4 py-2 font-mono font-bold text-[#C9A84C]">{r.registration_number}</td>
                                 <td className="px-4 py-2 text-gray-900">{r.name}</td>
                                 <td className="px-4 py-2 text-gray-500">{r.distance_name}</td>
+                                <td className="px-4 py-2 text-gray-500">{r.registration_type_name || '-'}</td>
                                 <td className="px-4 py-2">
                                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                     r.status === 'paid' || r.status === 'confirmed' ? 'bg-green-100 text-green-700' :
@@ -795,7 +849,8 @@ export function OrganizerDashboard() {
                           </tbody>
                         </table>
                       </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1279,6 +1334,42 @@ export function OrganizerDashboard() {
                     </div>
                   ))}
                   <button onClick={addDistance} className="text-[#C9A84C] text-sm hover:underline">+ Adicionar distância</button>
+                </div>
+              </div>
+
+              {/* Tipos de Inscrição (Kits) — opcional, independente de distância/lote */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tipos de Inscrição (Kits) — opcional</label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Ative para oferecer opções como "Kit Básico" e "Kit Completo" com preços diferentes — o corredor escolhe uma delas na inscrição e o valor cobrado é o do kit escolhido. Se deixar vazio, o evento funciona normalmente, com preço por distância/lote.
+                </p>
+                <div className="space-y-3">
+                  {form.registrationTypes.map((t, i) => (
+                    <div key={i} className="border rounded-xl p-3 bg-gray-50 flex flex-wrap gap-2 items-start">
+                      <input
+                        value={t.name}
+                        onChange={e => setForm(p => { const rt = [...p.registrationTypes]; rt[i] = { ...rt[i], name: e.target.value }; return { ...p, registrationTypes: rt }; })}
+                        className="flex-1 min-w-[160px] border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
+                        placeholder="Ex: Kit Básico" />
+                      <input
+                        value={t.description}
+                        onChange={e => setForm(p => { const rt = [...p.registrationTypes]; rt[i] = { ...rt[i], description: e.target.value }; return { ...p, registrationTypes: rt }; })}
+                        className="flex-1 min-w-[160px] border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
+                        placeholder="Descrição (opcional)" />
+                      <input
+                        type="number"
+                        value={t.price}
+                        onChange={e => setForm(p => { const rt = [...p.registrationTypes]; rt[i] = { ...rt[i], price: e.target.value }; return { ...p, registrationTypes: rt }; })}
+                        className="w-28 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
+                        placeholder="R$ preço" />
+                      <button
+                        onClick={() => setForm(p => ({ ...p, registrationTypes: p.registrationTypes.filter((_, j) => j !== i) }))}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setForm(p => ({ ...p, registrationTypes: [...p.registrationTypes, { name: '', description: '', price: '' }] }))}
+                    className="text-[#C9A84C] text-sm hover:underline">+ Adicionar tipo de inscrição</button>
                 </div>
               </div>
 

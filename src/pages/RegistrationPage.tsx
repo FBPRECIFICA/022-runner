@@ -43,6 +43,7 @@ export function RegistrationPage() {
   const { user } = useAuth();
 
   const [event, setEvent] = useState<any>(null);
+  const [registrationTypes, setRegistrationTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<Step>('form');
@@ -58,14 +59,22 @@ export function RegistrationPage() {
   function defaultForm(u: any) {
     return {
       name: u?.name || '', cpf: '', birthdate: '', phone: '', email: u?.email || '',
-      city: '', gender: '', shirt_size: '', distance_index: 0,
+      city: '', gender: '', shirt_size: '', distance_index: 0, registration_type_index: 0,
       team_name: '', emergency_contact: '', blood_type: '', medical_condition: '',
     };
   }
 
   useEffect(() => {
     supabase.from('events').select('*').eq('slug', eventSlug).single()
-      .then(({ data }) => { setEvent(data); if (data) trackRegistrationStart(data.title); setLoading(false); });
+      .then(({ data }) => {
+        setEvent(data);
+        if (data) {
+          trackRegistrationStart(data.title);
+          supabase.from('registration_types').select('*').eq('event_id', data.id).order('sort_order')
+            .then(({ data: types }) => setRegistrationTypes(types || []));
+        }
+        setLoading(false);
+      });
   }, [eventSlug]);
 
   // Pré-preenche campos com dados do perfil do usuário logado
@@ -120,7 +129,13 @@ export function RegistrationPage() {
       const distances = event.distances || [];
       const chosen = distances[form.distance_index] || distances[0];
       const price = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
-      const platformFee = Math.round(Number(price) * 0.10 * 100) / 100;
+
+      // Tipos de inscrição (kits): recurso independente da distância/lote. Quando o
+      // evento tem kits cadastrados, o valor cobrado vem exclusivamente do kit escolhido.
+      const hasKits = registrationTypes.length > 0;
+      const chosenKit = hasKits ? (registrationTypes[form.registration_type_index] || registrationTypes[0]) : null;
+      const finalPrice = hasKits ? Number(chosenKit.price) : Number(price);
+      const platformFee = Math.round(finalPrice * 0.10 * 100) / 100;
 
       // Proteção contra inscrição duplicada pelo mesmo CPF no mesmo evento
       const cleanCpf = form.cpf.replace(/\D/g, '');
@@ -157,12 +172,15 @@ export function RegistrationPage() {
         shirt_size: form.shirt_size,
         distance_name: chosen?.name || null,
         distance_price: Number(price) || null,
+        registration_type_id: chosenKit?.id || null,
+        registration_type_name: chosenKit?.name || null,
+        registration_type_price: chosenKit ? Number(chosenKit.price) : null,
         full_name: form.name,
         document: cleanCpf,
-        base_amount: Number(price),
+        base_amount: finalPrice,
         platform_fee: platformFee,
         discount_amount: 0,
-        amount: Number(price) + platformFee,
+        amount: finalPrice + platformFee,
         status: 'pending',
         team_name: form.team_name || null,
         emergency_contact: form.emergency_contact || null,
@@ -171,7 +189,7 @@ export function RegistrationPage() {
       }).select().single();
 
       if (insertError) throw insertError;
-      trackRegistrationComplete(event.title, Number(price));
+      trackRegistrationComplete(event.title, finalPrice);
       localStorage.removeItem(LS_KEY);
       setRegistrationId(data.id);
 
@@ -219,7 +237,7 @@ export function RegistrationPage() {
                 athleteName: form.name,
                 athleteEmail: form.email,
                 distanceName: chosen?.name || '',
-                amount: Number(price).toFixed(2).replace('.', ','),
+                amount: finalPrice.toFixed(2).replace('.', ','),
                 paymentStatus: 'pending',
                 totalRegistrations: (totalRegs ?? 0) + 1,
               },
@@ -334,6 +352,16 @@ export function RegistrationPage() {
                 </select>
               </Field>
             </div>
+
+            {registrationTypes.length > 0 && (
+              <Field label="Tipo de Inscrição (Kit) *">
+                <select className={inp} value={form.registration_type_index} onChange={e => set('registration_type_index', Number(e.target.value))}>
+                  {registrationTypes.map((t: any, i: number) => (
+                    <option key={i} value={i}>{t.name} — R$ {Number(t.price).toFixed(2).replace('.', ',')}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
             {/* Novos campos */}
             <div className="border-t pt-4 space-y-4">
