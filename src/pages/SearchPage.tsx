@@ -19,6 +19,7 @@ function supabaseToEvent(e: any): Event {
     city: e.city, state: 'RJ', startLocation: e.location || '',
     maxParticipants: e.max_participants || 0, currentParticipants: e.registrations?.[0]?.count ?? e.current_participants ?? 0,
     banner: e.banner_url || '', distances,
+    registrationTypes: (e.registration_types || []).map((t: any) => ({ price: Number(t.price) })),
     qualityScore: e.quality_score || 0, plan: e.plan || 'free',
     status: e.status === 'published' ? 'registration_open' : e.status,
     organizerId: e.organizer_id || '', slug: e.slug,
@@ -49,7 +50,7 @@ export function SearchPage() {
     setSearched(true);
     setParams(q ? { q } : {});
 
-    let qb = supabase.from('events').select('*, registrations(count)').eq('status', 'published')
+    let qb = supabase.from('events').select('*, registrations(count), registration_types(price)').eq('status', 'published')
       .in('registrations.status', ['paid', 'confirmed', 'presente']);
     if (q.trim()) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
     if (city) qb = qb.eq('city', city);

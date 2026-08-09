@@ -50,6 +50,7 @@ function supabaseToEvent(e: any): Event {
     currentParticipants: e.registrations?.[0]?.count ?? e.current_participants ?? 0,
     banner: e.banner_url || '',
     distances,
+    registrationTypes: (e.registration_types || []).map((t: any) => ({ price: Number(t.price) })),
     qualityScore: e.quality_score || 0,
     plan: e.plan || 'free',
     status: e.status === 'published' ? 'registration_open' : e.status,
@@ -64,7 +65,7 @@ export function HomePage() {
   useEffect(() => {
     supabase
       .from('events')
-      .select('*, registrations(count)')
+      .select('*, registrations(count), registration_types(price)')
       .eq('status', 'published')
       .in('registrations.status', ['paid', 'confirmed', 'presente'])
       .order('date', { ascending: true })

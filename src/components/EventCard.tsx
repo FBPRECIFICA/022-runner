@@ -20,9 +20,15 @@ export function EventCard({ event }: EventCardProps) {
     year: 'numeric'
   });
 
-  const minPrice = Math.min(...event.distances.map(d => d.price));
-  const maxPrice = Math.max(...event.distances.map(d => d.price));
-  const priceRange = minPrice === maxPrice ? `R$ ${minPrice}` : `R$ ${minPrice} - R$ ${maxPrice}`;
+  let priceRange: string;
+  if (event.registrationTypes && event.registrationTypes.length > 0) {
+    const kitMinPrice = Math.min(...event.registrationTypes.map(t => t.price));
+    priceRange = `A partir de R$ ${kitMinPrice.toFixed(2).replace('.', ',')}`;
+  } else {
+    const minPrice = Math.min(...event.distances.map(d => d.price));
+    const maxPrice = Math.max(...event.distances.map(d => d.price));
+    priceRange = minPrice === maxPrice ? `R$ ${minPrice}` : `R$ ${minPrice} - R$ ${maxPrice}`;
+  }
 
   useEffect(() => {
     if (!user) return;

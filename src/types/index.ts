@@ -44,6 +44,7 @@ export interface Event {
   banner?: string;
   logo?: string;
   distances: EventDistance[];
+  registrationTypes?: { price: number }[];
   qualityScore: number;
   plan: EventPlan;
   status: EventStatus;
