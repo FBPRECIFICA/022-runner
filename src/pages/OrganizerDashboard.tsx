@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
-import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, TrendingDown, ClipboardCheck, Search, Tag, X, Percent } from 'lucide-react';
+import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, ClipboardCheck, Search, Tag, X, Percent } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import * as XLSX from 'xlsx';
@@ -611,7 +611,6 @@ export function OrganizerDashboard() {
           const paidRegs = allRegistrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
           const pendingRegs = allRegistrations.filter(r => r.status === 'pending' || r.status === 'awaiting_payment');
           const totalBruto = paidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-          const taxaPlataforma = totalBruto * 0.10;
           const taxaAsaasEstimada = totalBruto * 0.015;
           const estimadoAReceber = totalBruto - taxaAsaasEstimada;
 
@@ -630,7 +629,7 @@ export function OrganizerDashboard() {
           return (
             <>
               {/* Cards financeiros */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
                 <div className="bg-white rounded-xl p-4 border-2" style={{ borderColor: '#C9A84C' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign size={16} style={{ color: '#C9A84C' }} />
@@ -638,14 +637,6 @@ export function OrganizerDashboard() {
                   </div>
                   <p className="text-xl font-bold" style={{ color: '#C9A84C' }}>R$ {totalBruto.toFixed(2).replace('.', ',')}</p>
                   <p className="text-xs text-gray-400">{paidRegs.length} inscr. pagas</p>
-                </div>
-                <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#fca5a5' }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <TrendingDown size={16} className="text-red-400" />
-                    <span className="text-xs font-medium text-gray-500">Taxa 022Runners (10%)</span>
-                  </div>
-                  <p className="text-xl font-bold text-red-400">R$ {taxaPlataforma.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-xs text-gray-400">paga pelo atleta, não desconta sua receita</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#86efac' }}>
                   <div className="flex items-center gap-2 mb-1">
@@ -666,7 +657,7 @@ export function OrganizerDashboard() {
               </div>
 
               <p className="text-xs text-gray-400 -mt-4 mb-4">
-                * Valor estimado. O valor real varia conforme a forma de pagamento: PIX: desconto de 0,99% | Cartão: desconto de 2,99% (taxas Asaas).
+                * Valor estimado. A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. O valor final pode variar, pois toda a parte financeira é controlada pelo Asaas, sistema financeiro independente.
               </p>
 
               {/* Gráfico de inscrições por semana */}
@@ -713,7 +704,6 @@ export function OrganizerDashboard() {
                           <th className="px-4 py-2 font-medium">Atleta</th>
                           <th className="px-4 py-2 font-medium">Nº Peito</th>
                           <th className="px-4 py-2 font-medium">Valor Inscrição</th>
-                          <th className="px-4 py-2 font-medium">Taxa 022 (10%)</th>
                           <th className="px-4 py-2 font-medium">Taxa Asaas</th>
                           <th className="px-4 py-2 font-medium">Est. Líquido</th>
                           <th className="px-4 py-2 font-medium">Forma Pgto</th>
@@ -724,7 +714,6 @@ export function OrganizerDashboard() {
                       <tbody>
                         {filteredRegs.slice(0, 50).map(r => {
                           const valorInscricao = Number(r.base_amount ?? r.amount ?? 0);
-                          const taxa022 = valorInscricao * 0.10;
                           const asaasRate = asaasRateForMethod(r.payment_method);
                           const taxaAsaas = asaasRate != null ? valorInscricao * asaasRate : null;
                           const estLiquido = taxaAsaas != null ? valorInscricao - taxaAsaas : null;
@@ -735,7 +724,6 @@ export function OrganizerDashboard() {
                             <td className="px-4 py-2 font-medium text-gray-900">{r.name}</td>
                             <td className="px-4 py-2 font-mono font-bold" style={{ color: '#C9A84C' }}>{r.registration_number}</td>
                             <td className="px-4 py-2 text-gray-700">R$ {valorInscricao.toFixed(2).replace('.', ',')}</td>
-                            <td className="px-4 py-2 text-gray-500">R$ {taxa022.toFixed(2).replace('.', ',')}</td>
                             <td className="px-4 py-2 text-gray-500">{taxaAsaas != null ? `R$ ${taxaAsaas.toFixed(2).replace('.', ',')}` : '-'}</td>
                             <td className="px-4 py-2 font-medium text-green-600">{estLiquido != null ? `R$ ${estLiquido.toFixed(2).replace('.', ',')}` : '-'}</td>
                             <td className="px-4 py-2 text-gray-500">{paymentMethodLabel(r.payment_method)}</td>
