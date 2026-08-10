@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
 import { computeAthleteStats } from '../lib/athleteStats';
-import { netForOrganizer } from '../lib/asaasFee';
+import { asaasFeeFromNetValue, netForOrganizer } from '../lib/asaasFee';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 const LEO_PAGE_SIZE = 20;
@@ -232,8 +232,7 @@ export function AdminDashboard() {
                     const paidRegsAll = registrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
                     const taxaAsaasExata = paidRegsAll.reduce((s, r) => {
                       const charged = Number(r.amount ?? r.base_amount ?? 0);
-                      const net = r.asaas_net_value != null ? Number(r.asaas_net_value) : null;
-                      return s + (net != null ? charged - net : 0);
+                      return s + (asaasFeeFromNetValue(charged, r.asaas_net_value) ?? 0);
                     }, 0);
                     const estRepasse = stats.revenue - stats.platformRevenue - taxaAsaasExata;
                     return (
