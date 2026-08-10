@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Clock, Copy, CreditCard, FileText, QrCode } from 'lucide-react';
 import { SecurityBadges } from '../components/SecurityBadges';
+import { SecuritySeal } from '../components/SecuritySeal';
 
 type PaymentMethod = 'PIX' | 'CREDIT_CARD' | 'BOLETO';
 
@@ -292,6 +293,9 @@ export function PaymentPage() {
             <p className="text-xs text-gray-500">Sua vaga está reservada por 30 minutos</p>
           </div>
         </div>
+
+        {/* Selo de segurança */}
+        <SecuritySeal />
 
         {/* Selos de segurança */}
         <SecurityBadges />

@@ -2,6 +2,7 @@
 import { NewsletterForm } from '../components/NewsletterForm';
 import { HeroSection } from '../components/HeroSection';
 import { EventCard } from '../components/EventCard';
+import { SecuritySeal } from '../components/SecuritySeal';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Star, Award, Clock, ArrowRight, Sparkles, Trophy } from 'lucide-react';
 import { events as mockEvents, LAGOS_REGION_CITIES } from '../data/mockData';
@@ -491,6 +492,13 @@ export function HomePage() {
               Criar conta grátis <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Selo de segurança */}
+      <section className="py-10 bg-white">
+        <div className="container mx-auto px-4">
+          <SecuritySeal />
         </div>
       </section>
 
