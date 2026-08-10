@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
 import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, ClipboardCheck, Search, Tag, X, Percent } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
@@ -99,7 +99,7 @@ function generateSlug(title: string) {
 
 export function OrganizerDashboard() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<'eventos' | 'criar' | 'cupons'>('eventos');
+  const [tab, setTab] = useState<'eventos' | 'criar' | 'cupons' | 'maisdados'>('eventos');
   const [events, setEvents] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState<CouponForm>(emptyCouponForm);
@@ -123,8 +123,31 @@ export function OrganizerDashboard() {
   const [loadingRegs, setLoadingRegs] = useState(false);
   const [allRegistrations, setAllRegistrations] = useState<any[]>([]);
   const [regSearch, setRegSearch] = useState('');
+  const [maisDadosEventId, setMaisDadosEventId] = useState<string | null>(null);
 
   useEffect(() => { loadEvents(); loadCoupons(); }, []);
+
+  useEffect(() => {
+    if (tab !== 'maisdados') return;
+    if (!maisDadosEventId && events.length > 0) {
+      setMaisDadosEventId(events[0].id);
+      return;
+    }
+    if (maisDadosEventId) ensureEventRegsLoaded(maisDadosEventId);
+  }, [tab, maisDadosEventId, events]);
+
+  const ensureEventRegsLoaded = async (eventId: string) => {
+    if (eventRegistrations[eventId]) return;
+    setLoadingRegs(true);
+    const { data } = await supabase
+      .from('registrations')
+      .select('*')
+      .eq('event_id', eventId)
+      .neq('status', 'cancelled')
+      .order('registration_number');
+    setEventRegistrations(prev => ({ ...prev, [eventId]: data || [] }));
+    setLoadingRegs(false);
+  };
 
   const toggleInscritos = async (eventId: string) => {
     if (expandedEventId === eventId) {
@@ -132,17 +155,7 @@ export function OrganizerDashboard() {
       return;
     }
     setExpandedEventId(eventId);
-    if (!eventRegistrations[eventId]) {
-      setLoadingRegs(true);
-      const { data } = await supabase
-        .from('registrations')
-        .select('*')
-        .eq('event_id', eventId)
-        .neq('status', 'cancelled')
-        .order('registration_number');
-      setEventRegistrations(prev => ({ ...prev, [eventId]: data || [] }));
-      setLoadingRegs(false);
-    }
+    await ensureEventRegsLoaded(eventId);
   };
 
   const loadEvents = async () => {
@@ -605,6 +618,7 @@ export function OrganizerDashboard() {
           <button onClick={() => setTab('eventos')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'eventos' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Meus Eventos</button>
           <button onClick={() => setTab('criar')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'criar' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Criar Evento</button>
           <button onClick={() => setTab('cupons')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'cupons' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Cupons</button>
+          <button onClick={() => setTab('maisdados')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'maisdados' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Mais Dados</button>
         </div>
 
         {/* Lista de Eventos */}
@@ -1095,6 +1109,158 @@ export function OrganizerDashboard() {
               </div>
             )}
           </div>
+          );
+        })()}
+
+        {/* Mais Dados */}
+        {tab === 'maisdados' && (() => {
+          const regs = maisDadosEventId ? (eventRegistrations[maisDadosEventId] || []) : [];
+          const confirmedRegsMd = regs.filter(r => r.status === 'paid' || r.status === 'confirmed');
+          const pendingRegsMd = regs.filter(r => r.status === 'pending' || r.status === 'awaiting_payment');
+
+          const genderLabels: Record<string, string> = { M: 'Masculino', F: 'Feminino', O: 'Outro' };
+          const genderColors: Record<string, string> = { M: '#3B82F6', F: '#EC4899', O: '#9CA3AF' };
+          const genderCounts = regs.reduce((acc: Record<string, number>, r) => {
+            if (r.gender) acc[r.gender] = (acc[r.gender] || 0) + 1;
+            return acc;
+          }, {});
+          const genderData = Object.entries(genderCounts).map(([g, count]) => ({
+            name: genderLabels[g] || g,
+            value: count,
+            color: genderColors[g] || '#C9A84C',
+          }));
+
+          const calcAge = (birthDate: string) => {
+            const today = new Date();
+            const [y, m, d] = birthDate.split('-').map(Number);
+            let age = today.getFullYear() - y;
+            if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
+            return age;
+          };
+          const ages = regs.filter(r => r.birth_date).map(r => calcAge(r.birth_date));
+          const avgAge = ages.length ? Math.round(ages.reduce((s, a) => s + a, 0) / ages.length) : null;
+          const minAge = ages.length ? Math.min(...ages) : null;
+          const maxAge = ages.length ? Math.max(...ages) : null;
+
+          const lastRegs = [...regs]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 10);
+
+          return (
+            <>
+              <div className="mb-6">
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Evento</label>
+                <select
+                  value={maisDadosEventId || ''}
+                  onChange={e => setMaisDadosEventId(e.target.value || null)}
+                  className="w-full sm:w-80 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                >
+                  <option value="">Selecione um evento</option>
+                  {events.map(ev => (
+                    <option key={ev.id} value={ev.id}>{ev.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              {!maisDadosEventId ? (
+                <div className="bg-white rounded-xl border p-12 text-center text-gray-400">Selecione um evento para ver os dados.</div>
+              ) : loadingRegs && !eventRegistrations[maisDadosEventId] ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C9A84C]" />
+                </div>
+              ) : regs.length === 0 ? (
+                <div className="bg-white rounded-xl border p-12 text-center text-gray-400">Nenhum inscrito neste evento ainda.</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-white rounded-xl p-4 border-2 border-green-200">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Confirmados</p>
+                      <p className="text-2xl font-bold text-green-600">{confirmedRegsMd.length}</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border-2 border-yellow-200">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Pendentes</p>
+                      <p className="text-2xl font-bold text-yellow-600">{pendingRegsMd.length}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-white rounded-xl border p-4">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-3">Sexo dos Atletas</h3>
+                      {genderData.length === 0 ? (
+                        <p className="text-sm text-gray-400 py-8 text-center">Sem dados de sexo.</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={200}>
+                          <PieChart>
+                            <Pie data={genderData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
+                              {genderData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                            </Pie>
+                            <Legend />
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+
+                    <div className="bg-white rounded-xl border p-4">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-3">Idade dos Atletas</h3>
+                      {avgAge === null ? (
+                        <p className="text-sm text-gray-400 py-8 text-center">Sem dados de idade.</p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold" style={{ color: '#C9A84C' }}>{avgAge}</p>
+                            <p className="text-xs text-gray-500">Idade média</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-blue-500">{minAge}</p>
+                            <p className="text-xs text-gray-500">Mais jovem</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-purple-500">{maxAge}</p>
+                            <p className="text-xs text-gray-500">Mais experiente</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border overflow-hidden">
+                    <div className="px-4 py-3 border-b">
+                      <h3 className="text-sm font-semibold text-gray-700">Últimos Inscritos</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left border-b text-gray-500">
+                            <th className="px-4 py-2 font-medium">Atleta</th>
+                            <th className="px-4 py-2 font-medium">Nº Peito</th>
+                            <th className="px-4 py-2 font-medium">Status</th>
+                            <th className="px-4 py-2 font-medium">Data</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lastRegs.map(r => {
+                            const isPaid = r.status === 'paid' || r.status === 'confirmed';
+                            return (
+                              <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50">
+                                <td className="px-4 py-2 font-medium text-gray-900">{r.name}</td>
+                                <td className="px-4 py-2 font-mono font-bold" style={{ color: '#C9A84C' }}>{r.registration_number}</td>
+                                <td className="px-4 py-2">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isPaid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                    {isPaid ? 'Confirmado' : 'Pendente'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-2 text-gray-400 text-xs">{new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
           );
         })()}
 
