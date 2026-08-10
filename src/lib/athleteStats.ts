@@ -31,7 +31,10 @@ export function computeAthleteStats<T extends AthleteStatsRow>(regs: T[]) {
     color: GENDER_COLORS[g] || '#C9A84C',
   }));
 
-  const ages = regs.filter(r => r.birth_date).map(r => calcAge(r.birth_date as string));
+  const ages = regs
+    .filter(r => r.birth_date)
+    .map(r => calcAge(r.birth_date as string))
+    .filter(age => age > 0 && age <= 110); // descarta data de nascimento invalida/digitada errado
   const avgAge = ages.length ? Math.round(ages.reduce((s, a) => s + a, 0) / ages.length) : null;
   const minAge = ages.length ? Math.min(...ages) : null;
   const maxAge = ages.length ? Math.max(...ages) : null;
