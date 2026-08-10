@@ -613,7 +613,7 @@ export function OrganizerDashboard() {
           const totalBruto = paidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
           const taxaPlataforma = totalBruto * 0.10;
           const taxaAsaasEstimada = totalBruto * 0.015;
-          const estimadoAReceber = totalBruto - taxaPlataforma - taxaAsaasEstimada;
+          const estimadoAReceber = totalBruto - taxaAsaasEstimada;
 
           const weeklyData = (() => {
             const weeks: Record<string, number> = {};
@@ -727,7 +727,7 @@ export function OrganizerDashboard() {
                           const taxa022 = valorInscricao * 0.10;
                           const asaasRate = asaasRateForMethod(r.payment_method);
                           const taxaAsaas = asaasRate != null ? valorInscricao * asaasRate : null;
-                          const estLiquido = taxaAsaas != null ? valorInscricao - taxa022 - taxaAsaas : null;
+                          const estLiquido = taxaAsaas != null ? valorInscricao - taxaAsaas : null;
                           const isPaid = r.status === 'paid' || r.status === 'confirmed';
                           const isCancelled = r.status === 'cancelled';
                           return (

@@ -504,7 +504,7 @@ export function AdminDashboard() {
         const orgPaidRegs = orgRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
         const totalBruto = orgPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
         const taxa10 = totalBruto * 0.10;
-        const estimado = totalBruto - taxa10 - totalBruto * 0.015;
+        const estimado = totalBruto - totalBruto * 0.015;
         const recentRegs = [...orgRegs]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 20);
@@ -531,7 +531,7 @@ export function AdminDashboard() {
                     <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
-                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor estimado, descontando 10% da plataforma e ~1,5% de taxa Asaas (varia por forma de pagamento).</p>
+                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor estimado, descontando ~1,5% de taxa Asaas (varia por forma de pagamento). A taxa de 10% da plataforma é paga pelo atleta, não desconta a receita do organizador.</p>
 
                 <div>
                   <h4 className="text-sm font-semibold text-white mb-2">Eventos ({orgEvents.length})</h4>
@@ -599,7 +599,7 @@ export function AdminDashboard() {
         const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
         const bruto = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
         const taxa10 = bruto * 0.10;
-        const estimado = bruto - taxa10 - bruto * 0.015;
+        const estimado = bruto - bruto * 0.015;
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setSelectedEventPreview(null)}>
