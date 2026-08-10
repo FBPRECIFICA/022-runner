@@ -534,27 +534,30 @@ export function AdminDashboard() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-left" style={{ color: '#94a3b8' }}>
-                          {['Evento', 'Data', 'Inscritos', 'Receita'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                          {['Evento', 'Data', 'Inscritos', 'Receita', 'Comissão 022 (10%)'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
                         </tr>
                       </thead>
                       <tbody>
                         {orgEvents.length === 0 ? (
-                          <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum evento.</td></tr>
+                          <tr><td colSpan={5} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum evento.</td></tr>
                         ) : orgEvents.map(ev => {
                           const evRegs = registrations.filter(r => r.event_id === ev.id);
                           const evRevenue = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed').reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
+                          const evComissao = evRevenue * 0.10;
                           return (
                             <tr key={ev.id} style={{ borderTop: '1px solid #334155' }}>
                               <td className="px-3 py-2 text-white">{ev.title}</td>
                               <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{new Date(ev.date).toLocaleDateString('pt-BR')}</td>
                               <td className="px-3 py-2 text-center" style={{ color: '#94a3b8' }}>{evRegs.filter(r => r.status !== 'cancelled').length}</td>
                               <td className="px-3 py-2 text-green-400">R$ {evRevenue.toFixed(2).replace('.', ',')}</td>
+                              <td className="px-3 py-2 font-semibold text-purple-400">R$ {evComissao.toFixed(2).replace('.', ',')}</td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
+                  <p className="text-xs mt-1.5" style={{ color: '#64748b' }}>Comissão 022Runners: 10% cobrado do atleta na inscrição — lucro real da plataforma por evento. Visível só aqui no Admin.</p>
                 </div>
 
                 <div>
