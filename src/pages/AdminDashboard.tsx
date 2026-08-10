@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Users, Calendar, TrendingUp, TrendingDown, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
+import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 const LEO_PAGE_SIZE = 20;
@@ -503,7 +503,6 @@ export function AdminDashboard() {
         const orgRegs = registrations.filter(r => orgEventIds.includes(r.event_id));
         const orgPaidRegs = orgRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
         const totalBruto = orgPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-        const taxa10 = totalBruto * 0.10;
         const estimado = totalBruto - totalBruto * 0.015;
         const recentRegs = [...orgRegs]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -517,21 +516,17 @@ export function AdminDashboard() {
                 <button onClick={() => setSelectedOrganizerId(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
               </div>
               <div className="p-5 overflow-y-auto space-y-6">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
                     <div className="flex items-center gap-2 mb-1" style={{ color: '#C9A84C' }}><DollarSign size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Total Bruto</span></div>
                     <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>R$ {totalBruto.toFixed(2).replace('.', ',')}</p>
-                  </div>
-                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
-                    <div className="flex items-center gap-2 mb-1 text-red-400"><TrendingDown size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Taxa 10%</span></div>
-                    <p className="text-lg font-bold text-red-400">R$ {taxa10.toFixed(2).replace('.', ',')}</p>
                   </div>
                   <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
                     <div className="flex items-center gap-2 mb-1 text-green-400"><TrendingUp size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Est. a Receber*</span></div>
                     <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
-                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor estimado, descontando ~1,5% de taxa Asaas (varia por forma de pagamento). A taxa de 10% da plataforma é paga pelo atleta, não desconta a receita do organizador.</p>
+                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor estimado. A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. O valor final pode variar, pois toda a parte financeira é controlada pelo Asaas, sistema financeiro independente.</p>
 
                 <div>
                   <h4 className="text-sm font-semibold text-white mb-2">Eventos ({orgEvents.length})</h4>
@@ -598,7 +593,6 @@ export function AdminDashboard() {
         const evRegs = registrations.filter(r => r.event_id === ev.id);
         const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
         const bruto = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-        const taxa10 = bruto * 0.10;
         const estimado = bruto - bruto * 0.015;
 
         return (
@@ -609,20 +603,17 @@ export function AdminDashboard() {
                 <button onClick={() => setSelectedEventPreview(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
               </div>
               <div className="p-5 overflow-y-auto space-y-6">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
                     <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Bruto</p>
                     <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>R$ {bruto.toFixed(2).replace('.', ',')}</p>
                   </div>
                   <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
-                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Taxa 10%</p>
-                    <p className="text-lg font-bold text-red-400">R$ {taxa10.toFixed(2).replace('.', ',')}</p>
-                  </div>
-                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
-                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Estimado</p>
+                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Est. a Receber*</p>
                     <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
+                <p className="text-xs" style={{ color: '#64748b' }}>* Valor estimado. A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. O valor final pode variar, pois toda a parte financeira é controlada pelo Asaas, sistema financeiro independente.</p>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
