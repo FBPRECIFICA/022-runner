@@ -2,7 +2,7 @@
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
@@ -39,6 +39,7 @@ export function AdminDashboard() {
   const [leoExpanded, setLeoExpanded] = useState<string | null>(null);
   const [leoLoading, setLeoLoading] = useState(false);
   const [selectedOrganizerId, setSelectedOrganizerId] = useState<string | null>(null);
+  const [orgMaisDadosEventId, setOrgMaisDadosEventId] = useState<string | null>(null);
   const [selectedEventPreview, setSelectedEventPreview] = useState<any | null>(null);
   const [eventCoupons, setEventCoupons] = useState<any[]>([]);
   const [loadingEventCoupons, setLoadingEventCoupons] = useState(false);
@@ -540,6 +541,39 @@ export function AdminDashboard() {
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 20);
 
+        const effectiveMdEventId = orgEvents.some(e => e.id === orgMaisDadosEventId) ? orgMaisDadosEventId : (orgEvents[0]?.id || null);
+        const mdRegs = effectiveMdEventId ? registrations.filter(r => r.event_id === effectiveMdEventId && r.status !== 'cancelled') : [];
+        const mdConfirmed = mdRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
+        const mdPending = mdRegs.filter(r => r.status === 'pending' || r.status === 'awaiting_payment');
+
+        const genderLabelsMd: Record<string, string> = { M: 'Masculino', F: 'Feminino', O: 'Outro' };
+        const genderColorsMd: Record<string, string> = { M: '#3B82F6', F: '#EC4899', O: '#9CA3AF' };
+        const genderCountsMd = mdRegs.reduce((acc: Record<string, number>, r) => {
+          if (r.gender) acc[r.gender] = (acc[r.gender] || 0) + 1;
+          return acc;
+        }, {});
+        const genderDataMd = Object.entries(genderCountsMd).map(([g, count]) => ({
+          name: genderLabelsMd[g] || g,
+          value: count,
+          color: genderColorsMd[g] || '#C9A84C',
+        }));
+
+        const calcAgeMd = (birthDate: string) => {
+          const today = new Date();
+          const [y, m, d] = birthDate.split('-').map(Number);
+          let age = today.getFullYear() - y;
+          if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
+          return age;
+        };
+        const agesMd = mdRegs.filter(r => r.birth_date).map(r => calcAgeMd(r.birth_date));
+        const avgAgeMd = agesMd.length ? Math.round(agesMd.reduce((s, a) => s + a, 0) / agesMd.length) : null;
+        const minAgeMd = agesMd.length ? Math.min(...agesMd) : null;
+        const maxAgeMd = agesMd.length ? Math.max(...agesMd) : null;
+
+        const lastRegsMd = [...mdRegs]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 10);
+
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setSelectedOrganizerId(null)}>
             <div className="w-full max-w-3xl max-h-[90vh] rounded-2xl flex flex-col" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} onClick={e => e.stopPropagation()}>
@@ -587,6 +621,107 @@ export function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-white">Mais Dados</h4>
+                    {orgEvents.length > 1 && (
+                      <select
+                        value={effectiveMdEventId || ''}
+                        onChange={e => setOrgMaisDadosEventId(e.target.value || null)}
+                        className="text-xs rounded-lg px-2 py-1"
+                        style={{ backgroundColor: '#0f172a', color: '#e2e8f0', border: '1px solid #334155' }}
+                      >
+                        {orgEvents.map(ev => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+                      </select>
+                    )}
+                  </div>
+                  {orgEvents.length === 0 ? (
+                    <p className="text-sm text-center py-6" style={{ color: '#64748b' }}>Nenhum evento.</p>
+                  ) : mdRegs.length === 0 ? (
+                    <p className="text-sm text-center py-6" style={{ color: '#64748b' }}>Nenhum inscrito neste evento ainda.</p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="rounded-xl p-3" style={{ backgroundColor: '#0f172a' }}>
+                          <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Confirmados</p>
+                          <p className="text-xl font-bold text-green-400">{mdConfirmed.length}</p>
+                        </div>
+                        <div className="rounded-xl p-3" style={{ backgroundColor: '#0f172a' }}>
+                          <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Pendentes</p>
+                          <p className="text-xl font-bold text-yellow-400">{mdPending.length}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-3 mb-3">
+                        <div className="rounded-xl p-3" style={{ backgroundColor: '#0f172a' }}>
+                          <p className="text-xs font-medium mb-2" style={{ color: '#94a3b8' }}>Sexo dos Atletas</p>
+                          {genderDataMd.length === 0 ? (
+                            <p className="text-xs text-center py-6" style={{ color: '#64748b' }}>Sem dados de sexo.</p>
+                          ) : (
+                            <ResponsiveContainer width="100%" height={160}>
+                              <PieChart>
+                                <Pie data={genderDataMd} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label>
+                                  {genderDataMd.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                                </Pie>
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', color: '#fff', fontSize: 12 }} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          )}
+                        </div>
+                        <div className="rounded-xl p-3" style={{ backgroundColor: '#0f172a' }}>
+                          <p className="text-xs font-medium mb-2" style={{ color: '#94a3b8' }}>Idade dos Atletas</p>
+                          {avgAgeMd === null ? (
+                            <p className="text-xs text-center py-6" style={{ color: '#64748b' }}>Sem dados de idade.</p>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-2 pt-2">
+                              <div className="text-center">
+                                <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>{avgAgeMd}</p>
+                                <p className="text-[10px]" style={{ color: '#94a3b8' }}>Idade média</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-lg font-bold text-blue-400">{minAgeMd}</p>
+                                <p className="text-[10px]" style={{ color: '#94a3b8' }}>Mais jovem</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-lg font-bold text-purple-400">{maxAgeMd}</p>
+                                <p className="text-[10px]" style={{ color: '#94a3b8' }}>Mais experiente</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0f172a' }}>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left" style={{ color: '#94a3b8' }}>
+                              {['Atleta', 'Nº Peito', 'Status', 'Data'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {lastRegsMd.map(r => {
+                              const isPaid = r.status === 'paid' || r.status === 'confirmed';
+                              return (
+                                <tr key={r.id} style={{ borderTop: '1px solid #334155' }}>
+                                  <td className="px-3 py-2 text-white">{r.name}</td>
+                                  <td className="px-3 py-2 font-mono" style={{ color: '#C9A84C' }}>{r.registration_number}</td>
+                                  <td className="px-3 py-2">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isPaid ? 'bg-green-900 text-green-300' : 'bg-yellow-900 text-yellow-300'}`}>
+                                      {isPaid ? 'Confirmado' : 'Pendente'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs" style={{ color: '#94a3b8' }}>{new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div>
