@@ -367,6 +367,7 @@ export function OrganizerDashboard() {
     const rows = (data || []).map(r => ({
       'Nº Peito': r.registration_number,
       'Nome Completo': r.full_name || r.name,
+      'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
       'CPF': r.cpf,
       'Email': r.email,
       'Telefone': r.phone,
