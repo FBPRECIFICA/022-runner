@@ -4,9 +4,18 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
+import { computeAthleteStats } from '../lib/athleteStats';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 const LEO_PAGE_SIZE = 20;
+
+type ExportStatusFilter = 'all' | 'paid' | 'pending' | 'cancelled';
+const EXPORT_STATUS_OPTIONS: { value: ExportStatusFilter; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'paid', label: 'Apenas Pagos/Confirmados' },
+  { value: 'pending', label: 'Apenas Pendentes/Aguardando' },
+  { value: 'cancelled', label: 'Apenas Cancelados' },
+];
 
 type Tab = 'overview' | 'events' | 'users' | 'registrations' | 'leo' | 'organizers';
 
@@ -40,6 +49,7 @@ export function AdminDashboard() {
   const [leoLoading, setLeoLoading] = useState(false);
   const [selectedOrganizerId, setSelectedOrganizerId] = useState<string | null>(null);
   const [orgMaisDadosEventId, setOrgMaisDadosEventId] = useState<string | null>(null);
+  const [exportModalEvent, setExportModalEvent] = useState<any | null>(null);
   const [selectedEventPreview, setSelectedEventPreview] = useState<any | null>(null);
   const [eventCoupons, setEventCoupons] = useState<any[]>([]);
   const [loadingEventCoupons, setLoadingEventCoupons] = useState(false);
@@ -138,27 +148,31 @@ export function AdminDashboard() {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
   };
 
-  const exportEventExcel = (event: any) => {
+  const exportEventExcel = (event: any, statusFilter: ExportStatusFilter) => {
     const evtRegs = registrations
       .filter(r => r.event_id === event.id)
+      .filter(r => {
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'paid') return r.status === 'paid' || r.status === 'confirmed';
+        if (statusFilter === 'pending') return r.status === 'pending' || r.status === 'awaiting_payment';
+        return r.status === 'cancelled';
+      })
       .sort((a, b) => (a.registration_number || '').localeCompare(b.registration_number || ''));
     const rows = evtRegs.map(r => ({
-      'Nº Peito': r.registration_number,
       'Nome Completo': r.full_name || r.name,
-      'CPF': r.cpf,
-      'Email': r.email,
+      'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
+      'Nº Peito': r.registration_number,
       'Telefone': r.phone,
       'Categoria': r.distance_name,
       'Distância': r.distance_name,
-      'Tamanho Camiseta': r.shirt_size,
-      'Status Pagamento': statusLabel(r.status),
-      'Data Inscrição': new Date(r.created_at).toLocaleDateString('pt-BR'),
+      'Tamanho': r.shirt_size,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
     const date = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
+    setExportModalEvent(null);
   };
 
   const tabs: { key: Tab; label: string }[] = [
@@ -543,36 +557,7 @@ export function AdminDashboard() {
 
         const effectiveMdEventId = orgEvents.some(e => e.id === orgMaisDadosEventId) ? orgMaisDadosEventId : (orgEvents[0]?.id || null);
         const mdRegs = effectiveMdEventId ? registrations.filter(r => r.event_id === effectiveMdEventId && r.status !== 'cancelled') : [];
-        const mdConfirmed = mdRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
-        const mdPending = mdRegs.filter(r => r.status === 'pending' || r.status === 'awaiting_payment');
-
-        const genderLabelsMd: Record<string, string> = { M: 'Masculino', F: 'Feminino', O: 'Outro' };
-        const genderColorsMd: Record<string, string> = { M: '#3B82F6', F: '#EC4899', O: '#9CA3AF' };
-        const genderCountsMd = mdRegs.reduce((acc: Record<string, number>, r) => {
-          if (r.gender) acc[r.gender] = (acc[r.gender] || 0) + 1;
-          return acc;
-        }, {});
-        const genderDataMd = Object.entries(genderCountsMd).map(([g, count]) => ({
-          name: genderLabelsMd[g] || g,
-          value: count,
-          color: genderColorsMd[g] || '#C9A84C',
-        }));
-
-        const calcAgeMd = (birthDate: string) => {
-          const today = new Date();
-          const [y, m, d] = birthDate.split('-').map(Number);
-          let age = today.getFullYear() - y;
-          if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
-          return age;
-        };
-        const agesMd = mdRegs.filter(r => r.birth_date).map(r => calcAgeMd(r.birth_date));
-        const avgAgeMd = agesMd.length ? Math.round(agesMd.reduce((s, a) => s + a, 0) / agesMd.length) : null;
-        const minAgeMd = agesMd.length ? Math.min(...agesMd) : null;
-        const maxAgeMd = agesMd.length ? Math.max(...agesMd) : null;
-
-        const lastRegsMd = [...mdRegs]
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, 10);
+        const { confirmed: mdConfirmed, pending: mdPending, genderData: genderDataMd, avgAge: avgAgeMd, minAge: minAgeMd, maxAge: maxAgeMd, lastRegs: lastRegsMd } = computeAthleteStats(mdRegs);
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setSelectedOrganizerId(null)}>
@@ -761,6 +746,8 @@ export function AdminDashboard() {
         const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
         const bruto = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
         const estimado = bruto - bruto * 0.015;
+        const mdRegsEv = evRegs.filter(r => r.status !== 'cancelled');
+        const { confirmed: mdConfirmedEv, pending: mdPendingEv, genderData: genderDataEv, avgAge: avgAgeEv, minAge: minAgeEv, maxAge: maxAgeEv, lastRegs: lastRegsEv } = computeAthleteStats(mdRegsEv);
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setSelectedEventPreview(null)}>
@@ -781,6 +768,93 @@ export function AdminDashboard() {
                   </div>
                 </div>
                 <p className="text-xs" style={{ color: '#64748b' }}>* Valor estimado. A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. O valor final pode variar, pois toda a parte financeira é controlada pelo Asaas, sistema financeiro independente.</p>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-white mb-2">Mais Dados</h4>
+                  {mdRegsEv.length === 0 ? (
+                    <p className="text-sm text-center py-6" style={{ color: '#64748b' }}>Nenhum inscrito neste evento ainda.</p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="rounded-xl p-3" style={{ backgroundColor: '#0f172a' }}>
+                          <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Confirmados</p>
+                          <p className="text-xl font-bold text-green-400">{mdConfirmedEv.length}</p>
+                        </div>
+                        <div className="rounded-xl p-3" style={{ backgroundColor: '#0f172a' }}>
+                          <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Pendentes</p>
+                          <p className="text-xl font-bold text-yellow-400">{mdPendingEv.length}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-3 mb-3">
+                        <div className="rounded-xl p-3" style={{ backgroundColor: '#0f172a' }}>
+                          <p className="text-xs font-medium mb-2" style={{ color: '#94a3b8' }}>Sexo dos Atletas</p>
+                          {genderDataEv.length === 0 ? (
+                            <p className="text-xs text-center py-6" style={{ color: '#64748b' }}>Sem dados de sexo.</p>
+                          ) : (
+                            <ResponsiveContainer width="100%" height={160}>
+                              <PieChart>
+                                <Pie data={genderDataEv} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label>
+                                  {genderDataEv.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                                </Pie>
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', color: '#fff', fontSize: 12 }} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          )}
+                        </div>
+                        <div className="rounded-xl p-3" style={{ backgroundColor: '#0f172a' }}>
+                          <p className="text-xs font-medium mb-2" style={{ color: '#94a3b8' }}>Idade dos Atletas</p>
+                          {avgAgeEv === null ? (
+                            <p className="text-xs text-center py-6" style={{ color: '#64748b' }}>Sem dados de idade.</p>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-2 pt-2">
+                              <div className="text-center">
+                                <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>{avgAgeEv}</p>
+                                <p className="text-[10px]" style={{ color: '#94a3b8' }}>Idade média</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-lg font-bold text-blue-400">{minAgeEv}</p>
+                                <p className="text-[10px]" style={{ color: '#94a3b8' }}>Mais jovem</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-lg font-bold text-purple-400">{maxAgeEv}</p>
+                                <p className="text-[10px]" style={{ color: '#94a3b8' }}>Mais experiente</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0f172a' }}>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left" style={{ color: '#94a3b8' }}>
+                              {['Atleta', 'Nº Peito', 'Status', 'Data'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {lastRegsEv.map(r => {
+                              const isPaid = r.status === 'paid' || r.status === 'confirmed';
+                              return (
+                                <tr key={r.id} style={{ borderTop: '1px solid #334155' }}>
+                                  <td className="px-3 py-2 text-white">{r.name}</td>
+                                  <td className="px-3 py-2 font-mono" style={{ color: '#C9A84C' }}>{r.registration_number}</td>
+                                  <td className="px-3 py-2">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isPaid ? 'bg-green-900 text-green-300' : 'bg-yellow-900 text-yellow-300'}`}>
+                                      {isPaid ? 'Confirmado' : 'Pendente'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs" style={{ color: '#94a3b8' }}>{new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -814,7 +888,7 @@ export function AdminDashboard() {
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-sm font-semibold text-white">Inscrições ({evRegs.length})</h4>
                     <button
-                      onClick={() => exportEventExcel(ev)}
+                      onClick={() => setExportModalEvent(ev)}
                       className="text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5"
                       style={{ backgroundColor: '#16a34a', color: '#fff' }}
                     >
@@ -872,6 +946,31 @@ export function AdminDashboard() {
               >
                 Excluir
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de seleção de status pra exportação */}
+      {exportModalEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setExportModalEvent(null)}>
+          <div className="w-full max-w-sm rounded-2xl" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#334155' }}>
+              <h3 className="text-lg font-bold text-white">Exportar Excel</h3>
+              <button onClick={() => setExportModalEvent(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
+            </div>
+            <div className="p-5 space-y-2">
+              <p className="text-sm mb-3" style={{ color: '#94a3b8' }}>Quais inscritos de "{exportModalEvent.title}" você quer exportar?</p>
+              {EXPORT_STATUS_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => exportEventExcel(exportModalEvent, opt.value)}
+                  className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-white hover:opacity-80"
+                  style={{ backgroundColor: '#0f172a', border: '1px solid #334155' }}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>

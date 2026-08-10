@@ -6,8 +6,17 @@ import { LAGOS_REGION_CITIES } from '../types';
 import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, ClipboardCheck, Search, Tag, X, Percent } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
+import { computeAthleteStats } from '../lib/athleteStats';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+
+type ExportStatusFilter = 'all' | 'paid' | 'pending' | 'cancelled';
+const EXPORT_STATUS_OPTIONS: { value: ExportStatusFilter; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'paid', label: 'Apenas Pagos/Confirmados' },
+  { value: 'pending', label: 'Apenas Pendentes/Aguardando' },
+  { value: 'cancelled', label: 'Apenas Cancelados' },
+];
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
 const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Bag', 'Squeeze (Garrafinha de água)', 'Outros'];
@@ -124,6 +133,7 @@ export function OrganizerDashboard() {
   const [allRegistrations, setAllRegistrations] = useState<any[]>([]);
   const [regSearch, setRegSearch] = useState('');
   const [maisDadosEventId, setMaisDadosEventId] = useState<string | null>(null);
+  const [exportModalEvent, setExportModalEvent] = useState<any | null>(null);
 
   useEffect(() => { loadEvents(); loadCoupons(); }, []);
 
@@ -375,27 +385,29 @@ export function OrganizerDashboard() {
     return null;
   };
 
-  const exportExcel = async (event: any) => {
+  const exportExcel = async (event: any, statusFilter: ExportStatusFilter) => {
     const { data } = await supabase.from('registrations').select('*').eq('event_id', event.id).order('registration_number');
-    const rows = (data || []).map(r => ({
-      'Nº Peito': r.registration_number,
+    const filtered = (data || []).filter(r => {
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'paid') return r.status === 'paid' || r.status === 'confirmed';
+      if (statusFilter === 'pending') return r.status === 'pending' || r.status === 'awaiting_payment';
+      return r.status === 'cancelled';
+    });
+    const rows = filtered.map(r => ({
       'Nome Completo': r.full_name || r.name,
       'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
-      'CPF': r.cpf,
-      'Email': r.email,
+      'Nº Peito': r.registration_number,
       'Telefone': r.phone,
       'Categoria': r.distance_name,
       'Distância': r.distance_name,
-      'Kit': r.registration_type_name || '-',
-      'Tamanho Camiseta': r.shirt_size,
-      'Status Pagamento': statusLabel(r.status),
-      'Data Inscrição': new Date(r.created_at).toLocaleDateString('pt-BR'),
+      'Tamanho': r.shirt_size,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
     const date = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
+    setExportModalEvent(null);
   };
 
   const openEdit = async (event: any) => {
@@ -791,7 +803,7 @@ export function OrganizerDashboard() {
                   <div className="flex gap-2 flex-shrink-0">
                     <a href={`/evento/${event.slug}`} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Visualizar"><Eye size={18} /></a>
                     <button onClick={() => openEdit(event)} className="p-2 text-gray-500 hover:text-[#C9A84C] border rounded-lg" title="Editar"><Edit size={18} /></button>
-                    <button onClick={() => exportExcel(event)} className="p-2 text-gray-500 hover:text-green-600 border rounded-lg" title="Exportar Excel"><Download size={18} /></button>
+                    <button onClick={() => setExportModalEvent(event)} className="p-2 text-gray-500 hover:text-green-600 border rounded-lg" title="Exportar Excel"><Download size={18} /></button>
                     <Link to={`/checkin/${event.slug}`} className="p-2 text-gray-500 hover:text-purple-600 border rounded-lg" title="Check-in"><ClipboardCheck size={18} /></Link>
                   </div>
                 </div>
@@ -1056,6 +1068,30 @@ export function OrganizerDashboard() {
               )}
             </div>
 
+            {/* Modal de seleção de status pra exportação */}
+            {exportModalEvent && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setExportModalEvent(null)}>
+                <div className="w-full max-w-sm rounded-2xl bg-white" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between p-5 border-b">
+                    <h3 className="text-lg font-bold text-gray-900">Exportar Excel</h3>
+                    <button onClick={() => setExportModalEvent(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
+                  </div>
+                  <div className="p-5 space-y-2">
+                    <p className="text-sm text-gray-500 mb-3">Quais inscritos de "{exportModalEvent.title}" você quer exportar?</p>
+                    {EXPORT_STATUS_OPTIONS.map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => exportExcel(exportModalEvent, opt.value)}
+                        className="w-full text-left px-4 py-2.5 rounded-lg border hover:border-[#C9A84C] hover:bg-amber-50 text-sm font-medium text-gray-700"
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Modal de uso do cupom */}
             {couponUsageModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setCouponUsageModal(null)}>
@@ -1115,36 +1151,7 @@ export function OrganizerDashboard() {
         {/* Mais Dados */}
         {tab === 'maisdados' && (() => {
           const regs = maisDadosEventId ? (eventRegistrations[maisDadosEventId] || []) : [];
-          const confirmedRegsMd = regs.filter(r => r.status === 'paid' || r.status === 'confirmed');
-          const pendingRegsMd = regs.filter(r => r.status === 'pending' || r.status === 'awaiting_payment');
-
-          const genderLabels: Record<string, string> = { M: 'Masculino', F: 'Feminino', O: 'Outro' };
-          const genderColors: Record<string, string> = { M: '#3B82F6', F: '#EC4899', O: '#9CA3AF' };
-          const genderCounts = regs.reduce((acc: Record<string, number>, r) => {
-            if (r.gender) acc[r.gender] = (acc[r.gender] || 0) + 1;
-            return acc;
-          }, {});
-          const genderData = Object.entries(genderCounts).map(([g, count]) => ({
-            name: genderLabels[g] || g,
-            value: count,
-            color: genderColors[g] || '#C9A84C',
-          }));
-
-          const calcAge = (birthDate: string) => {
-            const today = new Date();
-            const [y, m, d] = birthDate.split('-').map(Number);
-            let age = today.getFullYear() - y;
-            if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
-            return age;
-          };
-          const ages = regs.filter(r => r.birth_date).map(r => calcAge(r.birth_date));
-          const avgAge = ages.length ? Math.round(ages.reduce((s, a) => s + a, 0) / ages.length) : null;
-          const minAge = ages.length ? Math.min(...ages) : null;
-          const maxAge = ages.length ? Math.max(...ages) : null;
-
-          const lastRegs = [...regs]
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, 10);
+          const { confirmed: confirmedRegsMd, pending: pendingRegsMd, genderData, avgAge, minAge, maxAge, lastRegs } = computeAthleteStats(regs);
 
           return (
             <>
