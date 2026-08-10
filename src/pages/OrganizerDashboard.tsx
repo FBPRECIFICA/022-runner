@@ -7,6 +7,7 @@ import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import { computeAthleteStats } from '../lib/athleteStats';
+import { asaasFeeFromNetValue, netForOrganizer, paymentMethodLabel } from '../lib/asaasFee';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 
@@ -372,19 +373,6 @@ export function OrganizerDashboard() {
     return status;
   };
 
-  const paymentMethodLabel = (method: string | null | undefined) => {
-    if (method === 'PIX') return 'PIX';
-    if (method === 'CREDIT_CARD') return 'Cartão';
-    if (method === 'BOLETO') return 'Boleto';
-    return '-';
-  };
-
-  const asaasRateForMethod = (method: string | null | undefined): number | null => {
-    if (method === 'PIX') return 0.0099;
-    if (method === 'CREDIT_CARD') return 0.0299;
-    return null;
-  };
-
   const exportExcel = async (event: any, statusFilter: ExportStatusFilter) => {
     const { data } = await supabase.from('registrations').select('*').eq('event_id', event.id).order('registration_number');
     const filtered = (data || []).filter(r => {
@@ -638,8 +626,11 @@ export function OrganizerDashboard() {
           const paidRegs = allRegistrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
           const pendingRegs = allRegistrations.filter(r => r.status === 'pending' || r.status === 'awaiting_payment');
           const totalBruto = paidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-          const taxaAsaasEstimada = totalBruto * 0.015;
-          const estimadoAReceber = totalBruto - taxaAsaasEstimada;
+          const estimadoAReceber = paidRegs.reduce((s, r) => {
+            const base = Number(r.base_amount ?? r.amount ?? 0);
+            const net = netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value);
+            return s + (net ?? base);
+          }, 0);
 
           const weeklyData = (() => {
             const weeks: Record<string, number> = {};
@@ -671,7 +662,7 @@ export function OrganizerDashboard() {
                     <span className="text-xs font-medium text-gray-500">Est. a Receber*</span>
                   </div>
                   <p className="text-xl font-bold text-green-600">R$ {estimadoAReceber.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-xs text-gray-400">valor estimado, após taxas</p>
+                  <p className="text-xs text-gray-400">valor líquido, já descontada taxa Asaas</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#fde68a' }}>
                   <div className="flex items-center gap-2 mb-1">
@@ -684,7 +675,7 @@ export function OrganizerDashboard() {
               </div>
 
               <p className="text-xs text-gray-400 -mt-4 mb-4">
-                * Valor estimado. A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. O valor final pode variar, pois toda a parte financeira é controlada pelo Asaas, sistema financeiro independente.
+                * Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador.
               </p>
 
               {/* Gráfico de inscrições por semana */}
@@ -741,9 +732,9 @@ export function OrganizerDashboard() {
                       <tbody>
                         {filteredRegs.slice(0, 50).map(r => {
                           const valorInscricao = Number(r.base_amount ?? r.amount ?? 0);
-                          const asaasRate = asaasRateForMethod(r.payment_method);
-                          const taxaAsaas = asaasRate != null ? valorInscricao * asaasRate : null;
-                          const estLiquido = taxaAsaas != null ? valorInscricao - taxaAsaas : null;
+                          const valorCobrado = Number(r.amount ?? r.base_amount ?? 0);
+                          const taxaAsaas = asaasFeeFromNetValue(valorCobrado, r.asaas_net_value);
+                          const estLiquido = netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value);
                           const isPaid = r.status === 'paid' || r.status === 'confirmed';
                           const isCancelled = r.status === 'cancelled';
                           return (

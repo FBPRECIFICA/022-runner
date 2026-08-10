@@ -54,10 +54,15 @@ serve(async (req) => {
         })
       }
 
-      // Atualiza status para 'paid' e registra paid_at
+      // Atualiza status para 'paid' e registra paid_at + valor líquido real do Asaas
+      // (netValue já vem no payload do webhook — nunca estimar por fórmula, testado e não bate com a realidade)
+      const updatePayload: Record<string, unknown> = { status: 'paid', paid_at: now }
+      if (typeof payment?.netValue === 'number') updatePayload.asaas_net_value = payment.netValue
+      if (payment?.billingType) updatePayload.payment_method = payment.billingType
+
       const { error: updateError } = await supabase
         .from('registrations')
-        .update({ status: 'paid', paid_at: now })
+        .update(updatePayload)
         .eq('id', registrationId)
 
       if (updateError) {

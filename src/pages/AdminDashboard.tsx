@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
 import { computeAthleteStats } from '../lib/athleteStats';
+import { netForOrganizer } from '../lib/asaasFee';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 const LEO_PAGE_SIZE = 20;
@@ -227,25 +228,38 @@ export function AdminDashboard() {
               {tab === 'overview' && (
                 <div className="space-y-6">
                   <h1 className="text-2xl font-bold text-white">Visão Geral</h1>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {[
-                      { icon: <Calendar size={20} />, label: 'Eventos', value: stats.events, color: '#C9A84C' },
-                      { icon: <Users size={20} />, label: 'Usuários', value: stats.users, color: '#C9A84C' },
-                      { icon: <Award size={20} />, label: 'Inscrições', value: stats.registrations, color: '#16a34a' },
-                      { icon: <TrendingUp size={20} />, label: 'Total Bruto Inscrições', value: `R$ ${stats.revenue.toFixed(0)}`, color: '#C9A84C' },
-                      { icon: <DollarSign size={20} />, label: 'Taxa 022Runners (10%)', value: `R$ ${stats.platformRevenue.toFixed(0)}`, color: '#f87171' },
-                      { icon: <TrendingUp size={20} />, label: 'Est. Repasse*', value: `R$ ${(stats.revenue - stats.platformRevenue - stats.revenue * 0.015).toFixed(0)}`, color: '#22c55e' },
-                    ].map((s, i) => (
-                      <div key={i} className="rounded-xl p-4" style={{ backgroundColor: '#1e293b' }}>
-                        <div className="flex items-center gap-2 mb-2" style={{ color: s.color }}>{s.icon}</div>
-                        <p className="text-2xl font-bold text-white">{s.value}</p>
-                        <p className="text-sm" style={{ color: '#94a3b8' }}>{s.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs -mt-2" style={{ color: '#64748b' }}>
-                    * Valor estimado. Taxa Asaas varia: PIX 0,99% | Cartão 2,99%
-                  </p>
+                  {(() => {
+                    const paidRegsAll = registrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
+                    const taxaAsaasExata = paidRegsAll.reduce((s, r) => {
+                      const charged = Number(r.amount ?? r.base_amount ?? 0);
+                      const net = r.asaas_net_value != null ? Number(r.asaas_net_value) : null;
+                      return s + (net != null ? charged - net : 0);
+                    }, 0);
+                    const estRepasse = stats.revenue - stats.platformRevenue - taxaAsaasExata;
+                    return (
+                      <>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                          {[
+                            { icon: <Calendar size={20} />, label: 'Eventos', value: stats.events, color: '#C9A84C' },
+                            { icon: <Users size={20} />, label: 'Usuários', value: stats.users, color: '#C9A84C' },
+                            { icon: <Award size={20} />, label: 'Inscrições', value: stats.registrations, color: '#16a34a' },
+                            { icon: <TrendingUp size={20} />, label: 'Total Bruto Inscrições', value: `R$ ${stats.revenue.toFixed(0)}`, color: '#C9A84C' },
+                            { icon: <DollarSign size={20} />, label: 'Taxa 022Runners (10%)', value: `R$ ${stats.platformRevenue.toFixed(0)}`, color: '#f87171' },
+                            { icon: <TrendingUp size={20} />, label: 'Est. Repasse*', value: `R$ ${estRepasse.toFixed(0)}`, color: '#22c55e' },
+                          ].map((s, i) => (
+                            <div key={i} className="rounded-xl p-4" style={{ backgroundColor: '#1e293b' }}>
+                              <div className="flex items-center gap-2 mb-2" style={{ color: s.color }}>{s.icon}</div>
+                              <p className="text-2xl font-bold text-white">{s.value}</p>
+                              <p className="text-sm" style={{ color: '#94a3b8' }}>{s.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs -mt-2" style={{ color: '#64748b' }}>
+                          * Taxa Asaas real, registrada por transação (não é estimativa).
+                        </p>
+                      </>
+                    );
+                  })()}
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="rounded-xl p-5" style={{ backgroundColor: '#1e293b' }}>
@@ -550,7 +564,11 @@ export function AdminDashboard() {
         const orgRegs = registrations.filter(r => orgEventIds.includes(r.event_id));
         const orgPaidRegs = orgRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
         const totalBruto = orgPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-        const estimado = totalBruto - totalBruto * 0.015;
+        const estimado = orgPaidRegs.reduce((s, r) => {
+          const base = Number(r.base_amount ?? r.amount ?? 0);
+          const net = netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value);
+          return s + (net ?? base);
+        }, 0);
         const recentRegs = [...orgRegs]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 20);
@@ -577,7 +595,7 @@ export function AdminDashboard() {
                     <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
-                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor estimado. A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. O valor final pode variar, pois toda a parte financeira é controlada pelo Asaas, sistema financeiro independente.</p>
+                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador.</p>
 
                 <div>
                   <h4 className="text-sm font-semibold text-white mb-2">Eventos ({orgEvents.length})</h4>
@@ -745,7 +763,11 @@ export function AdminDashboard() {
         const evRegs = registrations.filter(r => r.event_id === ev.id);
         const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
         const bruto = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-        const estimado = bruto - bruto * 0.015;
+        const estimado = evPaidRegs.reduce((s, r) => {
+          const base = Number(r.base_amount ?? r.amount ?? 0);
+          const net = netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value);
+          return s + (net ?? base);
+        }, 0);
         const mdRegsEv = evRegs.filter(r => r.status !== 'cancelled');
         const { confirmed: mdConfirmedEv, pending: mdPendingEv, genderData: genderDataEv, avgAge: avgAgeEv, minAge: minAgeEv, maxAge: maxAgeEv, lastRegs: lastRegsEv } = computeAthleteStats(mdRegsEv);
 
@@ -767,7 +789,7 @@ export function AdminDashboard() {
                     <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
-                <p className="text-xs" style={{ color: '#64748b' }}>* Valor estimado. A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. O valor final pode variar, pois toda a parte financeira é controlada pelo Asaas, sistema financeiro independente.</p>
+                <p className="text-xs" style={{ color: '#64748b' }}>* Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador.</p>
 
                 <div>
                   <h4 className="text-sm font-semibold text-white mb-2">Mais Dados</h4>
