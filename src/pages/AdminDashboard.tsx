@@ -101,11 +101,12 @@ export function AdminDashboard() {
     setUsers(usrs || []);
     setRegistrations(regs || []);
     const paidRegs = (regs || []).filter(r => r.status === 'paid' || r.status === 'confirmed');
-    // Mesma lógica do OrganizerDashboard: total bruto = soma de base_amount (fallback amount),
-    // taxa plataforma = SEMPRE 10% do total bruto (nunca soma o platform_fee gravado por linha,
-    // que pode estar zerado em inscrições antigas migradas antes do modelo de taxa separada).
+    // Mesma lógica do OrganizerDashboard: total bruto = soma de base_amount (fallback amount).
+    // Taxa plataforma = SEMPRE 10% do preço ORIGINAL (base_amount + discount_amount), nunca do
+    // total bruto pós-cupom nem da coluna platform_fee gravada por linha (que pode estar zerada
+    // em inscrições antigas migradas antes do modelo de taxa separada).
     const revenue = paidRegs.reduce((a, r) => a + Number(r.base_amount ?? r.amount ?? 0), 0);
-    const platformRevenue = revenue * 0.10;
+    const platformRevenue = paidRegs.reduce((a, r) => a + Math.round((Number(r.base_amount ?? r.amount ?? 0) + Number(r.discount_amount ?? 0)) * 0.10 * 100) / 100, 0);
     setStats({ events: evts?.length || 0, users: usrs?.length || 0, registrations: regs?.length || 0, revenue, platformRevenue });
 
     // Monthly chart
@@ -302,8 +303,9 @@ export function AdminDashboard() {
                       <tbody>
                         {events.map(e => {
                           const evRegs = registrations.filter(r => r.event_id === e.id);
-                          const evRevenue = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed').reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-                          const evComissao = evRevenue * 0.10;
+                          const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
+                          const evRevenue = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
+                          const evComissao = evPaidRegs.reduce((s, r) => s + Math.round((Number(r.base_amount ?? r.amount ?? 0) + Number(r.discount_amount ?? 0)) * 0.10 * 100) / 100, 0);
                           const organizerName = users.find(u => u.id === e.organizer_id)?.name || '—';
                           return (
                             <tr key={e.id} style={{ borderTop: '1px solid #334155' }}>
