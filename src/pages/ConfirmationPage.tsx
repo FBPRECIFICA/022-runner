@@ -108,6 +108,7 @@ export function ConfirmationPage() {
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
               <p className="font-semibold">⚡ Aguardando Pagamento</p>
               <p className="mt-1">Finalize o pagamento para garantir sua vaga no evento.</p>
+              <p className="mt-2">Se você já pagou: estamos processando seu pagamento junto ao Asaas. Em até 4 horas, enviaremos a confirmação por e-mail e ela também aparecerá aqui no site.</p>
             </div>
             <Link
               to={`/pagamento/${registrationId}`}
