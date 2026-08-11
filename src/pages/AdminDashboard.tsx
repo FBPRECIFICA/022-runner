@@ -257,6 +257,9 @@ export function AdminDashboard() {
                         <p className="text-xs -mt-2" style={{ color: '#64748b' }}>
                           * Taxa Asaas real, registrada por transação (não é estimativa).
                         </p>
+                        <p className="text-xs -mt-1" style={{ color: '#f87171' }}>
+                          -R$50,45 (ajuste histórico: 32 inscrições com cupom calculadas pela regra antiga, antes da correção de 11/08/2026 — absorvido pela 022Runners)
+                        </p>
                       </>
                     );
                   })()}
