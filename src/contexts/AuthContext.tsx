@@ -9,8 +9,8 @@ interface AuthContextType {
   isOrganizer: boolean;
   isAthlete: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; errorCode?: string; message?: string }>;
-  loginWithGoogle: () => Promise<void>;
-  register: (name: string, email: string, password: string, role?: string) => Promise<boolean>;
+  loginWithGoogle: (redirectTo?: string) => Promise<void>;
+  register: (name: string, email: string, password: string, role?: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
 }
 
@@ -88,22 +88,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: false, errorCode: error.code ?? '', message: error.message ?? '' };
   };
 
-  const loginWithGoogle = async (): Promise<void> => {
+  const loginWithGoogle = async (redirectTo?: string): Promise<void> => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'https://adorzqjhazsfvbttlfht.supabase.co/auth/v1/callback' },
+      options: { redirectTo: redirectTo || window.location.origin },
     });
   };
 
-  const register = async (name: string, email: string, password: string, role = 'athlete'): Promise<boolean> => {
+  const register = async (name: string, email: string, password: string, role = 'athlete'): Promise<{ success: boolean; message?: string }> => {
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error || !data.user) return false;
+    if (error || !data.user) return { success: false, message: error?.message };
     const { error: profileError } = await supabase.from('users').upsert(
       { id: data.user.id, name, email, role },
       { onConflict: 'id', ignoreDuplicates: false }
     );
     if (profileError) console.warn('Profile upsert warning:', profileError.message);
-    return true;
+    return { success: true };
   };
 
   const logout = async () => {

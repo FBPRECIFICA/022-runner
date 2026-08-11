@@ -6,15 +6,17 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 import { trackRegistrationStart, trackRegistrationComplete } from '../utils/analytics';
 import { validateCPF } from '../utils/validators';
 import { TermoResponsabilidade } from '../components/TermoResponsabilidade';
+import { AccountGate } from '../components/AccountGate';
 import { SecurityBadges } from '../components/SecurityBadges';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não sei'];
 const LS_KEY = 'reg_form_draft';
+const LS_STEP_KEY = 'reg_form_step';
 
-type Step = 'form' | 'termo' | 'confirmação';
-const STEPS: Step[] = ['form', 'termo', 'confirmação'];
-const STEP_LABELS = ['1. Dados', '2. Termo', '3. Confirmação'];
+type Step = 'form' | 'termo' | 'conta' | 'confirmação';
+const STEPS: Step[] = ['form', 'termo', 'conta', 'confirmação'];
+const STEP_LABELS = ['1. Dados', '2. Termo', '3. Conta', '4. Confirmação'];
 
 function formatCPF(v: string) {
   return v.replace(/\D/g, '').slice(0, 11)
@@ -102,6 +104,22 @@ export function RegistrationPage() {
     if (!loading) localStorage.setItem(LS_KEY, JSON.stringify(form));
   }, [form, loading]);
 
+  // Restaura o passo "conta" após reload/retorno do redirect do Google OAuth
+  useEffect(() => {
+    if (localStorage.getItem(LS_STEP_KEY) === 'conta') setStep('conta');
+  }, []);
+
+  // Ponto único de convergência: login por senha, cadastro por senha ou volta do Google
+  // OAuth passam todos por aqui — é o AuthContext.user virar truthy que dispara o avanço,
+  // nunca uma chamada direta do AccountGate (login()/register() resolver não garante que
+  // o contexto já populou `user`, isso acontece de forma assíncrona via onAuthStateChange).
+  useEffect(() => {
+    if (step === 'conta' && user && !submitting) {
+      finalizeRegistration();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, user]);
+
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
   // Kit/distância pré-selecionados ao vir do botão "INSCREVER" de um card específico na página do evento.
@@ -135,17 +153,6 @@ export function RegistrationPage() {
     setSubmitting(true);
     setError('');
     try {
-      const distances = event.distances || [];
-      const chosen = distances[form.distance_index] || distances[0];
-      const price = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
-
-      // Tipos de inscrição (kits): recurso independente da distância/lote. Quando o
-      // evento tem kits cadastrados, o valor cobrado vem exclusivamente do kit escolhido.
-      const hasKits = registrationTypes.length > 0;
-      const chosenKit = hasKits ? (registrationTypes[form.registration_type_index] || registrationTypes[0]) : null;
-      const finalPrice = hasKits ? Number(chosenKit.price) : Number(price);
-      const platformFee = Math.round(finalPrice * 0.10 * 100) / 100;
-
       // Proteção contra inscrição duplicada pelo mesmo CPF no mesmo evento
       const cleanCpf = form.cpf.replace(/\D/g, '');
       const { data: existingRegs } = await supabase
@@ -162,15 +169,55 @@ export function RegistrationPage() {
         } else {
           setPendingDup(existingReg);
         }
+        localStorage.removeItem(LS_STEP_KEY);
         setStep('form');
         setSubmitting(false);
         return;
       }
+    } catch (err: any) {
+      setError(err.message || 'Erro ao verificar inscrição. Tente novamente.');
+      setStep('form');
+      setSubmitting(false);
+      return;
+    }
+
+    // Sem conta: pausa aqui e pede login/cadastro antes de gravar a inscrição —
+    // garante que user_id nunca nasça nulo. Com conta: segue direto.
+    if (user) {
+      await finalizeRegistration();
+    } else {
+      localStorage.setItem(LS_STEP_KEY, 'conta');
+      setStep('conta');
+      setSubmitting(false);
+    }
+  };
+
+  const handleAccountBack = () => {
+    localStorage.removeItem(LS_STEP_KEY);
+    setStep('termo');
+  };
+
+  const finalizeRegistration = async () => {
+    if (!user) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const distances = event.distances || [];
+      const chosen = distances[form.distance_index] || distances[0];
+      const price = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
+
+      // Tipos de inscrição (kits): recurso independente da distância/lote. Quando o
+      // evento tem kits cadastrados, o valor cobrado vem exclusivamente do kit escolhido.
+      const hasKits = registrationTypes.length > 0;
+      const chosenKit = hasKits ? (registrationTypes[form.registration_type_index] || registrationTypes[0]) : null;
+      const finalPrice = hasKits ? Number(chosenKit.price) : Number(price);
+      const platformFee = Math.round(finalPrice * 0.10 * 100) / 100;
+      const cleanCpf = form.cpf.replace(/\D/g, '');
 
       // registration_number gerado atomicamente pelo trigger trg_auto_registration_number no banco
       const { data, error: insertError } = await supabase.from('registrations').insert({
         event_id: event.id,
-        user_id: user?.id || null,
+        user_id: user.id,
         name: form.name,
         cpf: cleanCpf,
         birth_date: birthdateToISO(form.birthdate) || null,
@@ -200,13 +247,14 @@ export function RegistrationPage() {
       if (insertError) throw insertError;
       trackRegistrationComplete(event.title, finalPrice);
       localStorage.removeItem(LS_KEY);
+      localStorage.removeItem(LS_STEP_KEY);
       setRegistrationId(data.id);
 
       // Salvar termo de aceite — non-blocking: não interrompe fluxo se falhar
       try {
         await supabase.from('termo_aceites').insert({
           registration_id: data.id,
-          user_id: user?.id || null,
+          user_id: user.id,
           event_id: event.id,
           nome: form.name,
           cpf: form.cpf.replace(/\D/g, ''),
@@ -438,7 +486,21 @@ export function RegistrationPage() {
           </div>
         )}
 
-        {/* ETAPA 3: Confirmação */}
+        {/* ETAPA 3: Conta */}
+        {step === 'conta' && (
+          <div className="space-y-4">
+            {submitting ? (
+              <div className="bg-white rounded-xl border p-8 text-center">
+                <Loader2 size={32} className="animate-spin mx-auto mb-3" style={{ color: '#C9A84C' }} />
+                <p className="text-gray-600">Salvando sua inscrição...</p>
+              </div>
+            ) : (
+              <AccountGate defaultName={form.name} defaultEmail={form.email} onBack={handleAccountBack} />
+            )}
+          </div>
+        )}
+
+        {/* ETAPA 4: Confirmação */}
         {step === 'confirmação' && registrationId && (
           <div className="bg-white rounded-xl border shadow-sm p-6 text-center space-y-4">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{ backgroundColor: '#f0fdf4' }}>
