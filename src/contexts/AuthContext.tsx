@@ -49,6 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         }
       }
+
+      // Vincula inscrições feitas como convidado (antes de ter conta) ao usuário logado
+      supabase.rpc('claim_orphan_registrations').then(({ error: claimError }) => {
+        if (claimError) console.warn('claim_orphan_registrations warning:', claimError.message);
+      });
     } catch (err) {
       console.error('loadUserProfile error:', err);
     } finally {
