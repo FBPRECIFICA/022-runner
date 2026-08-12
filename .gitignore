@@ -6,3 +6,4 @@ dist/
 .claude/
 supabase/.env
 supabase/config.toml
+leia/
