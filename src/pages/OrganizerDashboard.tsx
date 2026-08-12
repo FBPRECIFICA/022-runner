@@ -265,6 +265,10 @@ export function OrganizerDashboard() {
   };
 
   const deleteCoupon = async (coupon: any) => {
+    if (coupon.current_uses > 0) {
+      toast.error('Este cupom já foi usado — desative em vez de excluir, pra não perder o histórico de uso.');
+      return;
+    }
     if (!window.confirm(`Tem certeza que deseja excluir o cupom ${coupon.code}?`)) return;
     const { error } = await supabase
       .from('coupons')
@@ -876,6 +880,17 @@ export function OrganizerDashboard() {
           const usesToday = couponUsages.filter(u => new Date(u.created_at).toDateString() === today).length;
           const totalDiscountGranted = couponUsages.reduce((s, u) => s + Number(u.discount_amount || 0), 0);
 
+          const couponSummaryByCode = new Map<string, { code: string; usos: number; totalDiscount: number; lastUse: string }>();
+          couponUsages.forEach(u => {
+            if (!u.coupon_code) return;
+            const entry = couponSummaryByCode.get(u.coupon_code) || { code: u.coupon_code, usos: 0, totalDiscount: 0, lastUse: u.created_at };
+            entry.usos += 1;
+            entry.totalDiscount += Number(u.discount_amount || 0);
+            if (new Date(u.created_at) > new Date(entry.lastUse)) entry.lastUse = u.created_at;
+            couponSummaryByCode.set(u.coupon_code, entry);
+          });
+          const couponUsageSummary = Array.from(couponSummaryByCode.values()).sort((a, b) => b.usos - a.usos);
+
           return (
           <div className="space-y-6">
             {/* Resumo de cupons */}
@@ -1043,14 +1058,58 @@ export function OrganizerDashboard() {
                               >
                                 {c.active ? 'Desativar' : 'Ativar'}
                               </button>
-                              <button
-                                onClick={() => deleteCoupon(c)}
-                                className="text-xs px-2 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
-                              >
-                                Excluir
-                              </button>
+                              {c.current_uses > 0 ? (
+                                <span
+                                  className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-400 cursor-not-allowed"
+                                  title="Cupom já usado — desative em vez de excluir, pra não perder o histórico de uso"
+                                >
+                                  Excluir
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => deleteCoupon(c)}
+                                  className="text-xs px-2 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
+                                >
+                                  Excluir
+                                </button>
+                              )}
                             </div>
                           </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-xl border overflow-hidden">
+              <div className="px-4 py-3 border-b">
+                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2"><TrendingUp size={16} style={{ color: '#C9A84C' }} /> Demonstrativo de Uso de Cupons</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Inclui cupons já usados mesmo que tenham sido excluídos depois</p>
+              </div>
+              {loadingCouponUsages ? (
+                <p className="text-center text-gray-400 text-sm py-8">Carregando...</p>
+              ) : couponUsageSummary.length === 0 ? (
+                <p className="text-center text-gray-400 text-sm py-8">Nenhum cupom foi usado ainda.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b text-gray-500">
+                        <th className="px-4 py-2 font-medium">Código</th>
+                        <th className="px-4 py-2 font-medium">Usos</th>
+                        <th className="px-4 py-2 font-medium">Desconto Total Concedido</th>
+                        <th className="px-4 py-2 font-medium">Último Uso</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {couponUsageSummary.map(s => (
+                        <tr key={s.code} className="border-b last:border-0 hover:bg-gray-50">
+                          <td className="px-4 py-2 font-mono font-bold text-gray-900">{s.code}</td>
+                          <td className="px-4 py-2 text-gray-700">{s.usos}</td>
+                          <td className="px-4 py-2 text-gray-700">R$ {s.totalDiscount.toFixed(2).replace('.', ',')}</td>
+                          <td className="px-4 py-2 text-gray-500">{new Date(s.lastUse).toLocaleDateString('pt-BR')}</td>
                         </tr>
                       ))}
                     </tbody>
