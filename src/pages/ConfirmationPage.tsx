@@ -12,7 +12,7 @@ export function ConfirmationPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: r } = await supabase.from('registrations').select('*').eq('id', registrationId).single();
+      const { data: r } = await supabase.rpc('get_registration_public', { p_id: registrationId }).single() as { data: any };
       if (r) {
         setReg(r);
         const { data: e } = await supabase.from('events').select('*').eq('id', r.event_id).single();

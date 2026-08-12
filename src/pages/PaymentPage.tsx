@@ -48,10 +48,8 @@ export function PaymentPage() {
   useEffect(() => {
     async function load() {
       const { data: regData } = await supabase
-        .from('registrations')
-        .select('*')
-        .eq('id', registrationId)
-        .single();
+        .rpc('get_registration_public', { p_id: registrationId })
+        .single() as { data: Record<string, any> | null };
       if (regData) {
         setReg(regData);
         const { data: evData } = await supabase
@@ -78,10 +76,8 @@ export function PaymentPage() {
     const intervalId = setInterval(async () => {
       try {
         const { data } = await supabase
-          .from('registrations')
-          .select('status')
-          .eq('id', registrationId)
-          .single();
+          .rpc('get_registration_public', { p_id: registrationId })
+          .single() as { data: Record<string, any> | null };
         if (data?.status === 'paid') {
           clearInterval(intervalId);
           setPolling(false);
@@ -146,7 +142,7 @@ export function PaymentPage() {
         setCouponMessage({ type: 'error', text: result?.message || 'Cupom inválido.' });
         return;
       }
-      const { data: refreshed } = await supabase.from('registrations').select('*').eq('id', registrationId).single();
+      const { data: refreshed } = await supabase.rpc('get_registration_public', { p_id: registrationId }).single() as { data: Record<string, any> | null };
       if (refreshed) setReg(refreshed);
       setCouponMessage({
         type: 'success',
@@ -171,10 +167,8 @@ export function PaymentPage() {
 
   const handleVerifyPayment = async () => {
     const { data } = await supabase
-      .from('registrations')
-      .select('status')
-      .eq('id', registrationId)
-      .single();
+      .rpc('get_registration_public', { p_id: registrationId })
+      .single() as { data: Record<string, any> | null };
     if (data?.status === 'paid') {
       navigate(`/confirmacao/${registrationId}`);
     }
