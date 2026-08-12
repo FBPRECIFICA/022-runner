@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
 import { computeAthleteStats } from '../lib/athleteStats';
+import { summarizeCouponUsage } from '../lib/couponStats';
 import { asaasFeeFromNetValue, netForOrganizer } from '../lib/asaasFee';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
@@ -576,6 +577,7 @@ export function AdminDashboard() {
         const recentRegs = [...orgRegs]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 20);
+        const orgCouponSummary = summarizeCouponUsage(orgRegs);
 
         const effectiveMdEventId = orgEvents.some(e => e.id === orgMaisDadosEventId) ? orgMaisDadosEventId : (orgEvents[0]?.id || null);
         const mdRegs = effectiveMdEventId ? registrations.filter(r => r.event_id === effectiveMdEventId && r.status !== 'cancelled') : [];
@@ -732,6 +734,31 @@ export function AdminDashboard() {
                 </div>
 
                 <div>
+                  <h4 className="text-sm font-semibold text-white mb-2">Demonstrativo de Uso de Cupons</h4>
+                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0f172a' }}>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left" style={{ color: '#94a3b8' }}>
+                          {['Código', 'Usos', 'Desconto Total Concedido', 'Último Uso'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orgCouponSummary.length === 0 ? (
+                          <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum cupom foi usado ainda.</td></tr>
+                        ) : orgCouponSummary.map(s => (
+                          <tr key={s.code} style={{ borderTop: '1px solid #334155' }}>
+                            <td className="px-3 py-2 font-mono font-bold text-white">{s.code}</td>
+                            <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{s.usos}</td>
+                            <td className="px-3 py-2" style={{ color: '#94a3b8' }}>R$ {s.totalDiscount.toFixed(2).replace('.', ',')}</td>
+                            <td className="px-3 py-2 text-xs" style={{ color: '#94a3b8' }}>{new Date(s.lastUse).toLocaleDateString('pt-BR')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
                   <h4 className="text-sm font-semibold text-white mb-2">Inscrições Recentes</h4>
                   <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0f172a' }}>
                     <table className="w-full text-sm">
@@ -774,6 +801,7 @@ export function AdminDashboard() {
         }, 0);
         const mdRegsEv = evRegs.filter(r => r.status !== 'cancelled');
         const { confirmed: mdConfirmedEv, pending: mdPendingEv, genderData: genderDataEv, avgAge: avgAgeEv, minAge: minAgeEv, maxAge: maxAgeEv, lastRegs: lastRegsEv } = computeAthleteStats(mdRegsEv);
+        const evCouponSummary = summarizeCouponUsage(evRegs);
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setSelectedEventPreview(null)}>
@@ -903,6 +931,33 @@ export function AdminDashboard() {
                             <td className="px-3 py-2 font-mono font-bold text-white">{c.code}</td>
                             <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{c.discount_type === 'percent' ? `${c.discount_value}%` : `R$ ${Number(c.discount_value).toFixed(2).replace('.', ',')}`}</td>
                             <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{c.current_uses ?? 0}{c.max_uses ? ` de ${c.max_uses}` : ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-white">Demonstrativo de Uso de Cupons</h4>
+                  </div>
+                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0f172a' }}>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left" style={{ color: '#94a3b8' }}>
+                          {['Código', 'Usos', 'Desconto Total Concedido', 'Último Uso'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {evCouponSummary.length === 0 ? (
+                          <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum cupom foi usado ainda.</td></tr>
+                        ) : evCouponSummary.map(s => (
+                          <tr key={s.code} style={{ borderTop: '1px solid #334155' }}>
+                            <td className="px-3 py-2 font-mono font-bold text-white">{s.code}</td>
+                            <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{s.usos}</td>
+                            <td className="px-3 py-2" style={{ color: '#94a3b8' }}>R$ {s.totalDiscount.toFixed(2).replace('.', ',')}</td>
+                            <td className="px-3 py-2 text-xs" style={{ color: '#94a3b8' }}>{new Date(s.lastUse).toLocaleDateString('pt-BR')}</td>
                           </tr>
                         ))}
                       </tbody>

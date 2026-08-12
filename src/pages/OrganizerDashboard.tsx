@@ -7,6 +7,7 @@ import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import { computeAthleteStats } from '../lib/athleteStats';
+import { summarizeCouponUsage } from '../lib/couponStats';
 import { asaasFeeFromNetValue, netForOrganizer, paymentMethodLabel } from '../lib/asaasFee';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
@@ -879,17 +880,7 @@ export function OrganizerDashboard() {
           const today = new Date().toDateString();
           const usesToday = couponUsages.filter(u => new Date(u.created_at).toDateString() === today).length;
           const totalDiscountGranted = couponUsages.reduce((s, u) => s + Number(u.discount_amount || 0), 0);
-
-          const couponSummaryByCode = new Map<string, { code: string; usos: number; totalDiscount: number; lastUse: string }>();
-          couponUsages.forEach(u => {
-            if (!u.coupon_code) return;
-            const entry = couponSummaryByCode.get(u.coupon_code) || { code: u.coupon_code, usos: 0, totalDiscount: 0, lastUse: u.created_at };
-            entry.usos += 1;
-            entry.totalDiscount += Number(u.discount_amount || 0);
-            if (new Date(u.created_at) > new Date(entry.lastUse)) entry.lastUse = u.created_at;
-            couponSummaryByCode.set(u.coupon_code, entry);
-          });
-          const couponUsageSummary = Array.from(couponSummaryByCode.values()).sort((a, b) => b.usos - a.usos);
+          const couponUsageSummary = summarizeCouponUsage(couponUsages);
 
           return (
           <div className="space-y-6">
