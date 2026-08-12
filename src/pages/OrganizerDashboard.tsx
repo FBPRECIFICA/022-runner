@@ -878,8 +878,11 @@ export function OrganizerDashboard() {
         {tab === 'cupons' && (() => {
           const activeCouponsCount = coupons.filter(c => c.active).length;
           const today = new Date().toDateString();
-          const usesToday = couponUsages.filter(u => new Date(u.created_at).toDateString() === today).length;
-          const totalDiscountGranted = couponUsages.reduce((s, u) => s + Number(u.discount_amount || 0), 0);
+          // Só contamos cupom aplicado num pagamento que realmente foi confirmado — pendente
+          // (carrinho abandonado) infla o número que o organizador usa pra avaliar parcerias.
+          const paidCouponUsages = couponUsages.filter(u => u.status === 'paid' || u.status === 'confirmed');
+          const usesToday = paidCouponUsages.filter(u => new Date(u.created_at).toDateString() === today).length;
+          const totalDiscountGranted = paidCouponUsages.reduce((s, u) => s + Number(u.discount_amount || 0), 0);
           const couponUsageSummary = summarizeCouponUsage(couponUsages);
 
           return (
