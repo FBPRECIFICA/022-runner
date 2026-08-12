@@ -22,11 +22,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, email, role, phone, city')
-        .eq('id', userId)
-        .single();
+      // Tenta algumas vezes antes de desistir: logo após um cadastro novo, o registro em
+      // public.users (feito por register(), abaixo) pode ainda não ter comitado quando
+      // onAuthStateChange já disparou isso aqui — sem retry, cai no fallback sintético
+      // abaixo com um `user` que não existe em public.users, e a inscrição que vem na
+      // sequência quebra a FK registrations_user_id_fkey. Ver PRIORIDADE MÁXIMA (12/08).
+      let data: any = null;
+      let error: any = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const result = await supabase
+          .from('users')
+          .select('id, name, email, role, phone, city')
+          .eq('id', userId)
+          .single();
+        data = result.data;
+        error = result.error;
+        if (data) break;
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
 
       console.log('Profile data:', data, 'Error:', error);
 
@@ -102,7 +115,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { id: data.user.id, name, email, role },
       { onConflict: 'id', ignoreDuplicates: false }
     );
-    if (profileError) console.warn('Profile upsert warning:', profileError.message);
+    if (profileError) {
+      console.error('Profile upsert failed:', profileError.message);
+      return { success: false, message: 'Erro ao criar seu perfil. Tente novamente.' };
+    }
     return { success: true };
   };
 
