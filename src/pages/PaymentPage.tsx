@@ -144,9 +144,13 @@ export function PaymentPage() {
       }
       const { data: refreshed } = await supabase.rpc('get_registration_public', { p_id: registrationId }).single() as { data: Record<string, any> | null };
       if (refreshed) setReg(refreshed);
+      // Compara o total SEM cupom (base original + taxa) contra o total COM
+      // cupom já aplicado — mostra o impacto real no que o atleta paga, não
+      // só o desconto na base (que sozinho não reflete a taxa fixa).
+      const totalWithoutCoupon = Number(result.base_amount) + Number(result.discount_amount) + Number(result.platform_fee);
       setCouponMessage({
         type: 'success',
-        text: `Cupom ${couponInput.trim().toUpperCase()} aplicado — De R$ ${Number(refreshed?.distance_price ?? 0).toFixed(2).replace('.', ',')} por R$ ${Number(result.base_amount).toFixed(2).replace('.', ',')}`,
+        text: `Cupom ${couponInput.trim().toUpperCase()} aplicado — De R$ ${totalWithoutCoupon.toFixed(2).replace('.', ',')} por R$ ${Number(result.total_amount).toFixed(2).replace('.', ',')}`,
       });
     } catch (err) {
       setCouponMessage({ type: 'error', text: err instanceof Error ? err.message : 'Erro ao aplicar cupom.' });
@@ -208,10 +212,16 @@ export function PaymentPage() {
     ['Nº Inscrição', String(reg.registration_number ?? '')],
   ];
 
-  const baseAmount = Number(reg.base_amount ?? reg.distance_price ?? reg.amount ?? 0);
+  // Regra vigente (11/08): taxa da plataforma é sempre 10% sobre o valor ORIGINAL
+  // da inscrição, e o cupom desconta só a parte do organizador — nunca a taxa.
+  // amount = original + platformFee - discountAmount (ver apply_coupon_to_registration).
+  // Derivar o valor original a partir dessa identidade garante que as 3 linhas
+  // exibidas sempre somem exatamente o total, mesmo pra registros antigos.
   const discountAmount = Number(reg.discount_amount ?? 0);
   const platformFee = Number(reg.platform_fee ?? 0);
-  const hasCoupon = !!reg.coupon_code;
+  const totalAmount = Number(reg.amount ?? 0);
+  const originalValue = totalAmount - platformFee + discountAmount;
+  const hasCoupon = !!reg.coupon_code && discountAmount > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -228,23 +238,23 @@ export function PaymentPage() {
               </div>
             ))}
             <div className="flex justify-between border-b pb-1.5">
-              <span className="text-gray-500">Inscrição</span>
-              <span className="font-medium text-gray-900">R$ {baseAmount.toFixed(2).replace('.', ',')}</span>
+              <span className="text-gray-500">Valor da inscrição (base)</span>
+              <span className="font-medium text-gray-900">R$ {originalValue.toFixed(2).replace('.', ',')}</span>
             </div>
-            {hasCoupon && discountAmount > 0 && (
+            <div className="flex justify-between border-b pb-1.5">
+              <span className="text-gray-500">Taxa da plataforma (10%, fixa sobre valor original)</span>
+              <span className="font-medium text-gray-900">+ R$ {platformFee.toFixed(2).replace('.', ',')}</span>
+            </div>
+            {hasCoupon && (
               <div className="flex justify-between border-b pb-1.5">
-                <span className="text-green-600">Cupom {String(reg.coupon_code ?? '')}</span>
-                <span className="font-medium text-green-600">- R$ {discountAmount.toFixed(2).replace('.', ',')}</span>
+                <span className="text-green-600">Desconto do cupom {String(reg.coupon_code ?? '')} (aplicado só na base)</span>
+                <span className="font-medium text-green-600">− R$ {discountAmount.toFixed(2).replace('.', ',')}</span>
               </div>
             )}
-            <div className="flex justify-between border-b pb-1.5">
-              <span className="text-gray-500">Taxa da plataforma</span>
-              <span className="font-medium text-gray-900">R$ {platformFee.toFixed(2).replace('.', ',')}</span>
-            </div>
             <div className="flex justify-between pt-1 font-bold text-lg">
-              <span>Total</span>
+              <span>Total a pagar</span>
               <span className="text-[#C9A84C]">
-                R$ {Number(reg.amount).toFixed(2).replace('.', ',')}
+                R$ {totalAmount.toFixed(2).replace('.', ',')}
               </span>
             </div>
           </div>
