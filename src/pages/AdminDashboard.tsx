@@ -161,15 +161,19 @@ export function AdminDashboard() {
         return r.status === 'cancelled';
       })
       .sort((a, b) => (a.registration_number || '').localeCompare(b.registration_number || ''));
-    const rows = evtRegs.map(r => ({
-      'Nome Completo': r.full_name || r.name,
-      'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
-      'Nº Peito': r.registration_number,
-      'Telefone': r.phone,
-      'Categoria': r.distance_name,
-      'Distância': r.distance_name,
-      'Tamanho': r.shirt_size,
-    }));
+    const rows = evtRegs.map(r => {
+      const includesShirt = !(r.registration_type_name || '').toLowerCase().includes('econ');
+      return {
+        'Nome Completo': r.full_name || r.name,
+        'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
+        'Nº Peito': r.registration_number,
+        'Telefone': r.phone,
+        'Categoria': r.distance_name,
+        'Distância': r.distance_name,
+        'Kit': includesShirt ? 'Completo' : 'Econômico',
+        'Tamanho': includesShirt ? r.shirt_size : '',
+      };
+    });
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');

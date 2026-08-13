@@ -46,7 +46,9 @@ export function RegistrationPage() {
   const { user } = useAuth();
 
   const [event, setEvent] = useState<any>(null);
-  const [registrationTypes, setRegistrationTypes] = useState<any[]>([]);
+  // Padrão definitivo: kit é sub-item da distância (event_distances -> registration_types),
+  // nunca mais solto no evento nem embutido no texto da distância.
+  const [eventDistances, setEventDistances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<Step>('form');
@@ -62,7 +64,7 @@ export function RegistrationPage() {
   function defaultForm(u: any) {
     return {
       name: u?.name || '', cpf: '', birthdate: '', phone: '', email: u?.email || '',
-      city: '', gender: '', shirt_size: '', distance_index: 0, registration_type_index: 0,
+      city: '', gender: '', shirt_size: '', distance_index: 0, kit_index: 0,
       team_name: '', emergency_contact: '', blood_type: '', medical_condition: '',
     };
   }
@@ -73,8 +75,14 @@ export function RegistrationPage() {
         setEvent(data);
         if (data) {
           trackRegistrationStart(data.title);
-          supabase.from('registration_types').select('*').eq('event_id', data.id).order('sort_order')
-            .then(({ data: types }) => setRegistrationTypes(types || []));
+          supabase.from('event_distances').select('*, registration_types(*)').eq('event_id', data.id).order('sort_order')
+            .then(({ data: dists }) => {
+              const sorted = (dists || []).map((d: any) => ({
+                ...d,
+                registration_types: [...(d.registration_types || [])].sort((a: any, b: any) => a.sort_order - b.sort_order),
+              }));
+              setEventDistances(sorted);
+            });
         }
         setLoading(false);
       });
@@ -124,11 +132,18 @@ export function RegistrationPage() {
 
   // Kit/distância pré-selecionados ao vir do botão "INSCREVER" de um card específico na página do evento.
   useEffect(() => {
-    const state = location.state as { registrationTypeIndex?: number; distanceIndex?: number } | null;
+    const state = location.state as { kitIndex?: number; distanceIndex?: number } | null;
     if (!state) return;
-    if (typeof state.registrationTypeIndex === 'number') set('registration_type_index', state.registrationTypeIndex);
     if (typeof state.distanceIndex === 'number') set('distance_index', state.distanceIndex);
+    if (typeof state.kitIndex === 'number') set('kit_index', state.kitIndex);
   }, [location.state]);
+
+  // Distância → kit, nessa ordem (padrão definitivo). Camiseta só é exigida
+  // quando o kit escolhido inclui camiseta (Kit Completo; Kit Econômico nunca mostra o campo).
+  const chosenDistance = eventDistances[form.distance_index] || eventDistances[0];
+  const kits: any[] = chosenDistance?.registration_types || [];
+  const chosenKit = kits[form.kit_index] || kits[0];
+  const shirtRequired = chosenKit ? chosenKit.includes_shirt !== false : true;
 
   const validate = () => {
     if (!form.name.trim()) return 'Informe seu nome completo.';
@@ -138,7 +153,7 @@ export function RegistrationPage() {
     if (!form.email.trim()) return 'Informe seu e-mail.';
     if (!form.city.trim()) return 'Informe sua cidade.';
     if (!form.gender) return 'Selecione o sexo.';
-    if (!form.shirt_size) return 'Selecione o tamanho da camiseta.';
+    if (shirtRequired && !form.shirt_size) return 'Selecione o tamanho da camiseta.';
     return '';
   };
 
@@ -202,15 +217,11 @@ export function RegistrationPage() {
     setSubmitting(true);
     setError('');
     try {
-      const distances = event.distances || [];
-      const chosen = distances[form.distance_index] || distances[0];
-      const price = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
-
-      // Tipos de inscrição (kits): recurso independente da distância/lote. Quando o
-      // evento tem kits cadastrados, o valor cobrado vem exclusivamente do kit escolhido.
-      const hasKits = registrationTypes.length > 0;
-      const chosenKit = hasKits ? (registrationTypes[form.registration_type_index] || registrationTypes[0]) : null;
-      const finalPrice = hasKits ? Number(chosenKit.price) : Number(price);
+      // Padrão definitivo: distância → kit, valor cobrado vem sempre do kit escolhido.
+      const chosenDistance = eventDistances[form.distance_index] || eventDistances[0];
+      const kits: any[] = chosenDistance?.registration_types || [];
+      const chosenKit = kits[form.kit_index] || kits[0];
+      const finalPrice = Number(chosenKit?.price ?? 0);
       const platformFee = Math.round(finalPrice * 0.10 * 100) / 100;
       const cleanCpf = form.cpf.replace(/\D/g, '');
 
@@ -225,9 +236,9 @@ export function RegistrationPage() {
         email: form.email,
         city: form.city,
         gender: form.gender,
-        shirt_size: form.shirt_size,
-        distance_name: chosen?.name || null,
-        distance_price: Number(price) || null,
+        shirt_size: shirtRequired ? form.shirt_size : null,
+        distance_name: chosenDistance?.name || null,
+        distance_price: null,
         registration_type_id: chosenKit?.id || null,
         registration_type_name: chosenKit?.name || null,
         registration_type_price: chosenKit ? Number(chosenKit.price) : null,
@@ -260,7 +271,7 @@ export function RegistrationPage() {
           cpf: form.cpf.replace(/\D/g, ''),
           data_nascimento: birthdateToISO(form.birthdate) || null,
           sexo: form.gender,
-          distancia: chosen?.name || '',
+          distancia: chosenDistance?.name || '',
           cidade: form.city,
           telefone: form.phone.replace(/\D/g, ''),
           email: form.email,
@@ -293,7 +304,7 @@ export function RegistrationPage() {
                 eventTitle: event.title,
                 athleteName: form.name,
                 athleteEmail: form.email,
-                distanceName: chosen?.name || '',
+                distanceName: chosenDistance?.name || '',
                 amount: finalPrice.toFixed(2).replace('.', ','),
                 paymentStatus: 'pending',
                 totalRegistrations: (totalRegs ?? 0) + 1,
@@ -320,11 +331,8 @@ export function RegistrationPage() {
     </div>
   );
   if (!event) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Evento não encontrado.</p></div>;
+  if (eventDistances.length === 0) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Nenhuma distância disponível para inscrição neste evento ainda.</p></div>;
 
-  const rawDistances: any[] = event.distances || [];
-  const distances: any[] = rawDistances.length > 0 ? rawDistances : [{ name: 'Geral', price: 0, lots: [] }];
-  const chosen = distances[form.distance_index] || distances[0];
-  const chosenPrice = chosen?.lots?.[0]?.price ?? chosen?.price ?? 0;
   const currentStepIdx = STEPS.indexOf(step);
 
   return (
@@ -395,29 +403,28 @@ export function RegistrationPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Tamanho da Camiseta *">
-                <select className={inp} value={form.shirt_size} onChange={e => set('shirt_size', e.target.value)}>
-                  <option value="">Selecione</option>
-                  {SHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+              <Field label="Distância *">
+                <select className={inp} value={form.distance_index} onChange={e => {
+                  set('distance_index', Number(e.target.value));
+                  set('kit_index', 0);
+                }}>
+                  {eventDistances.map((d: any, i: number) => <option key={i} value={i}>{d.name}</option>)}
                 </select>
               </Field>
-              <Field label="Distância *">
-                <select className={inp} value={form.distance_index} onChange={e => set('distance_index', Number(e.target.value))}>
-                  {distances.map((d: any, i: number) => (
-                    <option key={i} value={i}>
-                      {registrationTypes.length > 0 ? d.name : `${d.name} — R$ ${Number(d.lots?.[0]?.price ?? d.price ?? 0).toFixed(2).replace('.', ',')}`}
-                    </option>
+              <Field label="Kit *">
+                <select className={inp} value={form.kit_index} onChange={e => set('kit_index', Number(e.target.value))}>
+                  {kits.map((k: any, i: number) => (
+                    <option key={i} value={i}>{k.name} — R$ {Number(k.price).toFixed(2).replace('.', ',')}</option>
                   ))}
                 </select>
               </Field>
             </div>
 
-            {registrationTypes.length > 0 && (
-              <Field label="Tipo de Inscrição (Kit) *">
-                <select className={inp} value={form.registration_type_index} onChange={e => set('registration_type_index', Number(e.target.value))}>
-                  {registrationTypes.map((t: any, i: number) => (
-                    <option key={i} value={i}>{t.name} — R$ {Number(t.price).toFixed(2).replace('.', ',')}</option>
-                  ))}
+            {shirtRequired && (
+              <Field label="Tamanho da Camiseta *">
+                <select className={inp} value={form.shirt_size} onChange={e => set('shirt_size', e.target.value)}>
+                  <option value="">Selecione</option>
+                  {SHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Field>
             )}
@@ -470,7 +477,7 @@ export function RegistrationPage() {
                   cpf: form.cpf,
                   birthdate: form.birthdate,
                   gender: form.gender,
-                  distanceName: chosen?.name || '',
+                  distanceName: chosenDistance?.name || '',
                   city: form.city,
                   phone: form.phone,
                   email: form.email,
@@ -549,9 +556,9 @@ export function RegistrationPage() {
 
 const inp = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]';
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div>
+    <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       {children}
     </div>
