@@ -13,15 +13,22 @@ export function ForgotPasswordPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/redefinir-senha`,
-    });
-    if (err) {
-      setError('Erro ao enviar e-mail. Verifique o endereço informado.');
-    } else {
-      setSent(true);
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/redefinir-senha`,
+      });
+      if (err) {
+        setError('Erro ao enviar e-mail. Verifique o endereço informado.');
+      } else {
+        setSent(true);
+      }
+    } catch {
+      // Sem isso, uma falha de rede deixava o botão girando pra sempre, sem
+      // mensagem nenhuma — exatamente o "o sistema não fez nada" relatado.
+      setError('Erro de conexão ao enviar e-mail. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
