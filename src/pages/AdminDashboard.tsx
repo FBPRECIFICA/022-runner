@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveCo
 import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
 import { computeAthleteStats } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
-import { asaasFeeFromNetValue, netForOrganizer } from '../lib/asaasFee';
+import { asaasFeeFromNetValue, netForOrganizer, platformFeeFromOriginal } from '../lib/asaasFee';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 const LEO_PAGE_SIZE = 20;
@@ -107,7 +107,7 @@ export function AdminDashboard() {
     // total bruto pós-cupom nem da coluna platform_fee gravada por linha (que pode estar zerada
     // em inscrições antigas migradas antes do modelo de taxa separada).
     const revenue = paidRegs.reduce((a, r) => a + Number(r.base_amount ?? r.amount ?? 0), 0);
-    const platformRevenue = paidRegs.reduce((a, r) => a + Math.round((Number(r.base_amount ?? r.amount ?? 0) + Number(r.discount_amount ?? 0)) * 0.10 * 100) / 100, 0);
+    const platformRevenue = paidRegs.reduce((a, r) => a + platformFeeFromOriginal(r.base_amount ?? r.amount, r.discount_amount), 0);
     setStats({ events: evts?.length || 0, users: usrs?.length || 0, registrations: regs?.length || 0, revenue, platformRevenue });
 
     // Monthly chart
@@ -318,7 +318,7 @@ export function AdminDashboard() {
                           const evRegs = registrations.filter(r => r.event_id === e.id);
                           const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
                           const evRevenue = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-                          const evComissao = evPaidRegs.reduce((s, r) => s + Math.round((Number(r.base_amount ?? r.amount ?? 0) + Number(r.discount_amount ?? 0)) * 0.10 * 100) / 100, 0);
+                          const evComissao = evPaidRegs.reduce((s, r) => s + platformFeeFromOriginal(r.base_amount ?? r.amount, r.discount_amount), 0);
                           const organizerName = users.find(u => u.id === e.organizer_id)?.name || '—';
                           return (
                             <tr key={e.id} style={{ borderTop: '1px solid #334155' }}>

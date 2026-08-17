@@ -32,3 +32,11 @@ export function netForOrganizer(platformFee: number, netValue: number | null | u
   if (netValue == null) return null;
   return Number(netValue) - ASAAS_MESSAGING_FEE - Number(platformFee);
 }
+
+// Taxa da plataforma: sempre 10% do valor ORIGINAL da inscrição (base_amount +
+// discount_amount, isto é, antes do cupom), nunca do total pós-desconto. Regra
+// vigente desde 11/08/2026 (ver "fixed_commission_original_price"). Duplicada
+// em dois lugares de AdminDashboard.tsx antes de virar essa função única.
+export function platformFeeFromOriginal(baseAmount: number | null | undefined, discountAmount: number | null | undefined): number {
+  return Math.round((Number(baseAmount ?? 0) + Number(discountAmount ?? 0)) * 0.10 * 100) / 100;
+}
