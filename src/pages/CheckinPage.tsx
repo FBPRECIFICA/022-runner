@@ -2,6 +2,7 @@
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Search, Users } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export function CheckinPage() {
   const { eventSlug } = useParams<{ eventSlug: string }>();
@@ -26,8 +27,13 @@ export function CheckinPage() {
 
   const handleCheckin = async (id: string) => {
     const now = new Date().toISOString();
-    await supabase.from('registrations').update({ checkin_at: now, status: 'presente' }).eq('id', id);
-    setRegistrations(prev => prev.map(r => r.id === id ? { ...r, checkin_at: now, status: 'presente' } : r));
+    // checkin_at é o único campo de presença - "status" já é usado pra status de
+    // pagamento (paid/pending/cancelled) em toda a plataforma (exportação, painel
+    // financeiro, etc). Sobrescrever "status" aqui apagava o status de pagamento
+    // e quebrava esses outros lugares assim que o organizador fizesse o 1º check-in.
+    const { error } = await supabase.from('registrations').update({ checkin_at: now }).eq('id', id);
+    if (error) { toast.error('Erro ao confirmar check-in: ' + error.message); return; }
+    setRegistrations(prev => prev.map(r => r.id === id ? { ...r, checkin_at: now } : r));
   };
 
   const distances = [...new Set(registrations.map(r => r.distance_name))];
@@ -48,6 +54,7 @@ export function CheckinPage() {
       {/* Header */}
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10 shadow-sm">
         <h1 className="text-lg font-bold text-gray-900">{event.title}</h1>
+        <p className="text-xs text-gray-500 mt-0.5">Check-in confirma a presença do atleta no dia do evento — não afeta o pagamento da inscrição.</p>
         <div className="flex items-center gap-3 mt-2">
           <div className="flex items-center gap-2 text-sm">
             <Users size={16} className="text-[#C9A84C]" />
@@ -84,10 +91,15 @@ export function CheckinPage() {
               className={`bg-white rounded-xl border p-4 flex items-center gap-3 transition-all ${r.checkin_at ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
               <div className="flex-1">
                 <p className="font-bold text-gray-900 text-base">{r.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span className="text-sm font-mono font-bold text-[#C9A84C]">#{r.registration_number}</span>
                   <span className="text-xs text-gray-400">·</span>
                   <span className="text-xs text-gray-500">{r.distance_name}</span>
+                  {r.status === 'paid' || r.status === 'confirmed' ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700">Pago</span>
+                  ) : (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">Pagamento pendente</span>
+                  )}
                 </div>
                 {r.checkin_at && (
                   <p className="text-xs text-green-600 font-medium mt-0.5">

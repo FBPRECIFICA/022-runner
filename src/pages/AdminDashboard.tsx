@@ -174,11 +174,16 @@ export function AdminDashboard() {
         'Tamanho': includesShirt ? r.shirt_size : '',
       };
     });
+    if (rows.length === 0) {
+      toast.error('Nenhum inscrito nesse filtro pra exportar.');
+      return;
+    }
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
     const date = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
+    toast.success(`${rows.length} inscrito(s) exportado(s).`);
     setExportModalEvent(null);
   };
 

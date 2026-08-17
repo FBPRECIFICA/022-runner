@@ -152,18 +152,24 @@ export function OrganizerDashboard() {
       setMaisDadosEventId(events[0].id);
       return;
     }
-    if (maisDadosEventId) ensureEventRegsLoaded(maisDadosEventId);
+    // Sempre busca de novo ao entrar na aba/trocar de evento - ver toggleInscritos.
+    if (maisDadosEventId) ensureEventRegsLoaded(maisDadosEventId, true);
   }, [tab, maisDadosEventId, events]);
 
-  const ensureEventRegsLoaded = async (eventId: string) => {
-    if (eventRegistrations[eventId]) return;
+  const ensureEventRegsLoaded = async (eventId: string, forceRefresh = false) => {
+    if (eventRegistrations[eventId] && !forceRefresh) return;
     setLoadingRegs(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('registrations')
       .select('*')
       .eq('event_id', eventId)
       .neq('status', 'cancelled')
       .order('registration_number');
+    if (error) {
+      toast.error('Erro ao carregar inscrições: ' + error.message);
+      setLoadingRegs(false);
+      return;
+    }
     setEventRegistrations(prev => ({ ...prev, [eventId]: data || [] }));
     setLoadingRegs(false);
   };
@@ -174,7 +180,10 @@ export function OrganizerDashboard() {
       return;
     }
     setExpandedEventId(eventId);
-    await ensureEventRegsLoaded(eventId);
+    // Sempre busca de novo ao abrir, pra não mostrar dados velhos de uma
+    // sessao longa (ex.: inscrições pendentes novas que chegaram depois do
+    // primeiro carregamento não apareciam - cache nunca era invalidado).
+    await ensureEventRegsLoaded(eventId, true);
   };
 
   const loadEvents = async () => {
@@ -428,7 +437,11 @@ export function OrganizerDashboard() {
   };
 
   const exportExcel = async (event: any, statusFilter: ExportStatusFilter) => {
-    const { data } = await supabase.from('registrations').select('*, registration_types(name, includes_shirt)').eq('event_id', event.id).order('registration_number');
+    const { data, error } = await supabase.from('registrations').select('*, registration_types(name, includes_shirt)').eq('event_id', event.id).order('registration_number');
+    if (error) {
+      toast.error('Erro ao buscar inscritos pra exportar: ' + error.message);
+      return;
+    }
     const filtered = (data || []).filter(r => {
       if (statusFilter === 'all') return true;
       if (statusFilter === 'paid') return r.status === 'paid' || r.status === 'confirmed';
@@ -452,11 +465,16 @@ export function OrganizerDashboard() {
         'Tamanho': includesShirt ? r.shirt_size : '',
       };
     });
+    if (rows.length === 0) {
+      toast.error('Nenhum inscrito nesse filtro pra exportar.');
+      return;
+    }
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
     const date = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
+    toast.success(`${rows.length} inscrito(s) exportado(s).`);
     setExportModalEvent(null);
   };
 
