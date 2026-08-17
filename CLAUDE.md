@@ -28,10 +28,19 @@ antes de considerar concluído — não só o fluxo que motivou a mudança**:
 
 ## Staging antes de produção
 
-Existe uma branch Supabase de staging (`dczdybbmzkysojufydkm`, ligada sob demanda — tem custo
-por hora, então crie quando for testar algo arriscado e pode deletar depois). Qualquer migração
-de banco ou mudança em trigger/Edge Function que mexa em auth/pagamento/schema core deve ser
-testada ali primeiro, não direto em produção. Mudança cosmética/UI não precisa desse rito.
+Existe uma branch Supabase de staging (projeto pai `adorzqjhazsfvbttlfht`, branch atual
+`htlephpyypvkelorahex` — ligada sob demanda, tem custo por hora, então crie quando for testar
+algo arriscado e pode deletar depois com o MCP do Supabase). Qualquer migração de banco ou
+mudança em trigger/Edge Function que mexa em auth/pagamento/schema core deve ser testada ali
+primeiro, não direto em produção. Mudança cosmética/UI não precisa desse rito.
+
+**Se criar uma branch nova e ela cair em `MIGRATIONS_FAILED`:** o histórico de migrations rastreadas
+(`supabase_migrations.schema_migrations`) só ficou completo depois da migration `20260101000000_baseline_schema_reconstructed`
+(ver `supabase/migrations/`), que reconstrói o schema anterior ao rastreamento. Se esse arquivo
+sumir da tabela de tracking em produção por algum motivo, `list_branches` vai mostrar
+`MIGRATIONS_FAILED` de novo — confira `list_migrations` no branch recém-criado e os logs
+`postgres_logs` desse branch (via `query_logs`) pra ver em qual statement travou, não assuma
+que é o conteúdo da mudança que você acabou de fazer.
 
 ## Fonte única de comissão — NÃO está quebrado hoje, não "corrigir" sem motivo
 
