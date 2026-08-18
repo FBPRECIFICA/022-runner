@@ -179,7 +179,7 @@ export function RegistrationPage() {
         .limit(1);
       const existingReg = existingRegs?.[0];
       if (existingReg) {
-        if (existingReg.status === 'paid') {
+        if (existingReg.status === 'paid' || existingReg.status === 'confirmed') {
           setError('Você já está inscrito e com pagamento confirmado!');
         } else {
           setPendingDup(existingReg);
@@ -222,6 +222,7 @@ export function RegistrationPage() {
       const kits: any[] = chosenDistance?.registration_types || [];
       const chosenKit = kits[form.kit_index] || kits[0];
       const finalPrice = Number(chosenKit?.price ?? 0);
+      const isFree = finalPrice === 0;
       const platformFee = Math.round(finalPrice * 0.10 * 100) / 100;
       const cleanCpf = form.cpf.replace(/\D/g, '');
 
@@ -248,7 +249,7 @@ export function RegistrationPage() {
         platform_fee: platformFee,
         discount_amount: 0,
         amount: finalPrice + platformFee,
-        status: 'pending',
+        status: isFree ? 'confirmed' : 'pending',
         team_name: form.team_name || null,
         emergency_contact: form.emergency_contact || null,
         blood_type: form.blood_type || null,
@@ -306,13 +307,41 @@ export function RegistrationPage() {
                 athleteEmail: form.email,
                 distanceName: chosenDistance?.name || '',
                 amount: finalPrice.toFixed(2).replace('.', ','),
-                paymentStatus: 'pending',
+                paymentStatus: isFree ? 'confirmed' : 'pending',
                 totalRegistrations: (totalRegs ?? 0) + 1,
               },
             },
           });
         } catch (emailErr) {
           console.error('Erro ao notificar organizador (não bloqueante):', emailErr);
+        }
+      }
+
+      // Evento gratuito: não passa pelo asaas-webhook, então o e-mail de confirmação
+      // do atleta (normalmente disparado por lá) precisa ser mandado direto aqui.
+      if (isFree) {
+        try {
+          await supabase.functions.invoke('send-email', {
+            body: {
+              templateType: 'atleta_confirmacao',
+              recipientEmail: form.email,
+              data: {
+                athleteName: form.name,
+                eventTitle: event.title ?? '',
+                eventDate: event.date ? new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+                eventCity: event.city ?? '',
+                distanceName: chosenDistance?.name || '',
+                registrationNumber: data.registration_number,
+                amount: '0,00',
+                baseAmount: '0,00',
+                platformFee: '0,00',
+                discountAmount: '0,00',
+                couponCode: '',
+              },
+            },
+          });
+        } catch (emailErr) {
+          console.error('Erro ao enviar confirmação de inscrição gratuita (não bloqueante):', emailErr);
         }
       }
 
@@ -514,12 +543,18 @@ export function RegistrationPage() {
               <span className="text-3xl">✅</span>
             </div>
             <h2 className="text-xl font-bold text-gray-900">Inscrição registrada!</h2>
-            <p className="text-gray-500 text-sm">Agora finalize o pagamento para confirmar sua vaga.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button onClick={() => navigate(`/pagamento/${registrationId}`)}
-                className="w-full font-bold py-3 rounded-xl" style={{ backgroundColor: '#C9A84C', color: '#000' }}>
-                💳 Ir para Pagamento
-              </button>
+            <p className="text-gray-500 text-sm">
+              {Number(chosenKit?.price ?? 0) === 0
+                ? 'Este é um evento gratuito — sua vaga já está confirmada, sem pagamento.'
+                : 'Agora finalize o pagamento para confirmar sua vaga.'}
+            </p>
+            <div className={`grid grid-cols-1 gap-3 ${Number(chosenKit?.price ?? 0) > 0 ? 'sm:grid-cols-2' : ''}`}>
+              {Number(chosenKit?.price ?? 0) > 0 && (
+                <button onClick={() => navigate(`/pagamento/${registrationId}`)}
+                  className="w-full font-bold py-3 rounded-xl" style={{ backgroundColor: '#C9A84C', color: '#000' }}>
+                  💳 Ir para Pagamento
+                </button>
+              )}
               <button onClick={() => navigate(`/confirmacao/${registrationId}`)}
                 className="w-full font-bold py-3 rounded-xl border" style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
                 Ver Confirmação

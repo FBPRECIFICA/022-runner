@@ -151,9 +151,16 @@ export function AdminDashboard() {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
   };
 
-  const exportEventExcel = (event: any, statusFilter: ExportStatusFilter) => {
-    const evtRegs = registrations
-      .filter(r => r.event_id === event.id)
+  const exportEventExcel = async (event: any, statusFilter: ExportStatusFilter) => {
+    const { data: evtRegsData, error: evtRegsError } = await supabase
+      .from('registrations')
+      .select('*, registration_types(name, includes_shirt)')
+      .eq('event_id', event.id);
+    if (evtRegsError) {
+      toast.error('Erro ao buscar inscritos pra exportar: ' + evtRegsError.message);
+      return;
+    }
+    const evtRegs = (evtRegsData || [])
       .filter(r => {
         if (statusFilter === 'all') return true;
         if (statusFilter === 'paid') return r.status === 'paid' || r.status === 'confirmed';
@@ -161,8 +168,12 @@ export function AdminDashboard() {
         return r.status === 'cancelled';
       })
       .sort((a, b) => (a.registration_number || '').localeCompare(b.registration_number || ''));
-    const rows = evtRegs.map(r => {
-      const includesShirt = !(r.registration_type_name || '').toLowerCase().includes('econ');
+    const rows = evtRegs.map((r: any) => {
+      // includes_shirt vem do kit vinculado (fonte da verdade); quando não há
+      // vínculo, cai pro nome do kit em texto — nunca assume que inclui camisa.
+      const includesShirt = r.registration_types
+        ? r.registration_types.includes_shirt
+        : !(r.registration_type_name || '').toLowerCase().includes('econ');
       return {
         'Nome Completo': r.full_name || r.name,
         'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
