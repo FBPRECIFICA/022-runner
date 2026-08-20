@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
-import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase } from 'lucide-react';
+import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase, ClipboardCheck, AlertTriangle } from 'lucide-react';
 import { computeAthleteStats } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
 import { asaasFeeFromNetValue, netForOrganizer, platformFeeFromOriginal } from '../lib/asaasFee';
@@ -168,34 +168,41 @@ export function AdminDashboard() {
         return r.status === 'cancelled';
       })
       .sort((a, b) => (a.registration_number || '').localeCompare(b.registration_number || ''));
-    const rows = evtRegs.map((r: any) => {
-      // includes_shirt vem do kit vinculado (fonte da verdade); quando não há
-      // vínculo, cai pro nome do kit em texto — nunca assume que inclui camisa.
-      const includesShirt = r.registration_types
-        ? r.registration_types.includes_shirt
-        : !(r.registration_type_name || '').toLowerCase().includes('econ');
-      return {
-        'Nome Completo': r.full_name || r.name,
-        'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
-        'Nº Peito': r.registration_number,
-        'Telefone': r.phone,
-        'Categoria': r.distance_name,
-        'Distância': r.distance_name,
-        'Kit': includesShirt ? 'Completo' : 'Econômico',
-        'Tamanho': includesShirt ? r.shirt_size : '',
-      };
-    });
-    if (rows.length === 0) {
-      toast.error('Nenhum inscrito nesse filtro pra exportar.');
-      return;
+    try {
+      const rows = evtRegs.map((r: any) => {
+        // includes_shirt vem do kit vinculado (fonte da verdade); quando não há
+        // vínculo, cai pro nome do kit em texto — nunca assume que inclui camisa.
+        const includesShirt = r.registration_types
+          ? r.registration_types.includes_shirt
+          : !(r.registration_type_name || '').toLowerCase().includes('econ');
+        return {
+          'Nome Completo': r.full_name || r.name,
+          'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
+          'Nº Peito': r.registration_number,
+          'Telefone': r.phone,
+          'Categoria': r.distance_name,
+          'Distância': r.distance_name,
+          'Kit': includesShirt ? 'Completo' : 'Econômico',
+          'Tamanho': includesShirt ? r.shirt_size : '',
+        };
+      });
+      if (rows.length === 0) {
+        toast.error('Nenhum inscrito nesse filtro pra exportar.');
+        return;
+      }
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
+      const date = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
+      toast.success(`${rows.length} inscrito(s) exportado(s).`);
+      setExportModalEvent(null);
+    } catch (err: any) {
+      // ponytail: mesmo hardening aplicado em OrganizerDashboard.tsx — falha
+      // síncrona aqui morria em silêncio, sem toast.
+      toast.error('Falha ao gerar o Excel: ' + (err?.message || String(err)));
+      console.error('exportEventExcel falhou', err);
     }
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
-    const date = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
-    toast.success(`${rows.length} inscrito(s) exportado(s).`);
-    setExportModalEvent(null);
   };
 
   const tabs: { key: Tab; label: string }[] = [
@@ -611,6 +618,10 @@ export function AdminDashboard() {
                 <button onClick={() => setSelectedOrganizerId(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
               </div>
               <div className="p-5 overflow-y-auto space-y-6">
+                <div className="flex items-start gap-2 rounded-xl p-3 text-xs" style={{ backgroundColor: '#422006', color: '#fcd34d', border: '1px solid #78350f' }}>
+                  <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+                  <span>Isto roda com a SUA sessão de Admin (acesso total via RLS), não com a sessão/navegador/dispositivo real do organizador. Um clique funcionando aqui não prova que funciona pra ele — pra validar de verdade, é preciso reproduzir no login e dispositivo do próprio organizador.</span>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
                     <div className="flex items-center gap-2 mb-1" style={{ color: '#C9A84C' }}><DollarSign size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Total Bruto</span></div>
@@ -629,12 +640,12 @@ export function AdminDashboard() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-left" style={{ color: '#94a3b8' }}>
-                          {['Evento', 'Data', 'Inscritos', 'Receita'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                          {['Evento', 'Data', 'Inscritos', 'Receita', 'Ações'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
                         </tr>
                       </thead>
                       <tbody>
                         {orgEvents.length === 0 ? (
-                          <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum evento.</td></tr>
+                          <tr><td colSpan={5} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum evento.</td></tr>
                         ) : orgEvents.map(ev => {
                           const evRegs = registrations.filter(r => r.event_id === ev.id);
                           const evRevenue = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed').reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
@@ -644,6 +655,13 @@ export function AdminDashboard() {
                               <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{new Date(ev.date).toLocaleDateString('pt-BR')}</td>
                               <td className="px-3 py-2 text-center" style={{ color: '#94a3b8' }}>{evRegs.filter(r => r.status !== 'cancelled').length}</td>
                               <td className="px-3 py-2 text-green-400">R$ {evRevenue.toFixed(2).replace('.', ',')}</td>
+                              <td className="px-3 py-2">
+                                <div className="flex gap-1.5">
+                                  <a href={`/evento/${ev.slug}`} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg hover:bg-white/10" style={{ color: '#94a3b8' }} title="Visualizar (igual ao botão Eye do organizador)"><Eye size={14} /></a>
+                                  <button onClick={() => setExportModalEvent(ev)} className="p-1.5 rounded-lg hover:bg-white/10" style={{ color: '#94a3b8' }} title="Exportar Excel (igual ao botão do organizador, mas com sua sessão de Admin)"><Download size={14} /></button>
+                                  <a href={`/checkin/${ev.slug}`} className="p-1.5 rounded-lg hover:bg-white/10" style={{ color: '#94a3b8' }} title="Check-in (igual ao botão do organizador)"><ClipboardCheck size={14} /></a>
+                                </div>
+                              </td>
                             </tr>
                           );
                         })}

@@ -448,87 +448,104 @@ export function OrganizerDashboard() {
       if (statusFilter === 'pending') return r.status === 'pending' || r.status === 'awaiting_payment';
       return r.status === 'cancelled';
     });
-    const rows = filtered.map(r => {
-      // includes_shirt vem do kit vinculado (fonte da verdade); quando não há
-      // vínculo, cai pro nome do kit em texto — nunca assume que inclui camisa.
-      const includesShirt = r.registration_types
-        ? r.registration_types.includes_shirt
-        : !(r.registration_type_name || '').toLowerCase().includes('econ');
-      return {
-        'Nome Completo': r.full_name || r.name,
-        'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
-        'Nº Peito': r.registration_number,
-        'Telefone': r.phone,
-        'Categoria': r.distance_name,
-        'Distância': r.distance_name,
-        'Kit': includesShirt ? 'Completo' : 'Econômico',
-        'Tamanho': includesShirt ? r.shirt_size : '',
-      };
-    });
-    if (rows.length === 0) {
-      toast.error('Nenhum inscrito nesse filtro pra exportar.');
-      return;
+    try {
+      const rows = filtered.map(r => {
+        // includes_shirt vem do kit vinculado (fonte da verdade); quando não há
+        // vínculo, cai pro nome do kit em texto — nunca assume que inclui camisa.
+        const includesShirt = r.registration_types
+          ? r.registration_types.includes_shirt
+          : !(r.registration_type_name || '').toLowerCase().includes('econ');
+        return {
+          'Nome Completo': r.full_name || r.name,
+          'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
+          'Nº Peito': r.registration_number,
+          'Telefone': r.phone,
+          'Categoria': r.distance_name,
+          'Distância': r.distance_name,
+          'Kit': includesShirt ? 'Completo' : 'Econômico',
+          'Tamanho': includesShirt ? r.shirt_size : '',
+        };
+      });
+      if (rows.length === 0) {
+        toast.error('Nenhum inscrito nesse filtro pra exportar.');
+        return;
+      }
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
+      const date = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
+      toast.success(`${rows.length} inscrito(s) exportado(s).`);
+      setExportModalEvent(null);
+    } catch (err: any) {
+      // ponytail: nenhuma exceção síncrona daqui pra baixo tinha catch antes —
+      // uma linha malformada (ou o navegador bloqueando o download) falhava em
+      // silêncio total, sem toast e sem log visível pro organizador.
+      toast.error('Falha ao gerar o Excel: ' + (err?.message || String(err)));
+      console.error('exportExcel falhou', err);
     }
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
-    const date = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
-    toast.success(`${rows.length} inscrito(s) exportado(s).`);
-    setExportModalEvent(null);
   };
 
   const openEdit = async (event: any) => {
-    const dateObj = new Date(event.date);
-    const dateStr = dateObj.toISOString().split('T')[0];
-    const timeStr = dateObj.toTimeString().slice(0, 5);
-    const distances = (event.distances || []).map((d: any) => ({
-      name: d.name || '',
-      lots: d.lots ? d.lots.map((l: any) => ({ price: String(l.price || ''), qty: String(l.qty || '') }))
-        : [{ price: String(d.price || ''), qty: '' }],
-      includes_shirt: d.includes_shirt !== false,
-    }));
-    const { data: distRows } = await supabase
-      .from('event_distances')
-      .select('*, registration_types(*)')
-      .eq('event_id', event.id)
-      .order('sort_order');
-    const toKitSlot = (t: any): KitSlot => t
-      ? { id: t.id, lots: (t.lots && t.lots.length > 0 ? t.lots : [{ price: t.price ?? '', qty: '' }]).map((l: any) => ({ price: String(l.price ?? ''), qty: l.qty != null ? String(l.qty) : '' })) }
-      : emptyKitSlot();
-    const eventDistances: EventDistanceForm[] = (distRows || []).map((d: any) => ({
-      id: d.id,
-      name: d.name || '',
-      economico: toKitSlot((d.registration_types || []).find((t: any) => t.includes_shirt === false)),
-      completo: toKitSlot((d.registration_types || []).find((t: any) => t.includes_shirt === true)),
-    }));
-    setForm({
-      title: event.title || '',
-      description: event.description || '',
-      date: dateStr,
-      time: timeStr,
-      city: event.city || '',
-      location: event.location || '',
-      max_participants: event.max_participants ? String(event.max_participants) : '',
-      registration_deadline: event.registration_deadline
-        ? new Date(event.registration_deadline).toISOString().split('T')[0]
-        : '',
-      event_type: event.event_type || '',
-      kit_items: event.kit_items || [],
-      additional_info: event.additional_info || '',
-      sponsors: event.sponsors || [],
-      distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
-      link_percurso: event.link_percurso || '',
-      eventDistances,
-    });
-    setEditingEventId(event.id);
-    setEditingEventStatus(event.status || 'published');
-    setPhotos([]);
-    setPhotoPreviews([]);
-    setSponsorUploading([]);
-    setSuccess('');
-    setError('');
-    setTab('criar');
+    // ponytail: tudo abaixo rodava sem try/catch — qualquer exceção síncrona
+    // (ex: event.date inválido, distRows com formato inesperado) travava o
+    // clique inteiro sem nenhum feedback visível: nem modal abre, nem toast,
+    // nem log que o organizador consiga ver. Agora pelo menos aparece um erro.
+    try {
+      const dateObj = new Date(event.date);
+      const dateStr = dateObj.toISOString().split('T')[0];
+      const timeStr = dateObj.toTimeString().slice(0, 5);
+      const distances = (event.distances || []).map((d: any) => ({
+        name: d.name || '',
+        lots: d.lots ? d.lots.map((l: any) => ({ price: String(l.price || ''), qty: String(l.qty || '') }))
+          : [{ price: String(d.price || ''), qty: '' }],
+        includes_shirt: d.includes_shirt !== false,
+      }));
+      const { data: distRows } = await supabase
+        .from('event_distances')
+        .select('*, registration_types(*)')
+        .eq('event_id', event.id)
+        .order('sort_order');
+      const toKitSlot = (t: any): KitSlot => t
+        ? { id: t.id, lots: (t.lots && t.lots.length > 0 ? t.lots : [{ price: t.price ?? '', qty: '' }]).map((l: any) => ({ price: String(l.price ?? ''), qty: l.qty != null ? String(l.qty) : '' })) }
+        : emptyKitSlot();
+      const eventDistances: EventDistanceForm[] = (distRows || []).map((d: any) => ({
+        id: d.id,
+        name: d.name || '',
+        economico: toKitSlot((d.registration_types || []).find((t: any) => t.includes_shirt === false)),
+        completo: toKitSlot((d.registration_types || []).find((t: any) => t.includes_shirt === true)),
+      }));
+      setForm({
+        title: event.title || '',
+        description: event.description || '',
+        date: dateStr,
+        time: timeStr,
+        city: event.city || '',
+        location: event.location || '',
+        max_participants: event.max_participants ? String(event.max_participants) : '',
+        registration_deadline: event.registration_deadline
+          ? new Date(event.registration_deadline).toISOString().split('T')[0]
+          : '',
+        event_type: event.event_type || '',
+        kit_items: event.kit_items || [],
+        additional_info: event.additional_info || '',
+        sponsors: event.sponsors || [],
+        distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
+        link_percurso: event.link_percurso || '',
+        eventDistances,
+      });
+      setEditingEventId(event.id);
+      setEditingEventStatus(event.status || 'published');
+      setPhotos([]);
+      setPhotoPreviews([]);
+      setSponsorUploading([]);
+      setSuccess('');
+      setError('');
+      setTab('criar');
+    } catch (err: any) {
+      toast.error('Falha ao abrir edição do evento: ' + (err?.message || String(err)));
+      console.error('openEdit falhou', err);
+    }
   };
 
   const handleSubmit = async (publishStatus: 'published' | 'draft' = 'published') => {
