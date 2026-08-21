@@ -1025,6 +1025,33 @@ export function OrganizerDashboard() {
           );
         })()}
 
+        {/* Modal de seleção de status pra exportação — fora dos blocos de tab pois o botão
+            que abre isso vive na aba Eventos, mas antes ficava preso dentro do bloco da
+            aba Cupons: o clique setava o estado certo, só não tinha onde renderizar até
+            trocar de aba. */}
+        {exportModalEvent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setExportModalEvent(null)}>
+            <div className="w-full max-w-sm rounded-2xl bg-white" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b">
+                <h3 className="text-lg font-bold text-gray-900">Exportar Excel</h3>
+                <button onClick={() => setExportModalEvent(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
+              </div>
+              <div className="p-5 space-y-2">
+                <p className="text-sm text-gray-500 mb-3">Quais inscritos de "{exportModalEvent.title}" você quer exportar?</p>
+                {EXPORT_STATUS_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => exportExcel(exportModalEvent, opt.value)}
+                    className="w-full text-left px-4 py-2.5 rounded-lg border hover:border-[#C9A84C] hover:bg-amber-50 text-sm font-medium text-gray-700"
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Cupons */}
         {tab === 'cupons' && (() => {
           const activeCouponsCount = coupons.filter(c => c.active).length;
@@ -1262,30 +1289,6 @@ export function OrganizerDashboard() {
                 </div>
               )}
             </div>
-
-            {/* Modal de seleção de status pra exportação */}
-            {exportModalEvent && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setExportModalEvent(null)}>
-                <div className="w-full max-w-sm rounded-2xl bg-white" onClick={e => e.stopPropagation()}>
-                  <div className="flex items-center justify-between p-5 border-b">
-                    <h3 className="text-lg font-bold text-gray-900">Exportar Excel</h3>
-                    <button onClick={() => setExportModalEvent(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
-                  </div>
-                  <div className="p-5 space-y-2">
-                    <p className="text-sm text-gray-500 mb-3">Quais inscritos de "{exportModalEvent.title}" você quer exportar?</p>
-                    {EXPORT_STATUS_OPTIONS.map(opt => (
-                      <button
-                        key={opt.value}
-                        onClick={() => exportExcel(exportModalEvent, opt.value)}
-                        className="w-full text-left px-4 py-2.5 rounded-lg border hover:border-[#C9A84C] hover:bg-amber-50 text-sm font-medium text-gray-700"
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Modal de uso do cupom */}
             {couponUsageModal && (
