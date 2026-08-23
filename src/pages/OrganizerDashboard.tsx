@@ -1659,6 +1659,10 @@ export function OrganizerDashboard() {
               {/* Distâncias com Lotes */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Distâncias e Lotes de Preço</label>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 text-xs text-amber-800">
+                  ⚠️ Isso só controla a faixa de preço exibida nos cards de busca/listagem — NÃO abre inscrição.
+                  Pra atletas conseguirem se inscrever, cadastre a distância também em "Distâncias com Kit" mais abaixo.
+                </div>
                 {editingEventId && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 text-xs text-amber-800">
                     ℹ️ Você pode alterar o preço a qualquer momento, mesmo com o evento já publicado. As inscrições já realizadas mantêm o valor original — apenas novas inscrições usarão o novo valor.
