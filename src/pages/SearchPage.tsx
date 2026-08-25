@@ -33,16 +33,16 @@ export function SearchPage() {
     setSearched(true);
     setParams(q ? { q } : {});
 
-    let qb = supabase.from('events').select('*, registrations(count), registration_types(price)').eq('status', 'published')
-      .in('registrations.status', ['paid', 'confirmed', 'presente']);
+    let qb = supabase.from('events').select('*, registration_types(price)').eq('status', 'published');
     if (q.trim()) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
     if (city) qb = qb.eq('city', city);
     if (type !== 'Todos') qb = qb.eq('event_type', type);
     if (dateFrom) qb = qb.gte('date', dateFrom);
     if (dateTo) qb = qb.lte('date', dateTo);
 
-    let { data } = await qb.order('date', { ascending: true });
-    let mapped = (data || []).map(supabaseToEvent);
+    const [{ data }, { data: counts }] = await Promise.all([qb.order('date', { ascending: true }), supabase.rpc('get_events_confirmed_counts')]);
+    const countByEvent = new Map<string, number>((counts || []).map((c: any) => [c.event_id, c.confirmed_count]));
+    let mapped = (data || []).map(e => supabaseToEvent(e, countByEvent.get(e.id) ?? 0));
 
     if (priceMin || priceMax) {
       mapped = mapped.filter(e => {

@@ -71,10 +71,15 @@ export function RegistrationPage() {
   }
 
   useEffect(() => {
-    supabase.from('events').select('*, registrations(count)')
-      .in('registrations.status', ['paid', 'confirmed', 'presente'])
+    supabase.from('events').select('*')
       .eq('slug', eventSlug).single()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
+        if (data) {
+          // ver mesmo comentário em EventDetailPage.tsx — registrations não é
+          // visível pra anon via embed, só via essa RPC.
+          const { data: count } = await supabase.rpc('get_event_confirmed_count', { p_event_id: data.id });
+          data = { ...data, registrations: [{ count: count ?? 0 }] };
+        }
         setEvent(data);
         if (data) {
           trackRegistrationStart(data.title);

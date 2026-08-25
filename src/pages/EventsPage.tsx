@@ -46,9 +46,8 @@ export function EventsPage() {
     setLoading(true);
     let query = supabase
       .from('events')
-      .select('*, registrations(count), registration_types(price)', { count: 'exact' })
+      .select('*, registration_types(price)', { count: 'exact' })
       .eq('status', 'published')
-      .in('registrations.status', ['paid', 'confirmed', 'presente'])
       .order('date', { ascending: true })
       .range((p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1);
 
@@ -56,8 +55,9 @@ export function EventsPage() {
     if (type !== 'Todos') query = query.eq('event_type', type);
     if (dateFrom) query = query.gte('date', dateFrom);
 
-    const { data, count } = await query;
-    const mapped = (data || []).map(supabaseToEvent);
+    const [{ data, count }, { data: counts }] = await Promise.all([query, supabase.rpc('get_events_confirmed_counts')]);
+    const countByEvent = new Map<string, number>((counts || []).map((c: any) => [c.event_id, c.confirmed_count]));
+    const mapped = (data || []).map(e => supabaseToEvent(e, countByEvent.get(e.id) ?? 0));
     setEvents(prev => p === 1 ? mapped : [...prev, ...mapped]);
     setTotal(count || 0);
     setHasMore((p * PAGE_SIZE) < (count || 0));

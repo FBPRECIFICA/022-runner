@@ -35,17 +35,15 @@ export function HomePage() {
   const [allEvents, setAllEvents] = useState<Event[]>(mockEvents);
 
   useEffect(() => {
-    supabase
-      .from('events')
-      .select('*, registrations(count), registration_types(price)')
-      .eq('status', 'published')
-      .in('registrations.status', ['paid', 'confirmed', 'presente'])
-      .order('date', { ascending: true })
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setAllEvents(data.map(supabaseToEvent));
-        }
-      });
+    Promise.all([
+      supabase.from('events').select('*, registration_types(price)').eq('status', 'published').order('date', { ascending: true }),
+      supabase.rpc('get_events_confirmed_counts'),
+    ]).then(([{ data }, { data: counts }]) => {
+      if (data && data.length > 0) {
+        const countByEvent = new Map<string, number>((counts || []).map((c: any) => [c.event_id, c.confirmed_count]));
+        setAllEvents(data.map(e => supabaseToEvent(e, countByEvent.get(e.id) ?? 0)));
+      }
+    });
   }, []);
 
   const events = allEvents;

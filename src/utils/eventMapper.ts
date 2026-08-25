@@ -5,14 +5,16 @@ import { isRegistrationOpen } from './registrationStatus';
 // aqui pra não ter três lugares pra manter sincronizados quando a lógica de
 // "inscrições abertas" muda (era exatamente esse tipo de duplicidade que o
 // BLOCO Corrida Solidária (R2) pediu pra eliminar).
-export function supabaseToEvent(e: any): Event {
+// confirmedCount vem de fora (RPC get_events_confirmed_counts) — `registrations`
+// não é visível via embed pra visitante anônimo (não tem policy de SELECT pra anon,
+// só tem confirmedCount real quando alguém chama a RPC security definer).
+export function supabaseToEvent(e: any, confirmedCount = 0): Event {
   const distances = (e.distances || []).map((d: any, i: number) => ({
     id: `d${i}`,
     name: d.name,
     distanceKm: parseFloat(d.name) || 0,
     price: Number(d.price),
   }));
-  const confirmedCount = e.registrations?.[0]?.count ?? e.current_participants ?? 0;
   return {
     id: e.id,
     name: e.title,

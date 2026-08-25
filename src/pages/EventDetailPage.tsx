@@ -43,11 +43,16 @@ export function EventDetailPage() {
   useEffect(() => {
     async function fetchEvent() {
       const { data, error } = await supabase.from('events')
-        .select('*, registrations(count)')
-        .in('registrations.status', ['paid', 'confirmed', 'presente'])
+        .select('*')
         .eq('slug', slug).single();
       if (error || !data) { setNotFound(true); setLoading(false); return; }
-      setEvent(data);
+      // registrations não tem policy de SELECT pra visitante anônimo (tem CPF, telefone
+      // etc.) — embed `registrations(count)` sempre voltava 0 pra quem não tá logado,
+      // então o cálculo de "lotado" nunca funcionava de verdade pro público real
+      // (só parecia funcionar quando testado com uma sessão autenticada). RPC
+      // security definer expõe só a contagem.
+      const { data: count } = await supabase.rpc('get_event_confirmed_count', { p_event_id: data.id });
+      setEvent({ ...data, registrations: [{ count: count ?? 0 }] });
       trackEventView(data.title);
       if (data.organizer_id) {
         const { data: org } = await supabase.from('users').select('name, email, display_email').eq('id', data.organizer_id).single();
