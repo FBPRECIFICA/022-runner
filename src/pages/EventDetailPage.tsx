@@ -94,6 +94,8 @@ export function EventDetailPage() {
   const eventDate = new Date(event.date);
   const deadline = event.registration_deadline ? new Date(event.registration_deadline) : null;
   const maxP = event.max_participants || 0;
+  const confirmedCount = event.registrations?.[0]?.count ?? 0;
+  const isFull = maxP > 0 && confirmedCount >= maxP;
   const daysLeft = deadline ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000)) : null;
   const score = event.quality_score || 0;
   const isPast = eventDate.getTime() < Date.now();
@@ -141,8 +143,11 @@ export function EventDetailPage() {
             <ChevronLeft size={16} /> Voltar
           </Link>
           <div className="flex flex-wrap gap-2 mb-3">
-            {event.status === 'published' && (
+            {event.status === 'published' && !isFull && (
               <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Inscrições Abertas</span>
+            )}
+            {event.status === 'published' && isFull && (
+              <span className="inline-block bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Inscrições Encerradas</span>
             )}
             {score > 0 && (() => {
               const b = scoreBadge(score);
