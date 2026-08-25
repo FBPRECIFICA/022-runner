@@ -8,6 +8,7 @@ import { Calendar, MapPin, Star, Award, Clock, ArrowRight, Sparkles, Trophy } fr
 import { events as mockEvents, LAGOS_REGION_CITIES } from '../data/mockData';
 import { formatDate } from '../lib/utils';
 import { supabase } from '../lib/supabase';
+import { supabaseToEvent } from '../utils/eventMapper';
 import type { Event } from '../types';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -29,36 +30,6 @@ const CITY_COORDS: Record<string, [number, number]> = {
   'Macaé':              [-22.3710, -41.7870],
   'Bacaxá':             [-22.9550, -42.5720],
 };
-
-function supabaseToEvent(e: any): Event {
-  const distances = (e.distances || []).map((d: any, i: number) => ({
-    id: `d${i}`,
-    name: d.name,
-    distanceKm: parseFloat(d.name) || 0,
-    price: Number(d.price),
-  }));
-  return {
-    id: e.id,
-    name: e.title,
-    subtitle: e.description?.slice(0, 80) || '',
-    description: e.description || '',
-    date: e.date,
-    startTime: new Date(e.date).toTimeString().slice(0, 5),
-    city: e.city,
-    state: 'RJ',
-    startLocation: e.location || '',
-    maxParticipants: e.max_participants || 0,
-    currentParticipants: e.registrations?.[0]?.count ?? e.current_participants ?? 0,
-    banner: e.banner_url || '',
-    distances,
-    registrationTypes: (e.registration_types || []).map((t: any) => ({ price: Number(t.price) })),
-    qualityScore: e.quality_score || 0,
-    plan: e.plan || 'free',
-    status: e.status === 'published' ? 'registration_open' : e.status,
-    organizerId: e.organizer_id || '',
-    slug: e.slug,
-  };
-}
 
 export function HomePage() {
   const [allEvents, setAllEvents] = useState<Event[]>(mockEvents);

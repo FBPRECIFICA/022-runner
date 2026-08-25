@@ -8,6 +8,7 @@ import { validateCPF } from '../utils/validators';
 import { TermoResponsabilidade } from '../components/TermoResponsabilidade';
 import { AccountGate } from '../components/AccountGate';
 import { SecurityBadges } from '../components/SecurityBadges';
+import { isRegistrationOpen } from '../utils/registrationStatus';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não sei'];
@@ -70,7 +71,9 @@ export function RegistrationPage() {
   }
 
   useEffect(() => {
-    supabase.from('events').select('*').eq('slug', eventSlug).single()
+    supabase.from('events').select('*, registrations(count)')
+      .in('registrations.status', ['paid', 'confirmed', 'presente'])
+      .eq('slug', eventSlug).single()
       .then(({ data }) => {
         setEvent(data);
         if (data) {
@@ -391,6 +394,12 @@ export function RegistrationPage() {
     </div>
   );
   if (!event) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Evento não encontrado.</p></div>;
+  if (!isRegistrationOpen(event, event.registrations?.[0]?.count ?? 0)) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
+      <p className="text-gray-700 font-bold text-lg">Inscrições encerradas para {event.title}.</p>
+      <Link to={`/evento/${event.slug}`} className="text-[#C9A84C] font-semibold underline">Voltar para o evento</Link>
+    </div>
+  );
   if (eventDistances.length === 0) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Nenhuma distância disponível para inscrição neste evento ainda.</p></div>;
 
   const currentStepIdx = STEPS.indexOf(step);

@@ -3,40 +3,11 @@ import { supabase } from '../lib/supabase';
 import { EventCard } from '../components/EventCard';
 import { LAGOS_REGION_CITIES } from '../types';
 import type { Event } from '../types';
+import { supabaseToEvent } from '../utils/eventMapper';
 import { Search, Filter } from 'lucide-react';
 
 const EVENT_TYPES = ['Todos', 'Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
 const PAGE_SIZE = 9;
-
-function supabaseToEvent(e: any): Event {
-  const distances = (e.distances || []).map((d: any, i: number) => ({
-    id: `d${i}`,
-    name: d.name,
-    distanceKm: parseFloat(d.name) || 0,
-    price: Number(d.price),
-  }));
-  return {
-    id: e.id,
-    name: e.title,
-    subtitle: e.description?.slice(0, 80) || '',
-    description: e.description || '',
-    date: e.date,
-    startTime: new Date(e.date).toTimeString().slice(0, 5),
-    city: e.city,
-    state: 'RJ',
-    startLocation: e.location || '',
-    maxParticipants: e.max_participants || 0,
-    currentParticipants: e.registrations?.[0]?.count ?? e.current_participants ?? 0,
-    banner: e.banner_url || '',
-    distances,
-    registrationTypes: (e.registration_types || []).map((t: any) => ({ price: Number(t.price) })),
-    qualityScore: e.quality_score || 0,
-    plan: e.plan || 'free',
-    status: e.status === 'published' ? 'registration_open' : e.status,
-    organizerId: e.organizer_id || '',
-    slug: e.slug,
-  };
-}
 
 function SkeletonCard() {
   return (

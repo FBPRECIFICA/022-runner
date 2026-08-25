@@ -6,6 +6,7 @@ import { scoreBadge } from '../utils/scoreCalculator';
 import { Helmet } from 'react-helmet-async';
 import { trackEventView, trackShare } from '../utils/analytics';
 import { ReviewSection } from '../components/ReviewSection';
+import { isRegistrationOpen } from '../utils/registrationStatus';
 
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -95,7 +96,7 @@ export function EventDetailPage() {
   const deadline = event.registration_deadline ? new Date(event.registration_deadline) : null;
   const maxP = event.max_participants || 0;
   const confirmedCount = event.registrations?.[0]?.count ?? 0;
-  const isFull = maxP > 0 && confirmedCount >= maxP;
+  const registrationOpen = isRegistrationOpen(event, confirmedCount);
   const daysLeft = deadline ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000)) : null;
   const score = event.quality_score || 0;
   const isPast = eventDate.getTime() < Date.now();
@@ -143,11 +144,12 @@ export function EventDetailPage() {
             <ChevronLeft size={16} /> Voltar
           </Link>
           <div className="flex flex-wrap gap-2 mb-3">
-            {event.status === 'published' && !isFull && (
-              <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Inscrições Abertas</span>
-            )}
-            {event.status === 'published' && isFull && (
-              <span className="inline-block bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Inscrições Encerradas</span>
+            {event.status === 'published' && (
+              registrationOpen ? (
+                <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Inscrições Abertas</span>
+              ) : (
+                <span className="inline-block bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Inscrições Encerradas</span>
+              )
             )}
             {score > 0 && (() => {
               const b = scoreBadge(score);
@@ -301,13 +303,21 @@ export function EventDetailPage() {
                           <span className="text-xl font-black" style={{ color: '#C9A84C' }}>{k.name}</span>
                           <span className="text-white/60 text-xs uppercase tracking-widest">{k.includes_shirt ? 'Com camiseta' : 'Sem camiseta'}</span>
                           <span className="text-2xl font-black text-white">R$ {Number(k.price).toFixed(2).replace('.', ',')}</span>
-                          <button
-                            onClick={() => navigate(`/inscricao/${event.slug}`, { state: { distanceIndex: di, kitIndex: ki } })}
-                            className="w-full py-2 rounded-lg text-xs font-bold mt-1 transition-all hover:opacity-90"
-                            style={{ backgroundColor: '#C9A84C', color: '#000' }}
-                          >
-                            INSCREVER
-                          </button>
+                          {registrationOpen ? (
+                            <button
+                              onClick={() => navigate(`/inscricao/${event.slug}`, { state: { distanceIndex: di, kitIndex: ki } })}
+                              className="w-full py-2 rounded-lg text-xs font-bold mt-1 transition-all hover:opacity-90"
+                              style={{ backgroundColor: '#C9A84C', color: '#000' }}
+                            >
+                              INSCREVER
+                            </button>
+                          ) : (
+                            <button disabled
+                              className="w-full py-2 rounded-lg text-xs font-bold mt-1 bg-gray-700 text-gray-400 cursor-not-allowed"
+                            >
+                              INSCRIÇÕES ENCERRADAS
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -447,15 +457,21 @@ export function EventDetailPage() {
             )}
 
             {/* Botão Inscrever — desktop */}
-            <button
-              onClick={() => navigate(`/inscricao/${event.slug}`)}
-              className="w-full font-bold py-5 rounded-xl text-lg transition-all duration-200 shadow-lg"
-              style={{ backgroundColor: '#C9A84C', color: '#000', boxShadow: '0 4px 20px rgba(201,168,76,0.4)' }}
-              onMouseOver={e => (e.currentTarget.style.backgroundColor = '#B8962E')}
-              onMouseOut={e => (e.currentTarget.style.backgroundColor = '#C9A84C')}
-            >
-              INSCREVER-SE
-            </button>
+            {registrationOpen ? (
+              <button
+                onClick={() => navigate(`/inscricao/${event.slug}`)}
+                className="w-full font-bold py-5 rounded-xl text-lg transition-all duration-200 shadow-lg"
+                style={{ backgroundColor: '#C9A84C', color: '#000', boxShadow: '0 4px 20px rgba(201,168,76,0.4)' }}
+                onMouseOver={e => (e.currentTarget.style.backgroundColor = '#B8962E')}
+                onMouseOut={e => (e.currentTarget.style.backgroundColor = '#C9A84C')}
+              >
+                INSCREVER-SE
+              </button>
+            ) : (
+              <div className="w-full text-center py-4 rounded-xl bg-gray-100 text-gray-500 font-bold">
+                Inscrições encerradas
+              </div>
+            )}
 
             {/* Compartilhamento social */}
             <div className="bg-white rounded-xl border p-4 space-y-2">
@@ -497,15 +513,17 @@ export function EventDetailPage() {
       </div>
 
       {/* Botão flutuante mobile — INSCREVER-SE AGORA */}
-      <div className="md:hidden fixed bottom-16 left-4 right-20 z-30">
-        <button
-          onClick={() => navigate(`/inscricao/${event.slug}`)}
-          className="w-full font-black py-4 rounded-xl text-base shadow-2xl transition-all active:scale-95"
-          style={{ backgroundColor: '#C9A84C', color: '#000', boxShadow: '0 4px 24px rgba(201,168,76,0.5)' }}
-        >
-          INSCREVER-SE AGORA
-        </button>
-      </div>
+      {registrationOpen && (
+        <div className="md:hidden fixed bottom-16 left-4 right-20 z-30">
+          <button
+            onClick={() => navigate(`/inscricao/${event.slug}`)}
+            className="w-full font-black py-4 rounded-xl text-base shadow-2xl transition-all active:scale-95"
+            style={{ backgroundColor: '#C9A84C', color: '#000', boxShadow: '0 4px 24px rgba(201,168,76,0.5)' }}
+          >
+            INSCREVER-SE AGORA
+          </button>
+        </div>
+      )}
     </div>
   );
 }

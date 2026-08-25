@@ -186,6 +186,14 @@ export function OrganizerDashboard() {
     await ensureEventRegsLoaded(eventId, true);
   };
 
+  const toggleRegistrationsClosed = async (event: any) => {
+    const next = !event.registrations_closed;
+    const { error } = await supabase.from('events').update({ registrations_closed: next }).eq('id', event.id);
+    if (error) { toast.error('Erro ao atualizar inscrições: ' + error.message); return; }
+    setEvents(prev => prev.map(e => e.id === event.id ? { ...e, registrations_closed: next } : e));
+    toast.success(next ? 'Inscrições encerradas — some da opção de inscrever na página pública imediatamente.' : 'Inscrições reabertas.');
+  };
+
   const loadEvents = async () => {
     if (!user) return;
     const { data } = await supabase
@@ -939,6 +947,17 @@ export function OrganizerDashboard() {
                     <p className="text-sm text-gray-500">{event.city} · {new Date(event.date).toLocaleDateString('pt-BR')}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${event.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{event.status === 'published' ? 'Publicado' : 'Rascunho'}</span>
+                      <button
+                        onClick={() => toggleRegistrationsClosed(event)}
+                        title="Clique pra alternar — reflete na página pública na hora"
+                        className={`text-xs px-2 py-0.5 rounded-full font-semibold transition-colors ${
+                          event.registrations_closed
+                            ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                            : 'bg-green-50 text-green-700 hover:bg-green-100'
+                        }`}
+                      >
+                        Inscrições: {event.registrations_closed ? 'Encerradas' : 'Abertas'}
+                      </button>
                       <button
                         onClick={() => toggleInscritos(event.id)}
                         className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold hover:bg-amber-100 transition-colors"
