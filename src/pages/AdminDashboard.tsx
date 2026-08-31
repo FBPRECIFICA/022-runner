@@ -672,11 +672,11 @@ export function AdminDashboard() {
                     <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>R$ {totalBruto.toFixed(2).replace('.', ',')}</p>
                   </div>
                   <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
-                    <div className="flex items-center gap-2 mb-1 text-green-400"><TrendingUp size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Est. a Receber*</span></div>
+                    <div className="flex items-center gap-2 mb-1 text-green-400"><TrendingUp size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Líquido Total (Histórico)*</span></div>
                     <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
-                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador.</p>
+                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. Este número é o total acumulado desde sempre — <strong style={{ color: '#fbbf24' }}>não desconta saques já feitos.</strong> O saldo que ainda falta pagar hoje está na seção "Saques" mais abaixo.</p>
 
                 <div>
                   <h4 className="text-sm font-semibold text-white mb-2">Eventos ({orgEvents.length})</h4>
@@ -1012,11 +1012,11 @@ export function AdminDashboard() {
                     <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>R$ {bruto.toFixed(2).replace('.', ',')}</p>
                   </div>
                   <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
-                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Est. a Receber*</p>
+                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Líquido Total (Histórico)*</p>
                     <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
                   </div>
                 </div>
-                <p className="text-xs" style={{ color: '#64748b' }}>* Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador.</p>
+                <p className="text-xs" style={{ color: '#64748b' }}>* Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. Total acumulado deste evento — não desconta saques; saldo disponível está na aba "Ver Painel" do organizador, seção Saques.</p>
 
                 <div>
                   <h4 className="text-sm font-semibold text-white mb-2">Mais Dados</h4>

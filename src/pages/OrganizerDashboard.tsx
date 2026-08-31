@@ -847,10 +847,10 @@ export function OrganizerDashboard() {
                 <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#86efac' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp size={16} className="text-green-500" />
-                    <span className="text-xs font-medium text-gray-500">Est. a Receber*</span>
+                    <span className="text-xs font-medium text-gray-500">Líquido Total (Histórico)*</span>
                   </div>
                   <p className="text-xl font-bold text-green-600">R$ {estimadoAReceber.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-xs text-gray-400">valor líquido, já descontada taxa Asaas</p>
+                  <p className="text-xs text-gray-400">valor líquido acumulado (já descontada taxa Asaas) — não desconta saques já feitos. Saldo disponível hoje: aba Saques.</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#fde68a' }}>
                   <div className="flex items-center gap-2 mb-1">
