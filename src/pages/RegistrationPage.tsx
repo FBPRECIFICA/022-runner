@@ -176,15 +176,15 @@ export function RegistrationPage() {
     setSubmitting(true);
     setError('');
     try {
-      // Proteção contra inscrição duplicada pelo mesmo CPF no mesmo evento
+      // Proteção contra inscrição duplicada pelo mesmo CPF no mesmo evento.
+      // Via RPC (check_cpf_registration, SECURITY DEFINER) e não SELECT direto
+      // na tabela: `registrations` não tem policy de SELECT pra anon, e essa
+      // checagem roda ANTES do login (ver proceedToAccountOrFinalize) — um
+      // SELECT direto sempre voltaria vazio aqui, que foi exatamente a causa
+      // dos 7 pares duplicados na Corrida Solidária (2026-08-26).
       const cleanCpf = form.cpf.replace(/\D/g, '');
       const { data: existingRegs } = await supabase
-        .from('registrations')
-        .select('id, status, asaas_payment_id')
-        .eq('event_id', event.id)
-        .eq('cpf', cleanCpf)
-        .neq('status', 'cancelled')
-        .limit(1);
+        .rpc('check_cpf_registration', { p_event_id: event.id, p_cpf: cleanCpf });
       const existingReg = existingRegs?.[0];
       if (existingReg) {
         if (existingReg.status === 'paid' || existingReg.status === 'confirmed') {
@@ -386,7 +386,13 @@ export function RegistrationPage() {
 
       setStep('confirmação');
     } catch (err: any) {
-      setError(err.message || 'Erro ao salvar inscrição. Tente novamente.');
+      // 23505 = trava UNIQUE(event_id, cpf) no banco (registrations_event_cpf_unique_idx)
+      // — rede de segurança pro caso raro de duas tentativas simultâneas passarem
+      // pela checagem via RPC acima antes de qualquer uma delas terminar de gravar.
+      const message = err?.code === '23505'
+        ? 'Esse CPF já está inscrito nesse evento.'
+        : (err.message || 'Erro ao salvar inscrição. Tente novamente.');
+      setError(message);
       setStep('form');
     } finally {
       setSubmitting(false);
