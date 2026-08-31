@@ -55,6 +55,9 @@ export function AdminDashboard() {
   const [selectedEventPreview, setSelectedEventPreview] = useState<any | null>(null);
   const [eventCoupons, setEventCoupons] = useState<any[]>([]);
   const [loadingEventCoupons, setLoadingEventCoupons] = useState(false);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [withdrawalForm, setWithdrawalForm] = useState({ event_id: '', amount: '', withdrawn_at: '', note: '' });
+  const [savingWithdrawal, setSavingWithdrawal] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -93,21 +96,27 @@ export function AdminDashboard() {
   };
 
   const loadAll = async () => {
-    const [{ data: evts }, { data: usrs }, { data: regs }] = await Promise.all([
+    const [{ data: evts }, { data: usrs }, { data: regs }, { data: wds }] = await Promise.all([
       supabase.from('events').select('*').order('created_at', { ascending: false }),
       supabase.from('users').select('*').order('created_at', { ascending: false }),
       supabase.from('registrations').select('*').order('created_at', { ascending: false }),
+      supabase.from('withdrawals').select('*').order('withdrawn_at', { ascending: false }),
     ]);
     setEvents(evts || []);
     setUsers(usrs || []);
     setRegistrations(regs || []);
+    setWithdrawals(wds || []);
     const paidRegs = (regs || []).filter(r => r.status === 'paid' || r.status === 'confirmed');
     // Mesma lógica do OrganizerDashboard: total bruto = soma de base_amount (fallback amount).
-    // Taxa plataforma = SEMPRE 10% do preço ORIGINAL (base_amount + discount_amount), nunca do
-    // total bruto pós-cupom nem da coluna platform_fee gravada por linha (que pode estar zerada
-    // em inscrições antigas migradas antes do modelo de taxa separada).
+    // Comissão = soma da coluna platform_fee JÁ GRAVADA (dinheiro real cobrado do atleta e
+    // recebido via Asaas), não recalculada pela fórmula atual. Corrigido 31/08/2026: recalcular
+    // via platformFeeFromOriginal sobre dados históricos inflava a comissão exibida em eventos
+    // com cupons usados antes de 11/08/2026 (fórmula antiga na época = 10% pós-cupom, não
+    // pré-cupom) — ver Notion "Auditoria Arena MMP — Valores Não Fecham". A coluna platform_fee
+    // reflete sempre o valor real cobrado no momento da inscrição, inclusive 0 em inscrições
+    // anteriores à existência da comissão separada — nunca é "dado zerado a corrigir".
     const revenue = paidRegs.reduce((a, r) => a + Number(r.base_amount ?? r.amount ?? 0), 0);
-    const platformRevenue = paidRegs.reduce((a, r) => a + platformFeeFromOriginal(r.base_amount ?? r.amount, r.discount_amount), 0);
+    const platformRevenue = paidRegs.reduce((a, r) => a + Number(r.platform_fee ?? 0), 0);
     setStats({ events: evts?.length || 0, users: usrs?.length || 0, registrations: regs?.length || 0, revenue, platformRevenue });
 
     // Monthly chart
@@ -124,6 +133,26 @@ export function AdminDashboard() {
     setCityData(Object.entries(cities).map(([name, value]) => ({ name, value })));
 
     setLoading(false);
+  };
+
+  const addWithdrawal = async () => {
+    if (!withdrawalForm.event_id || !withdrawalForm.amount || !withdrawalForm.withdrawn_at) {
+      toast.error('Preencha evento, valor e data do saque.');
+      return;
+    }
+    setSavingWithdrawal(true);
+    const { data, error } = await supabase.from('withdrawals').insert({
+      event_id: withdrawalForm.event_id,
+      amount: Number(withdrawalForm.amount),
+      withdrawn_at: withdrawalForm.withdrawn_at,
+      note: withdrawalForm.note || null,
+      created_by: (await supabase.auth.getUser()).data.user?.id,
+    }).select().single();
+    setSavingWithdrawal(false);
+    if (error) { toast.error('Erro ao registrar saque: ' + error.message); return; }
+    setWithdrawals(prev => [data, ...prev]);
+    setWithdrawalForm({ event_id: '', amount: '', withdrawn_at: '', note: '' });
+    toast.success('Saque registrado.');
   };
 
   const updateEventPlan = async (id: string, plan: string) => {
@@ -264,6 +293,19 @@ export function AdminDashboard() {
                       return s + (asaasFeeFromNetValue(charged, r.asaas_net_value) ?? 0);
                     }, 0);
                     const estRepasse = stats.revenue - stats.platformRevenue - taxaAsaasExata;
+                    // Ajuste histórico: diferença entre o que a fórmula ATUAL de comissão (10% do
+                    // valor original) cobraria e o que foi realmente cobrado/gravado em platform_fee
+                    // — só existe pra inscrições com cupom feitas antes da correção de 11/08/2026
+                    // (regra vigente na hora era 10% pós-cupom). Calculado na hora, não fixo, pra
+                    // nunca mais ficar desatualizado (ver Notion "Auditoria Arena MMP — Valores Não
+                    // Fecham" e CLAUDE.md "Fonte única de comissão").
+                    let ajusteHistorico = 0;
+                    let ajusteHistoricoCount = 0;
+                    paidRegsAll.forEach(r => {
+                      const diff = Math.round((platformFeeFromOriginal(r.base_amount, r.discount_amount) - Number(r.platform_fee ?? 0)) * 100) / 100;
+                      if (diff !== 0) { ajusteHistorico += diff; ajusteHistoricoCount++; }
+                    });
+                    ajusteHistorico = Math.round(ajusteHistorico * 100) / 100;
                     return (
                       <>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -285,9 +327,11 @@ export function AdminDashboard() {
                         <p className="text-xs -mt-2" style={{ color: '#64748b' }}>
                           * Taxa Asaas real, registrada por transação (não é estimativa).
                         </p>
-                        <p className="text-xs -mt-1" style={{ color: '#f87171' }}>
-                          -R$50,45 (ajuste histórico: 32 inscrições com cupom calculadas pela regra antiga, antes da correção de 11/08/2026 — absorvido pela 022Runners)
-                        </p>
+                        {ajusteHistoricoCount > 0 && (
+                          <p className="text-xs -mt-1" style={{ color: '#f87171' }}>
+                            -R$ {Math.abs(ajusteHistorico).toFixed(2).replace('.', ',')} (ajuste histórico: {ajusteHistoricoCount} inscrição(ões) com cupom calculada(s) pela regra antiga, antes da correção de 11/08/2026 — absorvido pela 022Runners)
+                          </p>
+                        )}
                       </>
                     );
                   })()}
@@ -336,7 +380,7 @@ export function AdminDashboard() {
                           const evRegs = registrations.filter(r => r.event_id === e.id);
                           const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
                           const evRevenue = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-                          const evComissao = evPaidRegs.reduce((s, r) => s + platformFeeFromOriginal(r.base_amount ?? r.amount, r.discount_amount), 0);
+                          const evComissao = evPaidRegs.reduce((s, r) => s + Number(r.platform_fee ?? 0), 0);
                           const organizerName = users.find(u => u.id === e.organizer_id)?.name || '—';
                           return (
                             <tr key={e.id} style={{ borderTop: '1px solid #334155' }}>
@@ -820,6 +864,119 @@ export function AdminDashboard() {
                     </table>
                   </div>
                 </div>
+
+                {/* Saques — espelho fiel do que o organizador vê, + formulário de registro (só Admin registra) */}
+                {(() => {
+                  const orgWithdrawals = withdrawals.filter(w => orgEventIds.includes(w.event_id));
+                  const perEvent = orgEvents.map(ev => {
+                    const liquidoConfirmado = orgPaidRegs
+                      .filter(r => r.event_id === ev.id)
+                      .reduce((s, r) => s + (netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value) ?? 0), 0);
+                    const jaSacado = orgWithdrawals
+                      .filter(w => w.event_id === ev.id)
+                      .reduce((s, w) => s + Number(w.amount), 0);
+                    return { event: ev, liquidoConfirmado, jaSacado, saldo: liquidoConfirmado - jaSacado };
+                  });
+                  const totalSaldo = perEvent.reduce((s, e) => s + e.saldo, 0);
+                  const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
+                  return (
+                    <div>
+                      <h4 className="text-sm font-semibold text-white mb-2">Saques</h4>
+                      <div className="rounded-xl p-4 mb-3" style={{ backgroundColor: '#0f172a' }}>
+                        <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Saldo disponível pra saque (todos os eventos)</p>
+                        <p className="text-xl font-bold" style={{ color: '#C9A84C' }}>{fmt(totalSaldo)}</p>
+                      </div>
+                      <div className="rounded-xl overflow-hidden mb-3" style={{ backgroundColor: '#0f172a' }}>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left" style={{ color: '#94a3b8' }}>
+                              {['Evento', 'Líquido Confirmado', 'Já Sacado', 'Saldo'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {perEvent.length === 0 ? (
+                              <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum evento.</td></tr>
+                            ) : perEvent.map(({ event, liquidoConfirmado, jaSacado, saldo }) => (
+                              <tr key={event.id} style={{ borderTop: '1px solid #334155' }}>
+                                <td className="px-3 py-2 text-white">{event.title}</td>
+                                <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{fmt(liquidoConfirmado)}</td>
+                                <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{fmt(jaSacado)}</td>
+                                <td className="px-3 py-2 font-semibold" style={{ color: '#C9A84C' }}>{fmt(saldo)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="rounded-xl overflow-hidden mb-3" style={{ backgroundColor: '#0f172a' }}>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left" style={{ color: '#94a3b8' }}>
+                              {['Data', 'Evento', 'Valor', 'Observação'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {orgWithdrawals.length === 0 ? (
+                              <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum saque registrado ainda.</td></tr>
+                            ) : orgWithdrawals.map(w => (
+                              <tr key={w.id} style={{ borderTop: '1px solid #334155' }}>
+                                <td className="px-3 py-2 text-xs" style={{ color: '#94a3b8' }}>{new Date(w.withdrawn_at + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                <td className="px-3 py-2 text-white">{orgEvents.find(e => e.id === w.event_id)?.title || '—'}</td>
+                                <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{fmt(Number(w.amount))}</td>
+                                <td className="px-3 py-2 text-xs" style={{ color: '#94a3b8' }}>{w.note || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="rounded-xl p-3 space-y-2" style={{ backgroundColor: '#0f172a' }}>
+                        <p className="text-xs font-medium" style={{ color: '#94a3b8' }}>Registrar novo saque</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={withdrawalForm.event_id}
+                            onChange={e => setWithdrawalForm(f => ({ ...f, event_id: e.target.value }))}
+                            className="text-xs rounded-lg px-2 py-1.5"
+                            style={{ backgroundColor: '#1e293b', color: '#e2e8f0', border: '1px solid #334155' }}
+                          >
+                            <option value="">Selecione o evento</option>
+                            {orgEvents.map(ev => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+                          </select>
+                          <input
+                            type="date"
+                            value={withdrawalForm.withdrawn_at}
+                            onChange={e => setWithdrawalForm(f => ({ ...f, withdrawn_at: e.target.value }))}
+                            className="text-xs rounded-lg px-2 py-1.5"
+                            style={{ backgroundColor: '#1e293b', color: '#e2e8f0', border: '1px solid #334155' }}
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Valor (R$)"
+                            value={withdrawalForm.amount}
+                            onChange={e => setWithdrawalForm(f => ({ ...f, amount: e.target.value }))}
+                            className="text-xs rounded-lg px-2 py-1.5"
+                            style={{ backgroundColor: '#1e293b', color: '#e2e8f0', border: '1px solid #334155' }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Observação (opcional)"
+                            value={withdrawalForm.note}
+                            onChange={e => setWithdrawalForm(f => ({ ...f, note: e.target.value }))}
+                            className="text-xs rounded-lg px-2 py-1.5"
+                            style={{ backgroundColor: '#1e293b', color: '#e2e8f0', border: '1px solid #334155' }}
+                          />
+                        </div>
+                        <button
+                          onClick={addWithdrawal}
+                          disabled={savingWithdrawal}
+                          className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+                          style={{ backgroundColor: '#C9A84C', color: '#fff' }}
+                        >
+                          {savingWithdrawal ? 'Salvando...' : 'Registrar Saque'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

@@ -117,8 +117,9 @@ function generateSlug(title: string) {
 
 export function OrganizerDashboard() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<'eventos' | 'criar' | 'cupons' | 'maisdados'>('eventos');
+  const [tab, setTab] = useState<'eventos' | 'criar' | 'cupons' | 'maisdados' | 'saques'>('eventos');
   const [events, setEvents] = useState<any[]>([]);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState<CouponForm>(emptyCouponForm);
   const [couponLoading, setCouponLoading] = useState(false);
@@ -144,7 +145,20 @@ export function OrganizerDashboard() {
   const [maisDadosEventId, setMaisDadosEventId] = useState<string | null>(null);
   const [exportModalEvent, setExportModalEvent] = useState<any | null>(null);
 
-  useEffect(() => { loadEvents(); loadCoupons(); }, []);
+  useEffect(() => { loadEvents(); loadCoupons(); loadWithdrawals(); }, []);
+
+  useEffect(() => {
+    if (tab === 'saques') loadWithdrawals();
+  }, [tab]);
+
+  const loadWithdrawals = async () => {
+    const { data, error } = await supabase
+      .from('withdrawals')
+      .select('*, events(title)')
+      .order('withdrawn_at', { ascending: false });
+    if (error) { toast.error('Erro ao carregar saques: ' + error.message); return; }
+    setWithdrawals(data || []);
+  };
 
   useEffect(() => {
     if (tab !== 'maisdados') return;
@@ -792,6 +806,7 @@ export function OrganizerDashboard() {
           <button onClick={() => setTab('criar')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'criar' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Criar Evento</button>
           <button onClick={() => setTab('cupons')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'cupons' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Cupons</button>
           <button onClick={() => setTab('maisdados')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'maisdados' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Mais Dados</button>
+          <button onClick={() => setTab('saques')} className={`px-4 py-2 rounded-lg font-medium ${tab === 'saques' ? 'bg-[#C9A84C] text-white' : 'bg-white text-gray-600 border'}`}>Saques</button>
         </div>
 
         {/* Lista de Eventos */}
@@ -1493,6 +1508,88 @@ export function OrganizerDashboard() {
                   </div>
                 </>
               )}
+            </>
+          );
+        })()}
+
+        {/* Saques (somente leitura — quem registra é o Admin) */}
+        {tab === 'saques' && (() => {
+          const paidRegs = allRegistrations.filter(r => r.status === 'paid');
+          const perEvent = events.map(ev => {
+            const liquidoConfirmado = paidRegs
+              .filter(r => r.event_id === ev.id)
+              .reduce((s, r) => s + (netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value) ?? 0), 0);
+            const jaSacado = withdrawals
+              .filter(w => w.event_id === ev.id)
+              .reduce((s, w) => s + Number(w.amount), 0);
+            return { event: ev, liquidoConfirmado, jaSacado, saldo: liquidoConfirmado - jaSacado };
+          });
+          const totalSaldo = perEvent.reduce((s, e) => s + e.saldo, 0);
+          const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
+
+          return (
+            <>
+              <div className="bg-white rounded-xl border-2 border-[#C9A84C] p-6 mb-6">
+                <p className="text-sm font-medium text-gray-500 mb-1">Saldo disponível pra saque (todos os eventos)</p>
+                <p className="text-3xl font-bold" style={{ color: '#C9A84C' }}>{fmt(totalSaldo)}</p>
+                <p className="text-xs text-gray-400 mt-1">Líquido já confirmado (pago pelos atletas, descontadas taxas Asaas e comissão 022Runners) menos o que já foi sacado.</p>
+              </div>
+
+              <div className="bg-white rounded-xl border p-6 mb-6 overflow-x-auto">
+                <h3 className="font-semibold mb-4">Saldo por evento</h3>
+                {perEvent.length === 0 ? (
+                  <p className="text-sm text-gray-400">Nenhum evento ainda.</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500 border-b">
+                        <th className="py-2 pr-4">Evento</th>
+                        <th className="py-2 pr-4">Líquido Confirmado</th>
+                        <th className="py-2 pr-4">Já Sacado</th>
+                        <th className="py-2 pr-4">Saldo Disponível</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {perEvent.map(({ event, liquidoConfirmado, jaSacado, saldo }) => (
+                        <tr key={event.id} className="border-b last:border-0">
+                          <td className="py-2 pr-4">{event.title}</td>
+                          <td className="py-2 pr-4">{fmt(liquidoConfirmado)}</td>
+                          <td className="py-2 pr-4">{fmt(jaSacado)}</td>
+                          <td className="py-2 pr-4 font-semibold" style={{ color: '#C9A84C' }}>{fmt(saldo)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              <div className="bg-white rounded-xl border p-6 overflow-x-auto">
+                <h3 className="font-semibold mb-4">Histórico de saques</h3>
+                {withdrawals.length === 0 ? (
+                  <p className="text-sm text-gray-400">Nenhum saque registrado ainda.</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500 border-b">
+                        <th className="py-2 pr-4">Data</th>
+                        <th className="py-2 pr-4">Evento</th>
+                        <th className="py-2 pr-4">Valor</th>
+                        <th className="py-2 pr-4">Observação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {withdrawals.map(w => (
+                        <tr key={w.id} className="border-b last:border-0">
+                          <td className="py-2 pr-4">{new Date(w.withdrawn_at + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                          <td className="py-2 pr-4">{w.events?.title ?? '-'}</td>
+                          <td className="py-2 pr-4">{fmt(Number(w.amount))}</td>
+                          <td className="py-2 pr-4 text-gray-500">{w.note ?? '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </>
           );
         })()}

@@ -42,16 +42,36 @@ sumir da tabela de tracking em produção por algum motivo, `list_branches` vai 
 `postgres_logs` desse branch (via `query_logs`) pra ver em qual statement travou, não assuma
 que é o conteúdo da mudança que você acabou de fazer.
 
-## Fonte única de comissão — NÃO está quebrado hoje, não "corrigir" sem motivo
+## Fonte única de comissão — SEMPRE usar a coluna `platform_fee` gravada, nunca recalcular
 
-A regra vigente (fixada em 11/08/2026, confirmada correta em 17/08/2026) é: taxa de plataforma
-= sempre 10% sobre o valor ORIGINAL da inscrição (antes de cupom), nunca sobre o valor pós-
-desconto. Isso já está correto e consistente em `RegistrationPage.tsx` (onde `platform_fee` é
-calculado e gravado na criação) e em `AdminDashboard.tsx` (duas exibições, mesma fórmula).
-`PaymentPage.tsx` nem recalcula — só confia na coluna `platform_fee` já gravada. Se for
-consolidar a fórmula duplicada num helper único (`asaasFee.ts`), é refatoração de
-duplicação — o resultado numérico tem que ficar IDÊNTICO ao atual, teste isso explicitamente
-antes de considerar concluído.
+A regra de cálculo (fixada em 11/08/2026, confirmada correta em 17/08/2026) é: taxa de
+plataforma = sempre 10% sobre o valor ORIGINAL da inscrição (antes de cupom), nunca sobre o
+valor pós-desconto. Essa regra só vale pra calcular e GRAVAR `platform_fee` na CRIAÇÃO da
+inscrição (`RegistrationPage.tsx`). Para EXIBIR comissão em qualquer relatório/dashboard,
+some sempre a coluna `registrations.platform_fee` já gravada — nunca recalcule pela fórmula
+atual em cima de inscrições existentes. `platform_fee` é o valor real cobrado do atleta no
+momento daquela inscrição (inclusive `0` em inscrições anteriores à existência da comissão
+separada, ou um valor menor em cupons usados antes de 11/08/2026 quando a fórmula vigente na
+época era 10% pós-desconto) — recalcular pela fórmula de hoje sobre dado histórico produz um
+número que nunca foi dinheiro real. **Incidente 31/08/2026:** exatamente esse erro em
+`AdminDashboard.tsx` (`platformRevenue` do Overview e `evComissao` da tabela "Comissão por
+Evento", ambos usando `platformFeeFromOriginal` sobre todo o histórico) inflou a comissão
+exibida do Arena MMP em R$52,38 (29 inscrições) e do Balneário Run em R$19,20 (5 inscrições),
+fazendo a conta manual "Bruto − Comissão" parecer maior que o "Est. a Receber" real do
+Organizador — que nunca teve esse bug, pois sempre usou `platform_fee` gravado via
+`netForOrganizer`. Corrigido: ambos os pontos do Admin agora somam `platform_fee` direto,
+igual ao Organizador. Notion: "URGENTE — 022RUNNERS: Auditoria Arena MMP — Valores Não Fecham".
+`PaymentPage.tsx` também nem recalcula — só confia na coluna já gravada, mesmo padrão.
+
+**Nota sobre "Bruto":** o termo é usado com DOIS significados diferentes no sistema — não é
+bug, mas gera confusão se não for explicitado em qualquer relatório: (1) "Total Cobrado do
+Atleta" = `amount` = `base_amount + platform_fee` (dinheiro real que passou pelo Asaas); (2)
+"Bruto do Organizador" (usado nos cards do Admin) = `base_amount` só, SEM a comissão (que é
+cobrada à parte do atleta e nunca é dinheiro do organizador). As duas definições conciliam
+exatamente: `amount − platform_fee = base_amount`, e `base_amount − taxas_asaas = líquido do
+organizador` (a comissão nunca entra nessa segunda conta, se cancela por desenho). Em PDF de
+auditoria pro organizador, usar a definição (1) como "Bruto" é mais intuitivo — deixa claro
+que a comissão nunca foi dinheiro dele.
 
 ## Backlog de achados não é pra ser esquecido
 
