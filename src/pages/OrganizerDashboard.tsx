@@ -562,13 +562,18 @@ export function OrganizerDashboard() {
       setError('Preencha todos os campos obrigatórios.');
       return;
     }
-    // Padrão definitivo: toda distância cadastrada precisa das duas opções de kit
+    // Padrão definitivo: toda distância NOVA precisa das duas opções de kit
     // (Econômico sem camisa, Completo com camisa), cada uma com preço válido —
-    // nunca uma distância "pela metade" chegando na tela do atleta.
+    // nunca uma distância "pela metade" chegando na tela do atleta. Só vale pra
+    // distâncias ainda não salvas (sem id): uma distância que já existe no banco
+    // com um kit pendente (decisão de negócio adiada, ex. "3km caminhada" da
+    // Arena MMP sem Kit Econômico) não pode travar o salvamento de campos do
+    // evento sem relação com kit, como a data limite — senão o organizador fica
+    // impedido de editar QUALQUER coisa do evento até essa decisão ser tomada.
     const eventDistancesToSave = form.eventDistances.filter(d => d.name.trim());
     const kitPrice = (slot: KitSlot) => parseFloat(slot.lots[0]?.price || '0');
-    if (eventDistancesToSave.some(d => !(kitPrice(d.economico) > 0) || !(kitPrice(d.completo) > 0))) {
-      setError('Toda distância precisa dos dois kits (Econômico e Completo) com preço válido.');
+    if (eventDistancesToSave.some(d => !d.id && (!(kitPrice(d.economico) > 0) || !(kitPrice(d.completo) > 0)))) {
+      setError('Toda distância nova precisa dos dois kits (Econômico e Completo) com preço válido.');
       return;
     }
     setLoading(true);
@@ -694,7 +699,11 @@ export function OrganizerDashboard() {
               .update({ name, price, lots, includes_shirt })
               .eq('id', slot.id);
             if (kitErr) throw kitErr;
-          } else {
+          } else if (price > 0) {
+            // Kit sem id e sem preço (ex. Kit Econômico da "3km caminhada" da Arena
+            // MMP, decisão de preço ainda pendente) não deve ser criado com R$0 só
+            // porque o evento foi salvo por outro motivo — isso liberaria inscrição
+            // grátis nesse kit pro atleta. Fica ausente até alguém definir um preço.
             const { error: kitErr } = await supabase.from('registration_types').insert({
               event_id: savedEventId, distance_id: distanceId, name, price, lots, includes_shirt,
               sort_order: key === 'economico' ? 0 : 1,
