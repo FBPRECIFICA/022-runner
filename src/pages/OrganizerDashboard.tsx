@@ -252,7 +252,7 @@ export function OrganizerDashboard() {
     setLoadingCouponUsages(true);
     const { data: usages } = await supabase
       .from('registrations')
-      .select('name, full_name, email, created_at, discount_amount, coupon_code, status, events(title)')
+      .select('name, full_name, email, cpf, shirt_size, created_at, discount_amount, coupon_code, status, events(title)')
       .not('coupon_code', 'is', null)
       .order('created_at', { ascending: false });
     setCouponUsages(usages || []);
@@ -518,6 +518,35 @@ export function OrganizerDashboard() {
       // silêncio total, sem toast e sem log visível pro organizador.
       toast.error('Falha ao gerar o Excel: ' + (err?.message || String(err)));
       console.error('exportExcel falhou', err);
+    }
+  };
+
+  // Lista de conferência por cupom (Notion "Cupom 100% Cortesia + Lista de
+  // Conferência por Cupom"): Nome/CPF/Tamanho pro organizador confirmar
+  // identidade na entrega do kit — só usos pagos/confirmados contam, igual ao
+  // resto do painel (pendente/carrinho abandonado não é uso real).
+  const exportCouponUsage = (code: string, usages: any[]) => {
+    try {
+      const rows = usages
+        .filter(u => u.status === 'paid' || u.status === 'confirmed')
+        .map(u => ({
+          'Nome': u.name || u.full_name,
+          'CPF': u.cpf,
+          'Tamanho de Camisa': u.shirt_size || '',
+        }));
+      if (rows.length === 0) {
+        toast.error('Nenhum uso pago/confirmado desse cupom pra exportar.');
+        return;
+      }
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Conferência');
+      const date = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `cupom-${code.toLowerCase()}-conferencia-${date}.xlsx`);
+      toast.success(`${rows.length} uso(s) exportado(s).`);
+    } catch (err: any) {
+      toast.error('Falha ao gerar o Excel: ' + (err?.message || String(err)));
+      console.error('exportCouponUsage falhou', err);
     }
   };
 
@@ -1388,7 +1417,15 @@ export function OrganizerDashboard() {
                 <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl bg-white flex flex-col" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center justify-between p-5 border-b">
                     <h3 className="text-lg font-bold text-gray-900">Quem usou o cupom {couponUsageModal.code}</h3>
-                    <button onClick={() => setCouponUsageModal(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => exportCouponUsage(couponUsageModal.code, couponUsages.filter(u => u.coupon_code === couponUsageModal.code))}
+                        className="flex items-center gap-1.5 text-sm font-medium text-gray-600 border rounded-lg px-3 py-1.5 hover:bg-gray-50"
+                      >
+                        <Download size={14} /> Exportar
+                      </button>
+                      <button onClick={() => setCouponUsageModal(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
+                    </div>
                   </div>
                   <div className="p-5 overflow-y-auto">
                     {loadingCouponUsages ? (
@@ -1399,11 +1436,13 @@ export function OrganizerDashboard() {
                         <p className="text-center text-gray-400 text-sm py-8">Nenhum uso registrado ainda.</p>
                       ) : (
                         <div className="overflow-x-auto">
+                          <p className="text-xs text-gray-400 mb-2">CPF e Tamanho de Camisa são pra conferir identidade na entrega do kit — "Exportar" traz só usos pagos/confirmados.</p>
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="text-left border-b text-gray-500">
                                 <th className="px-3 py-2 font-medium">Atleta</th>
-                                <th className="px-3 py-2 font-medium">Email</th>
+                                <th className="px-3 py-2 font-medium">CPF</th>
+                                <th className="px-3 py-2 font-medium">Tamanho</th>
                                 <th className="px-3 py-2 font-medium">Evento</th>
                                 <th className="px-3 py-2 font-medium">Data</th>
                                 <th className="px-3 py-2 font-medium">Status</th>
@@ -1414,7 +1453,8 @@ export function OrganizerDashboard() {
                               {usages.map((u, i) => (
                                 <tr key={i} className="border-b last:border-0">
                                   <td className="px-3 py-2 font-medium text-gray-900">{u.name || u.full_name}</td>
-                                  <td className="px-3 py-2 text-gray-500">{u.email}</td>
+                                  <td className="px-3 py-2 text-gray-500">{u.cpf || '—'}</td>
+                                  <td className="px-3 py-2 text-gray-500">{u.shirt_size || '—'}</td>
                                   <td className="px-3 py-2 text-gray-500">{u.events?.title || '—'}</td>
                                   <td className="px-3 py-2 text-gray-500">{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
                                   <td className="px-3 py-2">

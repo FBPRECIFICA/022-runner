@@ -144,6 +144,39 @@ export function PaymentPage() {
       }
       const { data: refreshed } = await supabase.rpc('get_registration_public', { p_id: registrationId }).single() as { data: Record<string, any> | null };
       if (refreshed) setReg(refreshed);
+
+      // Cupom cortesia (100%, ou qualquer desconto que zere o total): a RPC já
+      // confirma a inscrição direto no banco (mesma lógica do evento gratuito),
+      // sem passar pelo asaas-webhook — então o e-mail de confirmação, que
+      // normalmente é disparado por lá, precisa ser mandado direto aqui.
+      if (result.confirmed && refreshed && event) {
+        try {
+          await supabase.functions.invoke('send-email', {
+            body: {
+              templateType: 'atleta_confirmacao',
+              recipientEmail: refreshed.email,
+              data: {
+                athleteName: refreshed.name,
+                eventTitle: (event.title as string) ?? '',
+                eventDate: event.date ? new Date(event.date as string).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+                eventCity: (event.city as string) ?? '',
+                distanceName: refreshed.distance_name || '',
+                registrationNumber: refreshed.registration_number,
+                amount: '0,00',
+                baseAmount: '0,00',
+                platformFee: '0,00',
+                discountAmount: Number(result.discount_amount).toFixed(2).replace('.', ','),
+                couponCode: couponInput.trim().toUpperCase(),
+              },
+            },
+          });
+        } catch (emailErr) {
+          console.error('Erro ao enviar confirmação de cortesia (não bloqueante):', emailErr);
+        }
+        navigate(`/confirmacao/${registrationId}`);
+        return;
+      }
+
       // Compara o total SEM cupom (base original + taxa) contra o total COM
       // cupom já aplicado — mostra o impacto real no que o atleta paga, não
       // só o desconto na base (que sozinho não reflete a taxa fixa).
