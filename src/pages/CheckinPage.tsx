@@ -26,13 +26,18 @@ export function CheckinPage() {
   }, [eventSlug]);
 
   const handleCheckin = async (id: string) => {
-    const now = new Date().toISOString();
     // checkin_at é o único campo de presença - "status" já é usado pra status de
     // pagamento (paid/pending/cancelled) em toda a plataforma (exportação, painel
     // financeiro, etc). Sobrescrever "status" aqui apagava o status de pagamento
     // e quebrava esses outros lugares assim que o organizador fizesse o 1º check-in.
-    const { error } = await supabase.from('registrations').update({ checkin_at: now }).eq('id', id);
+    //
+    // RPC em vez de update direto: a tabela nunca teve policy de UPDATE pro
+    // organizador, então o update direto sempre casava 0 linhas por RLS sem
+    // erro nenhum — a UI mostrava "Presente" localmente mas nada era gravado
+    // (achado 04/09/2026, 567 check-ins da Corrida Solidária nunca persistidos).
+    const { data, error } = await supabase.rpc('mark_registration_checkin', { p_registration_id: id });
     if (error) { toast.error('Erro ao confirmar check-in: ' + error.message); return; }
+    const now = data?.checkin_at ?? new Date().toISOString();
     setRegistrations(prev => prev.map(r => r.id === id ? { ...r, checkin_at: now } : r));
   };
 
