@@ -22,6 +22,9 @@ const EXPORT_STATUS_OPTIONS: { value: ExportStatusFilter; label: string }[] = [
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
 const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Bag', 'Squeeze (Garrafinha de água)', 'Outros'];
+// Mesma lista fixa usada em RegistrationPage.tsx. Estoque é um pool único por
+// evento (não por distância/kit) — decisão do Senhor Fábio, 04/09/2026.
+const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 
 interface Lot { price: string; qty: string; }
 interface DistanceWithLots { name: string; lots: Lot[]; includes_shirt: boolean; }
@@ -50,6 +53,10 @@ interface EventForm {
   distances: DistanceWithLots[];
   link_percurso: string;
   eventDistances: EventDistanceForm[];
+  // Estoque de camisetas por tamanho, pool único do evento. String vazia =
+  // tamanho sem controle de estoque (sempre disponível, comportamento anterior
+  // a essa feature); só é gravado em shirt_stock se preenchido.
+  shirtStock: Record<string, string>;
 }
 
 const emptyForm: EventForm = {
@@ -68,6 +75,7 @@ const emptyForm: EventForm = {
   distances: [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
   link_percurso: '',
   eventDistances: [],
+  shirtStock: {},
 };
 
 function calcScore(form: EventForm, hasPhotos: boolean): number {
@@ -131,6 +139,11 @@ export function OrganizerDashboard() {
   const [form, setForm] = useState<EventForm>(emptyForm);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editingEventStatus, setEditingEventStatus] = useState<string>('published');
+  // Contagem retroativa (confirmadas/pendentes) por tamanho, calculada a partir
+  // das inscrições reais do evento sendo editado — mostrada ao lado do campo de
+  // quantidade total, pra o organizador saber quanto já foi "gasto" antes mesmo
+  // de configurar o estoque pela primeira vez.
+  const [shirtCounts, setShirtCounts] = useState<Record<string, { confirmed: number; pending: number }>>({});
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [sponsorUploading, setSponsorUploading] = useState<boolean[]>([]);
@@ -537,6 +550,24 @@ export function OrganizerDashboard() {
         economico: toKitSlot((d.registration_types || []).find((t: any) => t.includes_shirt === false)),
         completo: toKitSlot((d.registration_types || []).find((t: any) => t.includes_shirt === true)),
       }));
+
+      const { data: stockRows } = await supabase.from('shirt_stock').select('size, quantity_total').eq('event_id', event.id);
+      const shirtStock: Record<string, string> = {};
+      for (const s of stockRows || []) shirtStock[s.size] = String(s.quantity_total);
+
+      // Contagem retroativa direto de `registrations` (RLS já dá acesso ao
+      // organizador dono) — funciona mesmo antes de shirt_stock ter qualquer
+      // linha, pra informar quanto já foi "gasto" antes da primeira configuração.
+      const { data: shirtRegs } = await supabase.from('registrations').select('shirt_size, status').eq('event_id', event.id);
+      const counts: Record<string, { confirmed: number; pending: number }> = {};
+      for (const r of shirtRegs || []) {
+        if (!r.shirt_size) continue;
+        if (!counts[r.shirt_size]) counts[r.shirt_size] = { confirmed: 0, pending: 0 };
+        if (r.status === 'paid' || r.status === 'confirmed') counts[r.shirt_size].confirmed++;
+        else if (r.status === 'pending' || r.status === 'awaiting_payment') counts[r.shirt_size].pending++;
+      }
+      setShirtCounts(counts);
+
       setForm({
         title: event.title || '',
         description: event.description || '',
@@ -555,6 +586,7 @@ export function OrganizerDashboard() {
         distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
         link_percurso: event.link_percurso || '',
         eventDistances,
+        shirtStock,
       });
       setEditingEventId(event.id);
       setEditingEventStatus(event.status || 'published');
@@ -727,7 +759,24 @@ export function OrganizerDashboard() {
         }
       }
 
+      // Estoque de camisetas: tamanho preenchido com número válido -> upsert;
+      // tamanho em branco -> remove o controle desse tamanho (volta a ficar
+      // sempre disponível), nunca grava 0 por engano.
+      for (const size of SHIRT_SIZES) {
+        const raw = form.shirtStock[size];
+        const qty = raw !== undefined && raw !== '' ? parseInt(raw) : NaN;
+        if (!isNaN(qty) && qty >= 0) {
+          const { error: stockErr } = await supabase.from('shirt_stock')
+            .upsert({ event_id: savedEventId, size, quantity_total: qty }, { onConflict: 'event_id,size' });
+          if (stockErr) throw stockErr;
+        } else {
+          const { error: stockErr } = await supabase.from('shirt_stock').delete().eq('event_id', savedEventId).eq('size', size);
+          if (stockErr) throw stockErr;
+        }
+      }
+
       setForm(emptyForm);
+      setShirtCounts({});
       setPhotos([]);
       setPhotoPreviews([]);
       setSponsorUploading([]);
@@ -1883,6 +1932,37 @@ export function OrganizerDashboard() {
                 </div>
               </div>
 
+              {/* Estoque de Camisetas — pool único do evento, compartilhado entre
+                  todas as distâncias/kits que incluem camisa (decisão do Senhor
+                  Fábio, 04/09/2026). Deixar um tamanho em branco = sem controle
+                  de estoque pra ele, sempre disponível (comportamento anterior). */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Estoque de Camisetas por Tamanho</label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Defina a quantidade total de cada tamanho pra travar automaticamente a escolha no formulário de inscrição quando esgotar. Só contam pro estoque inscrições PAGAS/CONFIRMADAS — pendentes nunca travam vaga, só aparecem aqui como alerta. Deixe em branco o tamanho que não quer controlar.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {SHIRT_SIZES.map(size => {
+                    const c = shirtCounts[size];
+                    return (
+                      <div key={size} className="border rounded-lg p-3 bg-gray-50">
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">Tamanho {size}</label>
+                        <input type="number" min="0" value={form.shirtStock[size] ?? ''}
+                          onChange={e => setForm(prev => ({ ...prev, shirtStock: { ...prev.shirtStock, [size]: e.target.value } }))}
+                          className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
+                          placeholder="Sem controle" />
+                        {c && (c.confirmed > 0 || c.pending > 0) && (
+                          <p className="text-[11px] text-gray-500 mt-1">
+                            {c.confirmed} confirmada{c.confirmed !== 1 ? 's' : ''}
+                            {c.pending > 0 && <span className="text-amber-600"> · {c.pending} pendente{c.pending !== 1 ? 's' : ''}</span>}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Upload de Fotos */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Fotos do Evento (máx. 5)</label>
@@ -1911,7 +1991,7 @@ export function OrganizerDashboard() {
             </div>
 
             <div className="flex gap-3 mt-6 flex-wrap">
-              <button onClick={() => { setTab('eventos'); setEditingEventId(null); setEditingEventStatus('published'); setForm(emptyForm); setSponsorUploading([]); }} className="border text-gray-600 py-3 px-5 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
+              <button onClick={() => { setTab('eventos'); setEditingEventId(null); setEditingEventStatus('published'); setForm(emptyForm); setShirtCounts({}); setSponsorUploading([]); }} className="border text-gray-600 py-3 px-5 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
               {(!editingEventId || editingEventStatus === 'draft') && (
                 <button onClick={() => handleSubmit('draft')} disabled={loading}
                   className="flex-1 border-2 text-gray-700 py-3 rounded-lg font-medium disabled:opacity-50 hover:bg-gray-50"

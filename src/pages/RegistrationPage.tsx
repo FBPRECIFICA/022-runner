@@ -50,6 +50,9 @@ export function RegistrationPage() {
   // Padrão definitivo: kit é sub-item da distância (event_distances -> registration_types),
   // nunca mais solto no evento nem embutido no texto da distância.
   const [eventDistances, setEventDistances] = useState<any[]>([]);
+  // null = organizador nunca configurou estoque pra esse evento (mostra todos os
+  // tamanhos, comportamento idêntico ao anterior a essa feature).
+  const [shirtAvailability, setShirtAvailability] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<Step>('form');
@@ -90,6 +93,14 @@ export function RegistrationPage() {
                 registration_types: [...(d.registration_types || [])].sort((a: any, b: any) => a.sort_order - b.sort_order),
               }));
               setEventDistances(sorted);
+            });
+          // Vazio (evento sem estoque configurado) mantém shirtAvailability null,
+          // preservando o comportamento anterior (todos os tamanhos disponíveis).
+          supabase.rpc('get_shirt_availability', { p_event_id: data.id })
+            .then(({ data: avail }) => {
+              if (avail && avail.length > 0) {
+                setShirtAvailability(Object.fromEntries(avail.map((a: any) => [a.size, a.available])));
+              }
             });
         }
         setLoading(false);
@@ -152,6 +163,23 @@ export function RegistrationPage() {
   const kits: any[] = chosenDistance?.registration_types || [];
   const chosenKit = kits[form.kit_index] || kits[0];
   const shirtRequired = chosenKit ? chosenKit.includes_shirt !== false : true;
+  // shirtAvailability null = sem estoque configurado pro evento, mostra todos.
+  // Um tamanho ausente do mapa (organizador não configurou ESSE tamanho
+  // específico, só outros) também conta como sem controle — só esconde quando
+  // o tamanho está presente E zerado.
+  const availableShirtSizes = shirtAvailability
+    ? SHIRT_SIZES.filter(s => !(s in shirtAvailability) || shirtAvailability[s] > 0)
+    : SHIRT_SIZES;
+
+  // Se o tamanho já escolhido (rascunho salvo, ou esgotou entre o carregamento
+  // e agora) não está mais disponível, força reseleção em vez de deixar
+  // submeter um tamanho esgotado.
+  useEffect(() => {
+    if (form.shirt_size && !availableShirtSizes.includes(form.shirt_size)) {
+      set('shirt_size', '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shirtAvailability]);
 
   const validate = () => {
     if (!form.name.trim()) return 'Informe seu nome completo.';
@@ -504,8 +532,11 @@ export function RegistrationPage() {
               <Field label="Tamanho da Camiseta *">
                 <select className={inp} value={form.shirt_size} onChange={e => set('shirt_size', e.target.value)}>
                   <option value="">Selecione</option>
-                  {SHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                  {availableShirtSizes.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
+                {shirtAvailability && availableShirtSizes.length < SHIRT_SIZES.length && (
+                  <p className="text-xs text-gray-500 mt-1">Alguns tamanhos esgotaram e não aparecem na lista.</p>
+                )}
               </Field>
             )}
 
