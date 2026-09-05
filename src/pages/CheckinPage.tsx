@@ -100,6 +100,11 @@ export function CheckinPage() {
                   <span className="text-sm font-mono font-bold text-[#C9A84C]">#{r.registration_number}</span>
                   <span className="text-xs text-gray-400">·</span>
                   <span className="text-xs text-gray-500">{r.distance_name}</span>
+                  {r.shirt_size && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">
+                      Camisa {r.shirt_size}
+                    </span>
+                  )}
                   {r.status === 'paid' || r.status === 'confirmed' ? (
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700">Pago</span>
                   ) : (
