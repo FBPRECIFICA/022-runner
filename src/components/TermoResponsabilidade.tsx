@@ -65,6 +65,9 @@ export function TermoResponsabilidade({ registration, event, userId, onAccepted 
 
         <p className="mt-3">Declaro ter lido e concordado com o regulamento completo do evento disponível na plataforma 022 RUNNER.</p>
 
+        <p className="mt-4 font-semibold">POLÍTICA DE CANCELAMENTO:</p>
+        <p className="mt-2">Em caso de cancelamento da inscrição solicitado pelo atleta com <strong>7 (sete) dias ou mais</strong> de antecedência em relação à data do evento, fica assegurado o estorno integral do valor pago. Em caso de cancelamento solicitado com <strong>menos de 7 (sete) dias</strong> de antecedência, o valor a ser estornado corresponderá ao montante pago, descontada a taxa de processamento de pagamento (Asaas) já incorrida na respectiva transação. Esta política se aplica a todos os eventos disponibilizados na plataforma 022 RUNNER, independentemente do organizador.</p>
+
         <p className="mt-4 text-xs text-gray-400">Assinado digitalmente em: {now} — Plataforma: 022runners.com.br</p>
       </div>
 
