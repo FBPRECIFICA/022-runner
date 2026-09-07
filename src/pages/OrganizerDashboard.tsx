@@ -136,6 +136,10 @@ export function OrganizerDashboard() {
   const [couponUsages, setCouponUsages] = useState<any[]>([]);
   const [couponUsageModal, setCouponUsageModal] = useState<any | null>(null);
   const [loadingCouponUsages, setLoadingCouponUsages] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<any | null>(null);
+  const [editCouponForm, setEditCouponForm] = useState({ discount_value: '', max_uses: '', valid_until: '' });
+  const [editCouponError, setEditCouponError] = useState('');
+  const [editCouponLoading, setEditCouponLoading] = useState(false);
   const [form, setForm] = useState<EventForm>(emptyForm);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editingEventStatus, setEditingEventStatus] = useState<string>('published');
@@ -333,6 +337,58 @@ export function OrganizerDashboard() {
     }
     toast.success('Cupom excluído com sucesso');
     loadCoupons();
+  };
+
+  const openEditCoupon = (coupon: any) => {
+    setEditCouponError('');
+    setEditingCoupon(coupon);
+    setEditCouponForm({
+      discount_value: String(coupon.discount_value ?? ''),
+      max_uses: coupon.max_uses != null ? String(coupon.max_uses) : '',
+      valid_until: coupon.valid_until ? coupon.valid_until.slice(0, 10) : '',
+    });
+  };
+
+  // Só max_uses/discount_value/valid_until são editáveis — nunca o "code":
+  // registrations.coupon_code guarda o texto do código usado em cada
+  // inscrição (não uma FK), então renomear o código quebraria o vínculo
+  // com o histórico de uso já registrado (current_uses e a lista de quem usou).
+  const handleUpdateCoupon = async () => {
+    if (!editingCoupon) return;
+    setEditCouponError('');
+    const value = parseFloat(editCouponForm.discount_value);
+    if (!value || value <= 0) { setEditCouponError('Informe um valor de desconto válido.'); return; }
+    if (editingCoupon.discount_type === 'percent' && value > 100) { setEditCouponError('Desconto percentual não pode ser maior que 100%.'); return; }
+    const maxUses = editCouponForm.max_uses ? parseInt(editCouponForm.max_uses) : null;
+    if (maxUses != null && maxUses < editingCoupon.current_uses) {
+      setEditCouponError(`O limite não pode ser menor que os ${editingCoupon.current_uses} usos já registrados.`);
+      return;
+    }
+    setEditCouponLoading(true);
+    try {
+      // .select() pra confirmar que uma linha foi realmente alterada — um
+      // UPDATE filtrado por RLS que não casa nenhuma linha retorna sucesso
+      // sem erro (mesma armadilha do bug de check-in de 04/09: a tela dizia
+      // "Presente" mas nada tinha sido gravado).
+      const { data, error } = await supabase
+        .from('coupons')
+        .update({
+          discount_value: value,
+          max_uses: maxUses,
+          valid_until: editCouponForm.valid_until || null,
+        })
+        .eq('id', editingCoupon.id)
+        .select();
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Nenhuma alteração foi salva — verifique se você tem permissão sobre este cupom.');
+      toast.success('Cupom atualizado com sucesso!');
+      setEditingCoupon(null);
+      loadCoupons();
+    } catch (err: any) {
+      setEditCouponError(err.message || 'Erro ao atualizar cupom.');
+    } finally {
+      setEditCouponLoading(false);
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1346,6 +1402,12 @@ export function OrganizerDashboard() {
                           <td className="px-4 py-2">
                             <div className="flex gap-2">
                               <button
+                                onClick={() => openEditCoupon(c)}
+                                className="text-xs px-2 py-1 rounded-lg border text-gray-600 hover:bg-gray-50"
+                              >
+                                Editar
+                              </button>
+                              <button
                                 onClick={() => toggleCouponActive(c)}
                                 className="text-xs px-2 py-1 rounded-lg border text-gray-600 hover:bg-gray-50"
                               >
@@ -1410,6 +1472,69 @@ export function OrganizerDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Modal de edição do cupom */}
+            {editingCoupon && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setEditingCoupon(null)}>
+                <div className="w-full max-w-sm rounded-2xl bg-white p-5" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">Editar cupom {editingCoupon.code}</h3>
+                    <button onClick={() => setEditingCoupon(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
+                  </div>
+                  {editCouponError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg mb-3 text-sm">{editCouponError}</div>}
+                  <p className="text-xs text-gray-400 mb-4">O código do cupom não pode ser alterado — ele já está vinculado ao histórico de uso ({editingCoupon.current_uses} inscrição{editingCoupon.current_uses === 1 ? '' : 'ões'}).</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Desconto {editingCoupon.discount_type === 'percent' ? '(%)' : '(R$)'}
+                      </label>
+                      <input
+                        type="number"
+                        value={editCouponForm.discount_value}
+                        onChange={e => setEditCouponForm(p => ({ ...p, discount_value: e.target.value }))}
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Limite máximo de usos</label>
+                      <input
+                        type="number"
+                        value={editCouponForm.max_uses}
+                        onChange={e => setEditCouponForm(p => ({ ...p, max_uses: e.target.value }))}
+                        placeholder="Deixe em branco para ilimitado"
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Já usado {editingCoupon.current_uses}x até agora.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Válido até (opcional)</label>
+                      <input
+                        type="date"
+                        value={editCouponForm.valid_until}
+                        onChange={e => setEditCouponForm(p => ({ ...p, valid_until: e.target.value }))}
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-5">
+                    <button
+                      onClick={() => setEditingCoupon(null)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-medium border text-gray-600 hover:bg-gray-50"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleUpdateCoupon}
+                      disabled={editCouponLoading}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                      style={{ backgroundColor: '#C9A84C' }}
+                    >
+                      {editCouponLoading ? 'Salvando...' : 'Salvar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Modal de uso do cupom */}
             {couponUsageModal && (
