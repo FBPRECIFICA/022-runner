@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { NewsletterForm } from '../components/NewsletterForm';
 import { HeroSection } from '../components/HeroSection';
+import { PartnersSection } from '../components/PartnersSection';
 import { EventCard } from '../components/EventCard';
 import { SecuritySeal } from '../components/SecuritySeal';
 import { Link } from 'react-router-dom';
@@ -472,12 +473,7 @@ export function HomePage() {
       </section>
 
       {/* Parceiros */}
-      <section className="py-12 bg-black">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-xs font-semibold tracking-widest mb-6" style={{ color: '#C9A84C' }}>PARCEIROS OFICIAIS</p>
-          <p className="text-gray-400 text-sm">Em breve — parceiros oficiais da plataforma serão anunciados aqui.</p>
-        </div>
-      </section>
+      <PartnersSection />
 
       <NewsletterForm />
 
