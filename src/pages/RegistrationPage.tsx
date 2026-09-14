@@ -40,6 +40,19 @@ function birthdateToISO(v: string): string | null {
   if (p.length !== 3 || p[2].length !== 4) return null;
   return `${p[2]}-${p[1]}-${p[0]}`;
 }
+// Lei 10.741/2003 (Estatuto do Idoso), Art. 23: idade conta na data do EVENTO, não da inscrição.
+// Ambas as datas forçadas pra meia-noite local (mesmo padrão de birthdateToISO) — sem isso,
+// uma string só-de-data (sem horário) é lida como UTC pelo motor JS, e getFullYear/Month/Date
+// (que leem em horário local) podem devolver o dia ANTERIOR em fusos atrás de UTC (ex: Brasil),
+// deslocando a fronteira dos 60 anos em quem faz aniversário no dia exato do evento.
+function ageAtEvent(birthISO: string, eventDateStr: string): number {
+  const b = new Date(birthISO + 'T00:00:00');
+  const e = new Date(eventDateStr.slice(0, 10) + 'T00:00:00');
+  let age = e.getFullYear() - b.getFullYear();
+  const m = e.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && e.getDate() < b.getDate())) age--;
+  return age;
+}
 export function RegistrationPage() {
   const { eventSlug } = useParams<{ eventSlug: string }>();
   const navigate = useNavigate();
@@ -163,6 +176,8 @@ export function RegistrationPage() {
   const kits: any[] = chosenDistance?.registration_types || [];
   const chosenKit = kits[form.kit_index] || kits[0];
   const shirtRequired = chosenKit ? chosenKit.includes_shirt !== false : true;
+  const birthISO = birthdateToISO(form.birthdate);
+  const isElderly = !!(birthISO && event?.date && ageAtEvent(birthISO, event.date) >= 60);
   // shirtAvailability null = sem estoque configurado pro evento, mostra todos.
   // Um tamanho ausente do mapa (organizador não configurou ESSE tamanho
   // específico, só outros) também conta como sem controle — só esconde quando
@@ -288,7 +303,12 @@ export function RegistrationPage() {
       const chosenDistance = eventDistances[form.distance_index] || eventDistances[0];
       const kits: any[] = chosenDistance?.registration_types || [];
       const chosenKit = kits[form.kit_index] || kits[0];
-      const finalPrice = Number(chosenKit?.price ?? 0);
+      const listPrice = Number(chosenKit?.price ?? 0);
+      // Lei 10.741/2003, Art. 23 — idoso (60+ na data do EVENTO) tem prioridade sobre
+      // cupom, sem comparação: sempre 50% off, comissão sobre o valor JÁ com desconto
+      // (inverso da regra padrão de cupom, que cobra 10% sobre o valor original).
+      const elderly = isElderly;
+      const finalPrice = elderly ? Math.round(listPrice * 0.5 * 100) / 100 : listPrice;
       const isFree = finalPrice === 0;
       const platformFee = Math.round(finalPrice * 0.10 * 100) / 100;
       const cleanCpf = form.cpf.replace(/\D/g, '');
@@ -314,7 +334,8 @@ export function RegistrationPage() {
         document: cleanCpf,
         base_amount: finalPrice,
         platform_fee: platformFee,
-        discount_amount: 0,
+        discount_amount: elderly ? Math.round((listPrice - finalPrice) * 100) / 100 : 0,
+        elderly_discount: elderly,
         amount: finalPrice + platformFee,
         status: isFree ? 'confirmed' : 'pending',
         team_name: form.team_name || null,
@@ -492,6 +513,13 @@ export function RegistrationPage() {
               <Field label="CPF *"><input className={inp} value={form.cpf} onChange={e => set('cpf', formatCPF(e.target.value))} placeholder="000.000.000-00" /></Field>
               <Field label="Data de Nascimento *"><input type="text" className={inp} value={form.birthdate} onChange={e => set('birthdate', formatBirthdate(e.target.value))} placeholder="DD/MM/AAAA" maxLength={10} /></Field>
             </div>
+
+            {isElderly && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+                <p className="font-semibold">Desconto Idoso 60+ aplicado: -50% (Lei 10.741/2003, Art. 23 — Estatuto do Idoso)</p>
+                <p className="text-xs mt-1">Leve documento de identificação com foto na retirada do kit, para comprovar a idade.</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <Field label="Telefone *"><input className={inp} value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))} placeholder="(22) 99999-9999" /></Field>

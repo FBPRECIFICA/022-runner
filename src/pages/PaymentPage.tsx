@@ -247,14 +247,17 @@ export function PaymentPage() {
 
   // Regra vigente (11/08): taxa da plataforma é sempre 10% sobre o valor ORIGINAL
   // da inscrição, e o cupom desconta só a parte do organizador — nunca a taxa.
-  // amount = original + platformFee - discountAmount (ver apply_coupon_to_registration).
-  // Derivar o valor original a partir dessa identidade garante que as 3 linhas
-  // exibidas sempre somem exatamente o total, mesmo pra registros antigos.
+  // Exceção (Lei 10.741/2003, Art. 23 — idoso 60+): comissão sobre o valor JÁ
+  // com desconto, não o original — por isso o valor original vem sempre de
+  // `registration_type_price` (snapshot fixo do preço de tabela do kit,
+  // nunca alterado por cupom ou desconto legal), não de uma conta reversa
+  // que assume a regra padrão.
   const discountAmount = Number(reg.discount_amount ?? 0);
   const platformFee = Number(reg.platform_fee ?? 0);
   const totalAmount = Number(reg.amount ?? 0);
-  const originalValue = totalAmount - platformFee + discountAmount;
-  const hasCoupon = !!reg.coupon_code && discountAmount > 0;
+  const isElderly = !!reg.elderly_discount;
+  const originalValue = Number(reg.registration_type_price ?? (totalAmount - platformFee + discountAmount));
+  const hasCoupon = !isElderly && !!reg.coupon_code && discountAmount > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -275,9 +278,17 @@ export function PaymentPage() {
               <span className="font-medium text-gray-900">R$ {originalValue.toFixed(2).replace('.', ',')}</span>
             </div>
             <div className="flex justify-between border-b pb-1.5">
-              <span className="text-gray-500">Taxa da plataforma (10%, fixa sobre valor original)</span>
+              <span className="text-gray-500">
+                {isElderly ? 'Taxa da plataforma (10% sobre o valor com desconto legal)' : 'Taxa da plataforma (10%, fixa sobre valor original)'}
+              </span>
               <span className="font-medium text-gray-900">+ R$ {platformFee.toFixed(2).replace('.', ',')}</span>
             </div>
+            {isElderly && (
+              <div className="flex justify-between border-b pb-1.5">
+                <span className="text-green-600">Desconto Idoso 60+ (Lei 10.741/2003, Art. 23)</span>
+                <span className="font-medium text-green-600">− R$ {discountAmount.toFixed(2).replace('.', ',')}</span>
+              </div>
+            )}
             {hasCoupon && (
               <div className="flex justify-between border-b pb-1.5">
                 <span className="text-green-600">Desconto do cupom {String(reg.coupon_code ?? '')} (aplicado só na base)</span>
@@ -292,8 +303,14 @@ export function PaymentPage() {
             </div>
           </div>
 
+          {isElderly && (
+            <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
+              Leve documento de identificação com foto na retirada do kit, para comprovar a idade (Lei 10.741/2003, Art. 23 — Estatuto do Idoso).
+            </div>
+          )}
+
           {/* Cupom de desconto */}
-          {!paymentResult && !expired && (
+          {!paymentResult && !expired && !isElderly && (
             <div className="mt-4 pt-4 border-t">
               <label className="block text-xs font-medium text-gray-500 mb-1.5">Cupom de desconto</label>
               <div className="flex gap-2">
