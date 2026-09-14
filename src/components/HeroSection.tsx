@@ -25,12 +25,8 @@ export function HeroSection() {
             </span>
           ))}
         </h1>
-        <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto">
+        <p className="text-xl md:text-2xl mb-12 max-w-2xl mx-auto">
           A plataforma de eventos esportivos da Região dos Lagos — RJ
-        </p>
-        <p className="text-lg mb-12 max-w-3xl mx-auto">
-          Encontre e participe de corridas, trails, maratonas e muito mais! 
-          Assistente IA para organizadores, landing pages automáticas, marketing integrado e score de qualidade.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link 
