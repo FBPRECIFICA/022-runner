@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LAGOS_REGION_CITIES } from '../types';
-import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, DollarSign, Clock, ClipboardCheck, Search, Tag, X, Percent } from 'lucide-react';
+import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, Clock, ClipboardCheck, Search, Tag, X, Percent } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import { computeAthleteStats } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
-import { asaasFeeFromNetValue, netForOrganizer, paymentMethodLabel } from '../lib/asaasFee';
+import { asaasFeeFromNetValue, netForOrganizer, paymentMethodLabel, sumAuditFigures } from '../lib/asaasFee';
+import { AuditFourNumbers } from '../components/AuditFourNumbers';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 
@@ -163,6 +164,20 @@ export function OrganizerDashboard() {
   const [exportModalEvent, setExportModalEvent] = useState<any | null>(null);
 
   useEffect(() => { loadEvents(); loadCoupons(); loadWithdrawals(); }, []);
+
+  // Os 4 números de auditoria (Bruto/Comissão/Taxa Asaas/Líquido) precisam refletir pagamentos
+  // novos sem o organizador precisar recarregar a página — reage a qualquer INSERT/UPDATE em
+  // registrations (ex.: webhook da Asaas confirmando um pagamento) recarregando os dados.
+  useEffect(() => {
+    const channel = supabase
+      .channel('organizer-registrations-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, () => {
+        loadEvents();
+        if (expandedEventId) ensureEventRegsLoaded(expandedEventId, true);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [expandedEventId]);
 
   useEffect(() => {
     if (tab === 'saques') loadWithdrawals();
@@ -947,12 +962,7 @@ export function OrganizerDashboard() {
         {tab === 'eventos' && (() => {
           const paidRegs = allRegistrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
           const pendingRegs = allRegistrations.filter(r => r.status === 'pending' || r.status === 'awaiting_payment');
-          const totalBruto = paidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-          const estimadoAReceber = paidRegs.reduce((s, r) => {
-            const base = Number(r.base_amount ?? r.amount ?? 0);
-            const net = netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value);
-            return s + (net ?? base);
-          }, 0);
+          const { bruto: totalBruto, comissao: totalComissao, taxaAsaas: totalTaxaAsaas, liquido: estimadoAReceber } = sumAuditFigures(paidRegs);
 
           const weeklyData = (() => {
             const weeks: Record<string, number> = {};
@@ -968,24 +978,9 @@ export function OrganizerDashboard() {
 
           return (
             <>
-              {/* Cards financeiros */}
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                <div className="bg-white rounded-xl p-4 border-2" style={{ borderColor: '#C9A84C' }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign size={16} style={{ color: '#C9A84C' }} />
-                    <span className="text-xs font-medium text-gray-500">Total Bruto</span>
-                  </div>
-                  <p className="text-xl font-bold" style={{ color: '#C9A84C' }}>R$ {totalBruto.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-xs text-gray-400">{paidRegs.length} inscr. pagas</p>
-                </div>
-                <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#86efac' }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <TrendingUp size={16} className="text-green-500" />
-                    <span className="text-xs font-medium text-gray-500">Líquido Total (Histórico)*</span>
-                  </div>
-                  <p className="text-xl font-bold text-green-600">R$ {estimadoAReceber.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-xs text-gray-400">valor líquido acumulado (já descontada taxa Asaas) — não desconta saques já feitos. Saldo disponível hoje: aba Saques.</p>
-                </div>
+              {/* Os 4 números de auditoria — sempre juntos, ao vivo (todos os eventos somados) */}
+              <AuditFourNumbers bruto={totalBruto} comissao={totalComissao} taxaAsaas={totalTaxaAsaas} liquido={estimadoAReceber} className="mb-3" />
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 <div className="bg-white rounded-xl p-4 border" style={{ borderColor: '#fde68a' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <Clock size={16} className="text-yellow-500" />
@@ -996,8 +991,8 @@ export function OrganizerDashboard() {
                 </div>
               </div>
 
-              <p className="text-xs text-gray-400 -mt-4 mb-4">
-                * Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador.
+              <p className="text-xs text-gray-400 mb-4">
+                * Taxa Asaas é o valor real registrado por transação (nunca estimativa). Os 4 números somam TODOS os eventos e é o total acumulado desde sempre — não desconta saques já feitos. Saldo disponível hoje: aba Saques.
               </p>
 
               {/* Gráfico de inscrições por semana */}
@@ -1143,6 +1138,8 @@ export function OrganizerDashboard() {
                       <p className="text-center text-gray-400 text-sm py-6">Nenhum inscrito ainda.</p>
                     ) : (() => {
                       const regs = eventRegistrations[event.id] || [];
+                      const evPaidRegs = regs.filter(r => r.status === 'paid' || r.status === 'confirmed');
+                      const evFigures = sumAuditFigures(evPaidRegs);
                       const kitCounts = regs.reduce((acc: Record<string, number>, r) => {
                         if (r.registration_type_name) acc[r.registration_type_name] = (acc[r.registration_type_name] || 0) + 1;
                         return acc;
@@ -1150,6 +1147,9 @@ export function OrganizerDashboard() {
                       const kitEntries = Object.entries(kitCounts);
                       return (
                       <div className="overflow-x-auto">
+                        <div className="px-4 pt-4">
+                          <AuditFourNumbers bruto={evFigures.bruto} comissao={evFigures.comissao} taxaAsaas={evFigures.taxaAsaas} liquido={evFigures.liquido} />
+                        </div>
                         {kitEntries.length > 0 && (
                           <div className="px-4 pt-3 flex flex-wrap gap-2">
                             {kitEntries.map(([name, count]) => (

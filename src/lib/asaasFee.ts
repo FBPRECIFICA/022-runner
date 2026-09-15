@@ -33,6 +33,44 @@ export function netForOrganizer(platformFee: number, netValue: number | null | u
   return Number(netValue) - ASAAS_MESSAGING_FEE - Number(platformFee);
 }
 
+export interface AuditFigures {
+  bruto: number;
+  comissao: number;
+  taxaAsaas: number;
+  liquido: number;
+}
+
+type AuditableRow = {
+  amount?: number | null;
+  base_amount?: number | null;
+  platform_fee?: number | null;
+  asaas_net_value?: number | null;
+};
+
+// Os "4 números" de auditoria — fonte única usada em painel Organizador, painel Admin e no PDF
+// de Auditoria, pra nunca mais divergir entre telas. Bruto = amount (total pago pelo atleta, já
+// com a comissão embutida) — não base_amount, ver CLAUDE.md "Nota sobre Bruto". Os 4 sempre
+// reconciliam por construção: Bruto − Comissão − TaxaAsaas = Líquido.
+export function auditFigures(r: AuditableRow): AuditFigures {
+  const bruto = Number(r.amount ?? r.base_amount ?? 0);
+  const comissao = Number(r.platform_fee ?? 0);
+  const taxaAsaas = asaasFeeFromNetValue(bruto, r.asaas_net_value) ?? 0;
+  const liquido = netForOrganizer(comissao, r.asaas_net_value) ?? (bruto - comissao);
+  return { bruto, comissao, taxaAsaas, liquido };
+}
+
+export function sumAuditFigures(regs: AuditableRow[]): AuditFigures {
+  return regs.reduce((acc, r) => {
+    const f = auditFigures(r);
+    return {
+      bruto: acc.bruto + f.bruto,
+      comissao: acc.comissao + f.comissao,
+      taxaAsaas: acc.taxaAsaas + f.taxaAsaas,
+      liquido: acc.liquido + f.liquido,
+    };
+  }, { bruto: 0, comissao: 0, taxaAsaas: 0, liquido: 0 });
+}
+
 // Taxa da plataforma: sempre 10% do valor ORIGINAL da inscrição (base_amount +
 // discount_amount, isto é, antes do cupom), nunca do total pós-desconto. Regra
 // vigente desde 11/08/2026 (ver "fixed_commission_original_price"). Duplicada

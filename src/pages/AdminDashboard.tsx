@@ -3,10 +3,11 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
-import { Users, Calendar, TrendingUp, Award, Star, Shield, XCircle, Trash2, DollarSign, MessageCircle, X, Eye, BarChart3, Download, Briefcase, ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { Users, Calendar, Award, Star, Shield, XCircle, Trash2, MessageCircle, X, Eye, BarChart3, Download, Briefcase, ClipboardCheck, AlertTriangle, FileText } from 'lucide-react';
 import { computeAthleteStats } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
-import { asaasFeeFromNetValue, netForOrganizer, platformFeeFromOriginal } from '../lib/asaasFee';
+import { netForOrganizer, platformFeeFromOriginal, sumAuditFigures } from '../lib/asaasFee';
+import { AuditFourNumbers } from '../components/AuditFourNumbers';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 const LEO_PAGE_SIZE = 20;
@@ -58,8 +59,42 @@ export function AdminDashboard() {
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [withdrawalForm, setWithdrawalForm] = useState({ event_id: '', amount: '', withdrawn_at: '', note: '' });
   const [savingWithdrawal, setSavingWithdrawal] = useState(false);
+  const [generatingAuditPdf, setGeneratingAuditPdf] = useState<string | null>(null);
+  const [auditPrint, setAuditPrint] = useState<{ event: any; figures: ReturnType<typeof sumAuditFigures>; paidCount: number; generatedAt: Date } | null>(null);
 
   useEffect(() => { loadAll(); }, []);
+
+  // Os 4 números de auditoria (Bruto/Comissão/Taxa Asaas/Líquido) precisam refletir pagamentos
+  // novos sem precisar dar F5 — reage a qualquer INSERT/UPDATE em registrations (ex.: webhook da
+  // Asaas confirmando um pagamento) recarregando os dados de todo o Admin.
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-registrations-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, () => { loadAll(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  useEffect(() => {
+    if (auditPrint) {
+      const t = setTimeout(() => window.print(), 100);
+      return () => clearTimeout(t);
+    }
+  }, [auditPrint]);
+
+  const handleGenerateAuditPdf = async (event: any) => {
+    setGeneratingAuditPdf(event.id);
+    try {
+      // Busca direto do banco na hora do clique (não usa o estado em memória) — garante que o
+      // PDF nunca fica desatualizado, mesmo que o realtime acima tenha atrasado por algum motivo.
+      const { data, error } = await supabase.from('registrations').select('*').eq('event_id', event.id);
+      if (error) { toast.error('Erro ao gerar PDF: ' + error.message); return; }
+      const paid = (data || []).filter(r => r.status === 'paid' || r.status === 'confirmed');
+      setAuditPrint({ event, figures: sumAuditFigures(paid), paidCount: paid.length, generatedAt: new Date() });
+    } finally {
+      setGeneratingAuditPdf(null);
+    }
+  };
 
   useEffect(() => {
     if (tab === 'leo') loadLeoConversations(leoPage);
@@ -244,7 +279,8 @@ export function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#0f172a' }}>
+    <>
+    <div className="min-h-screen flex print:hidden" style={{ backgroundColor: '#0f172a' }}>
       {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 hidden md:flex flex-col" style={{ backgroundColor: '#1e293b', borderRight: '1px solid #334155' }}>
         <div className="p-5 border-b" style={{ borderColor: '#334155' }}>
@@ -288,11 +324,7 @@ export function AdminDashboard() {
                   <h1 className="text-2xl font-bold text-white">Visão Geral</h1>
                   {(() => {
                     const paidRegsAll = registrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
-                    const taxaAsaasExata = paidRegsAll.reduce((s, r) => {
-                      const charged = Number(r.amount ?? r.base_amount ?? 0);
-                      return s + (asaasFeeFromNetValue(charged, r.asaas_net_value) ?? 0);
-                    }, 0);
-                    const estRepasse = stats.revenue - stats.platformRevenue - taxaAsaasExata;
+                    const totalFigures = sumAuditFigures(paidRegsAll);
                     // Ajuste histórico: diferença entre o que a fórmula ATUAL de comissão (10% do
                     // valor original) cobraria e o que foi realmente cobrado/gravado em platform_fee
                     // — só existe pra inscrições com cupom feitas antes da correção de 11/08/2026
@@ -308,14 +340,11 @@ export function AdminDashboard() {
                     ajusteHistorico = Math.round(ajusteHistorico * 100) / 100;
                     return (
                       <>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {[
                             { icon: <Calendar size={20} />, label: 'Eventos', value: stats.events, color: '#C9A84C' },
                             { icon: <Users size={20} />, label: 'Usuários', value: stats.users, color: '#C9A84C' },
                             { icon: <Award size={20} />, label: 'Inscrições', value: stats.registrations, color: '#16a34a' },
-                            { icon: <TrendingUp size={20} />, label: 'Total Bruto Inscrições', value: `R$ ${stats.revenue.toFixed(0)}`, color: '#C9A84C' },
-                            { icon: <DollarSign size={20} />, label: 'Taxa 022Runners (10%)', value: `R$ ${stats.platformRevenue.toFixed(0)}`, color: '#f87171' },
-                            { icon: <TrendingUp size={20} />, label: 'Est. Repasse*', value: `R$ ${estRepasse.toFixed(0)}`, color: '#22c55e' },
                           ].map((s, i) => (
                             <div key={i} className="rounded-xl p-4" style={{ backgroundColor: '#1e293b' }}>
                               <div className="flex items-center gap-2 mb-2" style={{ color: s.color }}>{s.icon}</div>
@@ -323,6 +352,10 @@ export function AdminDashboard() {
                               <p className="text-sm" style={{ color: '#94a3b8' }}>{s.label}</p>
                             </div>
                           ))}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-white mb-2">Os 4 números (todos os eventos, ao vivo)</p>
+                          <AuditFourNumbers dark bruto={totalFigures.bruto} comissao={totalFigures.comissao} taxaAsaas={totalFigures.taxaAsaas} liquido={totalFigures.liquido} />
                         </div>
                         <p className="text-xs -mt-2" style={{ color: '#64748b' }}>
                           * Taxa Asaas real, registrada por transação (não é estimativa).
@@ -364,14 +397,15 @@ export function AdminDashboard() {
 
                   <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1e293b' }}>
                     <div className="px-5 pt-5 pb-3">
-                      <h3 className="font-semibold text-white">Comissão 022Runners por Evento</h3>
-                      <p className="text-xs mt-1" style={{ color: '#64748b' }}>10% cobrado do atleta na inscrição — lucro real da plataforma, evento a evento.</p>
+                      <h3 className="font-semibold text-white">Auditoria por Evento — os 4 números</h3>
+                      <p className="text-xs mt-1" style={{ color: '#64748b' }}>Bruto = total pago pelo atleta. Taxa Asaas é o valor real por transação, nunca estimado.</p>
                     </div>
+                    <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead style={{ backgroundColor: '#0f172a' }}>
                         <tr className="text-left" style={{ color: '#94a3b8' }}>
-                          {['Evento', 'Organizador', 'Receita Bruta', 'Comissão (10%)'].map(h => (
-                            <th key={h} className="px-4 py-2 font-medium">{h}</th>
+                          {['Evento', 'Organizador', 'Bruto', 'Comissão', 'Taxa Asaas', 'Líquido', ''].map(h => (
+                            <th key={h} className="px-4 py-2 font-medium whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -379,20 +413,34 @@ export function AdminDashboard() {
                         {events.map(e => {
                           const evRegs = registrations.filter(r => r.event_id === e.id);
                           const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
-                          const evRevenue = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-                          const evComissao = evPaidRegs.reduce((s, r) => s + Number(r.platform_fee ?? 0), 0);
+                          const f = sumAuditFigures(evPaidRegs);
                           const organizerName = users.find(u => u.id === e.organizer_id)?.name || '—';
+                          const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
                           return (
                             <tr key={e.id} style={{ borderTop: '1px solid #334155' }}>
-                              <td className="px-4 py-2 text-white">{e.title}</td>
+                              <td className="px-4 py-2 text-white whitespace-nowrap">{e.title}</td>
                               <td className="px-4 py-2" style={{ color: '#94a3b8' }}>{organizerName}</td>
-                              <td className="px-4 py-2 text-green-400">R$ {evRevenue.toFixed(2).replace('.', ',')}</td>
-                              <td className="px-4 py-2 font-semibold text-purple-400">R$ {evComissao.toFixed(2).replace('.', ',')}</td>
+                              <td className="px-4 py-2 whitespace-nowrap" style={{ color: '#C9A84C' }}>{fmt(f.bruto)}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-red-400">-{fmt(f.comissao)}</td>
+                              <td className="px-4 py-2 whitespace-nowrap" style={{ color: '#fbbf24' }}>-{fmt(f.taxaAsaas)}</td>
+                              <td className="px-4 py-2 font-semibold whitespace-nowrap text-green-400">{fmt(f.liquido)}</td>
+                              <td className="px-4 py-2">
+                                <button
+                                  onClick={() => handleGenerateAuditPdf(e)}
+                                  disabled={generatingAuditPdf === e.id}
+                                  className="text-xs px-2 py-1.5 rounded-lg font-medium flex items-center gap-1 whitespace-nowrap disabled:opacity-50"
+                                  style={{ backgroundColor: '#C9A84C', color: '#fff' }}
+                                  title="Gera o PDF de Auditoria puxando os 4 números direto do banco agora"
+                                >
+                                  <FileText size={12} /> {generatingAuditPdf === e.id ? 'Gerando...' : 'PDF de Auditoria'}
+                                </button>
+                              </td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -639,12 +687,7 @@ export function AdminDashboard() {
         const orgEventIds = orgEvents.map(e => e.id);
         const orgRegs = registrations.filter(r => orgEventIds.includes(r.event_id));
         const orgPaidRegs = orgRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
-        const totalBruto = orgPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-        const estimado = orgPaidRegs.reduce((s, r) => {
-          const base = Number(r.base_amount ?? r.amount ?? 0);
-          const net = netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value);
-          return s + (net ?? base);
-        }, 0);
+        const orgFigures = sumAuditFigures(orgPaidRegs);
         const recentRegs = [...orgRegs]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 20);
@@ -666,17 +709,8 @@ export function AdminDashboard() {
                   <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
                   <span>Isto roda com a SUA sessão de Admin (acesso total via RLS), não com a sessão/navegador/dispositivo real do organizador. Um clique funcionando aqui não prova que funciona pra ele — pra validar de verdade, é preciso reproduzir no login e dispositivo do próprio organizador.</span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
-                    <div className="flex items-center gap-2 mb-1" style={{ color: '#C9A84C' }}><DollarSign size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Total Bruto</span></div>
-                    <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>R$ {totalBruto.toFixed(2).replace('.', ',')}</p>
-                  </div>
-                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
-                    <div className="flex items-center gap-2 mb-1 text-green-400"><TrendingUp size={16} /><span className="text-xs font-medium" style={{ color: '#94a3b8' }}>Líquido Total (Histórico)*</span></div>
-                    <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
-                  </div>
-                </div>
-                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. Este número é o total acumulado desde sempre — <strong style={{ color: '#fbbf24' }}>não desconta saques já feitos.</strong> O saldo que ainda falta pagar hoje está na seção "Saques" mais abaixo.</p>
+                <AuditFourNumbers dark bruto={orgFigures.bruto} comissao={orgFigures.comissao} taxaAsaas={orgFigures.taxaAsaas} liquido={orgFigures.liquido} />
+                <p className="text-xs -mt-4" style={{ color: '#64748b' }}>* Taxa Asaas é o valor real registrado pelo Asaas em cada pagamento (nunca estimativa). Estes números são o total acumulado desde sempre, somando todos os eventos do organizador — <strong style={{ color: '#fbbf24' }}>não descontam saques já feitos.</strong> O saldo que ainda falta pagar hoje está na seção "Saques" mais abaixo.</p>
 
                 <div>
                   <h4 className="text-sm font-semibold text-white mb-2">Eventos ({orgEvents.length})</h4>
@@ -988,12 +1022,7 @@ export function AdminDashboard() {
         const ev = selectedEventPreview;
         const evRegs = registrations.filter(r => r.event_id === ev.id);
         const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
-        const bruto = evPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
-        const estimado = evPaidRegs.reduce((s, r) => {
-          const base = Number(r.base_amount ?? r.amount ?? 0);
-          const net = netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value);
-          return s + (net ?? base);
-        }, 0);
+        const evFigures = sumAuditFigures(evPaidRegs);
         const mdRegsEv = evRegs.filter(r => r.status !== 'cancelled');
         const { confirmed: mdConfirmedEv, pending: mdPendingEv, genderData: genderDataEv, avgAge: avgAgeEv, minAge: minAgeEv, maxAge: maxAgeEv, lastRegs: lastRegsEv } = computeAthleteStats(mdRegsEv);
         const evCouponSummary = summarizeCouponUsage(evRegs);
@@ -1003,20 +1032,21 @@ export function AdminDashboard() {
             <div className="w-full max-w-3xl max-h-[90vh] rounded-2xl flex flex-col" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#334155' }}>
                 <h3 className="text-lg font-bold text-white">Painel do Organizador: {ev.title}</h3>
-                <button onClick={() => setSelectedEventPreview(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleGenerateAuditPdf(ev)}
+                    disabled={generatingAuditPdf === ev.id}
+                    className="text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"
+                    style={{ backgroundColor: '#C9A84C', color: '#fff' }}
+                  >
+                    <FileText size={14} /> {generatingAuditPdf === ev.id ? 'Gerando...' : 'Gerar PDF de Auditoria'}
+                  </button>
+                  <button onClick={() => setSelectedEventPreview(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
+                </div>
               </div>
               <div className="p-5 overflow-y-auto space-y-6">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
-                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Bruto</p>
-                    <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>R$ {bruto.toFixed(2).replace('.', ',')}</p>
-                  </div>
-                  <div className="rounded-xl p-4" style={{ backgroundColor: '#0f172a' }}>
-                    <p className="text-xs font-medium mb-1" style={{ color: '#94a3b8' }}>Líquido Total (Histórico)*</p>
-                    <p className="text-lg font-bold text-green-400">R$ {estimado.toFixed(2).replace('.', ',')}</p>
-                  </div>
-                </div>
-                <p className="text-xs" style={{ color: '#64748b' }}>* Valor real registrado pelo Asaas em cada pagamento (não é estimativa). A taxa de 10% da plataforma é paga pelo atleta e não desconta a receita do organizador. Total acumulado deste evento — não desconta saques; saldo disponível está na aba "Ver Painel" do organizador, seção Saques.</p>
+                <AuditFourNumbers dark bruto={evFigures.bruto} comissao={evFigures.comissao} taxaAsaas={evFigures.taxaAsaas} liquido={evFigures.liquido} />
+                <p className="text-xs" style={{ color: '#64748b' }}>* Taxa Asaas é o valor real registrado pelo Asaas em cada pagamento (nunca estimativa). Total acumulado deste evento — não desconta saques; saldo disponível está na aba "Ver Painel" do organizador, seção Saques.</p>
 
                 <div>
                   <h4 className="text-sm font-semibold text-white mb-2">Mais Dados</h4>
@@ -1252,5 +1282,52 @@ export function AdminDashboard() {
         </div>
       )}
     </div>
+
+    {/* PDF de Auditoria — só existe no papel/print, gerado com dado fresco do banco no clique
+        (handleGenerateAuditPdf), nunca com o estado em memória que pode estar desatualizado.
+        Segue o mesmo padrão de "renderiza + window.print()" do CertificatePage.tsx. */}
+    {auditPrint && (
+      <div className="hidden print:block p-10" style={{ color: '#111827' }}>
+        <div className="flex items-center justify-between mb-8 pb-4" style={{ borderBottom: '3px solid #C9A84C' }}>
+          <div>
+            <img src="/images/logo-022runners.png" alt="022 RUNNER" className="h-12 w-auto object-contain mb-2" />
+            <h1 className="text-xl font-bold">PDF de Auditoria</h1>
+          </div>
+          <div className="text-right text-xs text-gray-500">
+            <p>Gerado em {auditPrint.generatedAt.toLocaleString('pt-BR')}</p>
+            <p>Direto do banco de dados no momento do clique</p>
+          </div>
+        </div>
+
+        <h2 className="text-lg font-bold mb-1">{auditPrint.event.title}</h2>
+        <p className="text-sm text-gray-500 mb-6">{auditPrint.event.city} · {new Date(auditPrint.event.date).toLocaleDateString('pt-BR')} · {auditPrint.paidCount} inscrições pagas/confirmadas</p>
+
+        <table className="w-full text-sm mb-6" style={{ borderCollapse: 'collapse' }}>
+          <tbody>
+            {[
+              ['Bruto (total pago pelo atleta)', auditPrint.figures.bruto, false],
+              ['(−) Comissão da Plataforma', auditPrint.figures.comissao, true],
+              ['(−) Taxa Asaas (valor real, nunca estimado)', auditPrint.figures.taxaAsaas, true],
+              ['(=) Líquido do Organizador', auditPrint.figures.liquido, false],
+            ].map(([label, value, negative], i) => (
+              <tr key={i as number} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                <td className="py-3 pr-4 font-medium">{label as string}</td>
+                <td className="py-3 text-right font-bold" style={{ fontSize: i === 3 ? '1.1rem' : undefined }}>
+                  {negative ? '-' : ''}R$ {Math.abs(value as number).toFixed(2).replace('.', ',')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <p className="text-xs text-gray-500 leading-relaxed">
+          Bruto = valor total (<code>amount</code>) efetivamente pago pelo atleta via Asaas, já incluindo a comissão da plataforma.
+          Comissão = coluna <code>platform_fee</code> gravada no momento de cada inscrição (nunca recalculada por fórmula sobre dado histórico).
+          Taxa Asaas = valor real da transação, obtido do <code>netValue</code> retornado pela Asaas por pagamento (nunca uma estimativa de mercado).
+          Líquido do Organizador = Bruto − Comissão − Taxa Asaas. Este total é acumulado desde sempre e não desconta saques já feitos.
+        </p>
+      </div>
+    )}
+    </>
   );
 }
