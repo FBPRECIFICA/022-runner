@@ -167,12 +167,20 @@ export function OrganizerDashboard() {
 
   // Os 4 números de auditoria (Bruto/Comissão/Taxa Asaas/Líquido) precisam refletir pagamentos
   // novos sem o organizador precisar recarregar a página — reage a qualquer INSERT/UPDATE em
-  // registrations (ex.: webhook da Asaas confirmando um pagamento) recarregando os dados.
+  // registrations (ex.: webhook da Asaas confirmando um pagamento, ou cupom de cortesia 100%
+  // confirmando a inscrição direto) recarregando os dados.
+  //
+  // Notion "URGENTE — Cupons 100% Não Aparecem na Exportação": a causa não era filtro por
+  // valor (não existe nenhum `amount > 0` no código, confirmado por inspeção + query real no
+  // banco simulando a sessão do organizador) — era este canal só chamar loadEvents(), nunca
+  // loadCoupons(). Com a aba do painel já aberta, uma inscrição de cupom cortesia criada depois
+  // nunca aparecia no "Demonstrativo de Uso de Cupons" nem no modal/export por cupom até um F5.
   useEffect(() => {
     const channel = supabase
       .channel('organizer-registrations-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, () => {
         loadEvents();
+        loadCoupons();
         if (expandedEventId) ensureEventRegsLoaded(expandedEventId, true);
       })
       .subscribe();

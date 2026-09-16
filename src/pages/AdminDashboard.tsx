@@ -60,6 +60,7 @@ export function AdminDashboard() {
   const [withdrawalForm, setWithdrawalForm] = useState({ event_id: '', amount: '', withdrawn_at: '', note: '' });
   const [savingWithdrawal, setSavingWithdrawal] = useState(false);
   const [generatingAuditPdf, setGeneratingAuditPdf] = useState<string | null>(null);
+  const [orgCouponUsageModal, setOrgCouponUsageModal] = useState<{ code: string; regs: any[] } | null>(null);
   const [auditPrint, setAuditPrint] = useState<{ event: any; figures: ReturnType<typeof sumAuditFigures>; paidCount: number; generatedAt: Date } | null>(null);
 
   useEffect(() => { loadAll(); }, []);
@@ -266,6 +267,34 @@ export function AdminDashboard() {
       // síncrona aqui morria em silêncio, sem toast.
       toast.error('Falha ao gerar o Excel: ' + (err?.message || String(err)));
       console.error('exportEventExcel falhou', err);
+    }
+  };
+
+  // Espelha exportCouponUsage de OrganizerDashboard.tsx — a "Visão do Organizador" tinha só a
+  // tabela-resumo de cupons (Código/Usos/Desconto/Último Uso), sem jeito de ver ou exportar quem
+  // usou cada cupom. Mesma trava: só usos pagos/confirmados contam.
+  const exportOrgCouponUsage = (code: string, usages: any[]) => {
+    try {
+      const rows = usages
+        .filter(u => u.status === 'paid' || u.status === 'confirmed')
+        .map(u => ({
+          'Nome': u.name || u.full_name,
+          'CPF': u.cpf,
+          'Tamanho de Camisa': u.shirt_size || '',
+        }));
+      if (rows.length === 0) {
+        toast.error('Nenhum uso pago/confirmado desse cupom pra exportar.');
+        return;
+      }
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Conferência');
+      const date = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `cupom-${code.toLowerCase()}-conferencia-${date}.xlsx`);
+      toast.success(`${rows.length} uso(s) exportado(s).`);
+    } catch (err: any) {
+      toast.error('Falha ao gerar o Excel: ' + (err?.message || String(err)));
+      console.error('exportOrgCouponUsage falhou', err);
     }
   };
 
@@ -863,7 +892,15 @@ export function AdminDashboard() {
                           <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#94a3b8' }}>Nenhum cupom foi usado ainda.</td></tr>
                         ) : orgCouponSummary.map(s => (
                           <tr key={s.code} style={{ borderTop: '1px solid #334155' }}>
-                            <td className="px-3 py-2 font-mono font-bold text-white">{s.code}</td>
+                            <td className="px-3 py-2 font-mono font-bold text-white">
+                              <button
+                                onClick={() => setOrgCouponUsageModal({ code: s.code, regs: orgRegs.filter(r => r.coupon_code === s.code) })}
+                                className="underline decoration-dotted hover:opacity-80"
+                                style={{ color: '#C9A84C' }}
+                              >
+                                {s.code}
+                              </button>
+                            </td>
                             <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{s.usos}</td>
                             <td className="px-3 py-2" style={{ color: '#94a3b8' }}>R$ {s.totalDiscount.toFixed(2).replace('.', ',')}</td>
                             <td className="px-3 py-2 text-xs" style={{ color: '#94a3b8' }}>{new Date(s.lastUse).toLocaleDateString('pt-BR')}</td>
@@ -1016,6 +1053,56 @@ export function AdminDashboard() {
           </div>
         );
       })()}
+
+      {/* Modal de uso do cupom, dentro de Visão do Organizador — espelha o modal equivalente de
+          OrganizerDashboard.tsx (mesma trava: "Exportar" só traz usos pagos/confirmados). */}
+      {orgCouponUsageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setOrgCouponUsageModal(null)}>
+          <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl flex flex-col" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#334155' }}>
+              <h3 className="text-lg font-bold text-white">Quem usou o cupom {orgCouponUsageModal.code}</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => exportOrgCouponUsage(orgCouponUsageModal.code, orgCouponUsageModal.regs)}
+                  className="flex items-center gap-1.5 text-sm font-medium border rounded-lg px-3 py-1.5 hover:bg-white/10"
+                  style={{ color: '#e2e8f0', borderColor: '#334155' }}
+                >
+                  <Download size={14} /> Exportar
+                </button>
+                <button onClick={() => setOrgCouponUsageModal(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
+              </div>
+            </div>
+            <div className="p-5 overflow-y-auto">
+              {orgCouponUsageModal.regs.length === 0 ? (
+                <p className="text-center text-sm py-8" style={{ color: '#94a3b8' }}>Nenhum uso registrado ainda.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <p className="text-xs mb-2" style={{ color: '#64748b' }}>CPF e Tamanho de Camisa são pra conferir identidade na entrega do kit — "Exportar" traz só usos pagos/confirmados.</p>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b" style={{ color: '#94a3b8', borderColor: '#334155' }}>
+                        {['Atleta', 'CPF', 'Tamanho', 'Data', 'Status', 'Desconto'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orgCouponUsageModal.regs.map((u, i) => (
+                        <tr key={i} style={{ borderTop: '1px solid #334155' }}>
+                          <td className="px-3 py-2 font-medium text-white">{u.name || u.full_name}</td>
+                          <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{u.cpf || '—'}</td>
+                          <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{u.shirt_size || '—'}</td>
+                          <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+                          <td className="px-3 py-2"><span className={`text-xs px-2 py-1 rounded-full ${statusBadgeClass(u.status)}`}>{statusLabel(u.status)}</span></td>
+                          <td className="px-3 py-2" style={{ color: '#94a3b8' }}>R$ {Number(u.discount_amount || 0).toFixed(2).replace('.', ',')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Ver como Organizador (evento específico) */}
       {selectedEventPreview && (() => {
