@@ -6,7 +6,7 @@ interface AthleteStatsRow {
   created_at?: string;
 }
 
-const GENDER_LABELS: Record<string, string> = { M: 'Masculino', F: 'Feminino', O: 'Outro' };
+export const GENDER_LABELS: Record<string, string> = { M: 'Masculino', F: 'Feminino', O: 'Outro' };
 const GENDER_COLORS: Record<string, string> = { M: '#3B82F6', F: '#EC4899', O: '#9CA3AF' };
 
 function calcAge(birthDate: string): number {

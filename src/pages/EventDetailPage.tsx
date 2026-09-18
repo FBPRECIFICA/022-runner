@@ -6,7 +6,7 @@ import { scoreBadge } from '../utils/scoreCalculator';
 import { Helmet } from 'react-helmet-async';
 import { trackEventView, trackShare } from '../utils/analytics';
 import { ReviewSection } from '../components/ReviewSection';
-import { isRegistrationOpen } from '../utils/registrationStatus';
+import { isRegistrationOpen, isSoldOut } from '../utils/registrationStatus';
 
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -102,6 +102,7 @@ export function EventDetailPage() {
   const maxP = event.max_participants || 0;
   const confirmedCount = event.registrations?.[0]?.count ?? 0;
   const registrationOpen = isRegistrationOpen(event, confirmedCount);
+  const soldOut = isSoldOut(event, confirmedCount);
   const daysLeft = deadline ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 86400000)) : null;
   const score = event.quality_score || 0;
   const isPast = eventDate.getTime() < Date.now();
@@ -153,7 +154,7 @@ export function EventDetailPage() {
               registrationOpen ? (
                 <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Inscrições Abertas</span>
               ) : (
-                <span className="inline-block bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Inscrições Encerradas</span>
+                <span className="inline-block bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">{soldOut ? 'Esgotado' : 'Inscrições Encerradas'}</span>
               )
             )}
             {score > 0 && (() => {
@@ -320,7 +321,7 @@ export function EventDetailPage() {
                             <button disabled
                               className="w-full py-2 rounded-lg text-xs font-bold mt-1 bg-gray-700 text-gray-400 cursor-not-allowed"
                             >
-                              INSCRIÇÕES ENCERRADAS
+                              {soldOut ? 'ESGOTADO' : 'INSCRIÇÕES ENCERRADAS'}
                             </button>
                           )}
                         </div>
@@ -474,7 +475,7 @@ export function EventDetailPage() {
               </button>
             ) : (
               <div className="w-full text-center py-4 rounded-xl bg-gray-100 text-gray-500 font-bold">
-                Inscrições encerradas
+                {soldOut ? 'Esgotado' : 'Inscrições encerradas'}
               </div>
             )}
 

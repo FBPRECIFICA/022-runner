@@ -8,7 +8,7 @@ import { validateCPF } from '../utils/validators';
 import { TermoResponsabilidade } from '../components/TermoResponsabilidade';
 import { AccountGate } from '../components/AccountGate';
 import { SecurityBadges } from '../components/SecurityBadges';
-import { isRegistrationOpen } from '../utils/registrationStatus';
+import { isRegistrationOpen, isSoldOut } from '../utils/registrationStatus';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não sei'];
@@ -313,6 +313,34 @@ export function RegistrationPage() {
       const platformFee = Math.round(finalPrice * 0.10 * 100) / 100;
       const cleanCpf = form.cpf.replace(/\D/g, '');
 
+      // Revalida disponibilidade agora, no momento de gravar — o filtro carregado
+      // na abertura da página (shirtAvailability/isRegistrationOpen) é só uma foto
+      // de quando a página abriu; sem isso, uma aba aberta antes do esgotamento
+      // ainda conseguiria inscrever num tamanho ou numa vaga que já acabou entre a
+      // abertura e o envio. O banco tem um trigger de backstop pra inscrição
+      // gratuita (confirmada na hora); esta checagem cobre também o fluxo pago,
+      // ANTES de gerar qualquer cobrança no Asaas.
+      if (shirtRequired && form.shirt_size) {
+        const { data: avail } = await supabase.rpc('get_shirt_availability', { p_event_id: event.id });
+        const sizeRow = (avail || []).find((a: any) => a.size === form.shirt_size);
+        if (avail && avail.length > 0) setShirtAvailability(Object.fromEntries(avail.map((a: any) => [a.size, a.available])));
+        if (sizeRow && sizeRow.available <= 0) {
+          setError(`O tamanho ${form.shirt_size} esgotou. Escolha outro tamanho.`);
+          setStep('form');
+          setSubmitting(false);
+          return;
+        }
+      }
+      if (event.max_participants) {
+        const { data: confirmedNow } = await supabase.rpc('get_event_confirmed_count', { p_event_id: event.id });
+        if ((confirmedNow ?? 0) >= event.max_participants) {
+          setError('Esgotado — este evento atingiu o limite de vagas.');
+          setStep('form');
+          setSubmitting(false);
+          return;
+        }
+      }
+
       // registration_number gerado atomicamente pelo trigger trg_auto_registration_number no banco
       const { data, error: insertError } = await supabase.from('registrations').insert({
         event_id: event.id,
@@ -456,7 +484,11 @@ export function RegistrationPage() {
   if (!event) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Evento não encontrado.</p></div>;
   if (!isRegistrationOpen(event, event.registrations?.[0]?.count ?? 0)) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
-      <p className="text-gray-700 font-bold text-lg">Inscrições encerradas para {event.title}.</p>
+      <p className="text-gray-700 font-bold text-lg">
+        {isSoldOut(event, event.registrations?.[0]?.count ?? 0)
+          ? `Esgotado — ${event.title} atingiu o limite de vagas.`
+          : `Inscrições encerradas para ${event.title}.`}
+      </p>
       <Link to={`/evento/${event.slug}`} className="text-[#C9A84C] font-semibold underline">Voltar para o evento</Link>
     </div>
   );

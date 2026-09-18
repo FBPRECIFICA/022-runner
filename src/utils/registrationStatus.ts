@@ -8,7 +8,17 @@ export function isRegistrationOpen(
 ): boolean {
   if (event.status !== 'published') return false;
   if (event.registrations_closed) return false;
-  const maxP = event.max_participants || 0;
-  if (maxP > 0 && confirmedCount >= maxP) return false;
+  if (isSoldOut(event, confirmedCount)) return false;
   return true;
+}
+
+// Distingue "esgotado por lotação" (max_participants atingido) dos outros motivos de
+// inscrição encerrada (toggle manual, evento não publicado) — usado só pra decidir o
+// texto exibido ("Esgotado" vs "Inscrições Encerradas"), nunca pra liberar inscrição.
+export function isSoldOut(
+  event: { max_participants?: number | null },
+  confirmedCount = 0
+): boolean {
+  const maxP = event.max_participants || 0;
+  return maxP > 0 && confirmedCount >= maxP;
 }
