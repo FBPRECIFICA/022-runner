@@ -25,6 +25,27 @@ export function CheckinPage() {
     load();
   }, [eventSlug]);
 
+  // Contador "em tempo real": se mais de um celular/tablet estiver fazendo
+  // check-in ao mesmo tempo (comum na entrega ao vivo), cada um só via os
+  // check-ins feitos por ele mesmo até recarregar a página inteira. Polling
+  // simples (sem Realtime, sem alterar o fluxo de check-in) resolve isso.
+  // Merge em vez de substituir a lista inteira: um check-in local que acabou
+  // de ser clicado (setRegistrations otimista em handleCheckin) não pode
+  // "voltar" pra não-presente só porque um poll concorrente ainda pegou o
+  // banco um instante antes do UPDATE terminar — checkin_at nunca regride.
+  useEffect(() => {
+    if (!event?.id) return;
+    const intervalId = setInterval(async () => {
+      const { data: regs } = await supabase.from('registrations').select('*').eq('event_id', event.id).neq('status', 'cancelled').order('name');
+      if (!regs) return;
+      setRegistrations(prev => {
+        const localCheckins = new Map(prev.map(r => [r.id, r.checkin_at]));
+        return regs.map(r => ({ ...r, checkin_at: r.checkin_at || localCheckins.get(r.id) || null }));
+      });
+    }, 15000);
+    return () => clearInterval(intervalId);
+  }, [event?.id]);
+
   const handleCheckin = async (id: string) => {
     // checkin_at é o único campo de presença - "status" já é usado pra status de
     // pagamento (paid/pending/cancelled) em toda a plataforma (exportação, painel
@@ -44,12 +65,29 @@ export function CheckinPage() {
   const distances = [...new Set(registrations.map(r => r.distance_name))];
   const filtered = registrations.filter(r => {
     const q = search.toLowerCase();
-    const matchSearch = !q || r.name?.toLowerCase().includes(q) || r.registration_number?.toLowerCase().includes(q);
+    const qDigits = search.replace(/\D/g, '');
+    const matchSearch = !q
+      || r.name?.toLowerCase().includes(q)
+      || r.registration_number?.toLowerCase().includes(q)
+      || (qDigits && r.cpf?.includes(qDigits));
     const matchDist = !distanceFilter || r.distance_name === distanceFilter;
     return matchSearch && matchDist;
   });
 
   const checkedIn = registrations.filter(r => r.checkin_at).length;
+
+  // Contagem por tamanho de camiseta — ajuda a controlar quantas camisas de
+  // cada tamanho ainda faltam entregar. Ignora quem não tem tamanho (Kit
+  // Econômico, sem camiseta) e sempre reflete o evento inteiro, igual ao
+  // contador geral acima (não é afetado pelo filtro de busca/distância).
+  const sizeBreakdown = registrations.reduce((acc: Record<string, { checked: number; total: number }>, r) => {
+    if (!r.shirt_size) return acc;
+    if (!acc[r.shirt_size]) acc[r.shirt_size] = { checked: 0, total: 0 };
+    acc[r.shirt_size].total++;
+    if (r.checkin_at) acc[r.shirt_size].checked++;
+    return acc;
+  }, {});
+  const sizeBreakdownEntries = Object.entries(sizeBreakdown).sort(([a], [b]) => a.localeCompare(b));
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]" /></div>;
   if (!event) return <div className="min-h-screen flex items-center justify-center text-gray-500">Evento não encontrado.</div>;
@@ -71,6 +109,15 @@ export function CheckinPage() {
               style={{ width: `${registrations.length ? (checkedIn / registrations.length) * 100 : 0}%` }} />
           </div>
         </div>
+        {sizeBreakdownEntries.length > 0 && (
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
+            {sizeBreakdownEntries.map(([size, { checked, total }]) => (
+              <span key={size} className="text-xs bg-gray-100 rounded-full px-2.5 py-1 font-medium text-gray-600">
+                {size}: <span className="text-[#C9A84C] font-bold">{checked}</span>/{total}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="px-4 py-4 space-y-3">
@@ -80,7 +127,7 @@ export function CheckinPage() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
-              placeholder="Digite o nome ou número de peito" />
+              placeholder="Nome, CPF ou número de peito" />
           </div>
           <select value={distanceFilter} onChange={e => setDistanceFilter(e.target.value)}
             className="border rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white">
