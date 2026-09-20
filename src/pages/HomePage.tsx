@@ -5,7 +5,7 @@ import { PartnersSection } from '../components/PartnersSection';
 import { EventCard } from '../components/EventCard';
 import { SecuritySeal } from '../components/SecuritySeal';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Star, Award, Clock, ArrowRight, Sparkles, Trophy } from 'lucide-react';
+import { Calendar, MapPin, Star, Award, ArrowRight, Sparkles, Trophy } from 'lucide-react';
 import { events as mockEvents, LAGOS_REGION_CITIES } from '../data/mockData';
 import { formatDate } from '../lib/utils';
 import { supabase } from '../lib/supabase';
@@ -147,30 +147,35 @@ export function HomePage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {eventsByCity.map(({ city, events: cityEvents }) => (
                 <div key={city} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="relative">
-                    <img 
-                      src={cityEvents[0].banner || '/images/hero-bg.jpg'} 
-                      alt={city}
-                      className="w-full h-32 object-cover object-top"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <h3 className="text-xl font-bold text-white">{city}</h3>
-                      <p className="text-sm text-gray-200">{cityEvents.length} evento(s)</p>
+                  <div className="p-4 pb-2 flex items-center gap-2 border-b">
+                    <MapPin className="w-4 h-4 text-[#C9A84C] flex-shrink-0" />
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 leading-tight">{city}</h3>
+                      <p className="text-xs text-gray-500">{cityEvents.length} evento(s)</p>
                     </div>
                   </div>
                   <div className="p-4">
+                    {/* Cada evento com sua própria foto+nome — uma única foto
+                        "representando a cidade" no topo confundia qual evento
+                        era qual quando havia mais de um evento na mesma cidade
+                        (ex: Arena MMP + Balneário Run, ambos em São Pedro da
+                        Aldeia). */}
                     {cityEvents.slice(0, 2).map((event) => (
                       <div key={event.id} className="mb-3 last:mb-0">
-                        <Link 
+                        <Link
                           to={`/evento/${event.slug}`}
-                          className="flex items-center justify-between text-sm hover:text-[#C9A84C] transition-colors"
+                          className="flex items-center gap-3 text-sm hover:text-[#C9A84C] transition-colors"
                         >
-                          <div>
-                            <p className="font-medium text-gray-900">{event.name}</p>
+                          <img
+                            src={event.banner || '/images/hero-bg.jpg'}
+                            alt={event.name}
+                            className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{event.name}</p>
                             <p className="text-xs text-gray-500">{formatDate(event.date)}</p>
                           </div>
-                          <ArrowRight className="w-4 h-4 text-gray-400" />
+                          <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         </Link>
                       </div>
                     ))}
@@ -259,136 +264,6 @@ export function HomePage() {
               <span className="inline-block bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
                 92/100
               </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Seção de Planos */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-[#C9A84C] text-white px-4 py-2 rounded-full mb-4">
-              <Clock className="w-4 h-4" />
-              <span className="font-semibold">PLANOS</span>
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900">Escolha o melhor plano para seu evento</h2>
-            <p className="text-gray-600 mt-2">Taxa da plataforma: 0,1 (10%) sobre o valor da inscrição</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Plano Gratuito */}
-            <div className="bg-white rounded-xl shadow-md p-8 border border-gray-200 text-center">
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Gratuito</h3>
-                <p className="text-gray-500 mt-2">Publicação básica</p>
-              </div>
-              <ul className="space-y-4 text-left mb-8">
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-700">Publicação do evento</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-700">Busca normal</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-700">Acesso ao Assistente IA</span>
-                </li>
-              </ul>
-              <button className="w-full bg-gray-100 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors">
-                Publicar Evento
-              </button>
-            </div>
-
-            {/* Plano Destaque */}
-            <div className="bg-white rounded-xl shadow-xl p-8 border-2 border-[#C9A84C] text-center relative">
-              <span className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-[#C9A84C] text-white px-4 py-1 rounded-full text-sm font-semibold">
-                POPULAR
-              </span>
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold text-[#C9A84C]">Destaque</h3>
-                <p className="text-gray-500 mt-2">Prioridade nas buscas</p>
-              </div>
-              <ul className="space-y-4 text-left mb-8">
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-700">Tudo do Gratuito</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-700">Prioridade nas buscas</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-700">Selo Destaque</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-700">Destaque por categoria</span>
-                </li>
-              </ul>
-              <button className="w-full bg-[#C9A84C] text-white font-semibold py-3 rounded-lg hover:bg-[#B8962E] transition-colors">
-                Assinar Destaque
-              </button>
-            </div>
-
-            {/* Plano Premium */}
-            <div className="bg-gradient-to-b from-yellow-400 to-yellow-500 rounded-xl shadow-xl p-8 text-center">
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Premium</h3>
-                <p className="text-gray-700 mt-2">Máximo destaque</p>
-              </div>
-              <ul className="space-y-4 text-left mb-8">
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-yellow-700 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-800">Tudo do Destaque</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-yellow-700 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-800">Banner na página inicial</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-yellow-700 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-800">Destaque regional</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-yellow-700 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-800">Destaque por cidade</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <span className="w-5 h-5 bg-yellow-700 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs">✓</span>
-                  </span>
-                  <span className="text-gray-800">Divulgação regional</span>
-                </li>
-              </ul>
-              <button className="w-full bg-yellow-700 text-white font-semibold py-3 rounded-lg hover:bg-yellow-800 transition-colors">
-                Assinar Premium
-              </button>
             </div>
           </div>
         </div>

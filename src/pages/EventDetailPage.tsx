@@ -462,11 +462,13 @@ export function EventDetailPage() {
               </div>
             )}
 
-            {/* Botão Inscrever — desktop */}
+            {/* Botão Inscrever — desktop only; no mobile o botão flutuante
+                abaixo (md:hidden) já cobre essa ação, mostrar os dois juntos
+                duplicava o CTA na tela do celular. */}
             {registrationOpen ? (
               <button
                 onClick={() => navigate(`/inscricao/${event.slug}`)}
-                className="w-full font-bold py-5 rounded-xl text-lg transition-all duration-200 shadow-lg"
+                className="hidden md:block w-full font-bold py-5 rounded-xl text-lg transition-all duration-200 shadow-lg"
                 style={{ backgroundColor: '#C9A84C', color: '#000', boxShadow: '0 4px 20px rgba(201,168,76,0.4)' }}
                 onMouseOver={e => (e.currentTarget.style.backgroundColor = '#B8962E')}
                 onMouseOut={e => (e.currentTarget.style.backgroundColor = '#C9A84C')}

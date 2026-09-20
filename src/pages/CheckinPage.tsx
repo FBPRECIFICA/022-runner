@@ -8,6 +8,7 @@ export function CheckinPage() {
   const { eventSlug } = useParams<{ eventSlug: string }>();
   const [event, setEvent] = useState<any>(null);
   const [registrations, setRegistrations] = useState<any[]>([]);
+  const [shirtStock, setShirtStock] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
   const [distanceFilter, setDistanceFilter] = useState('');
   const [loading, setLoading] = useState(true);
@@ -19,6 +20,12 @@ export function CheckinPage() {
         setEvent(e);
         const { data: regs } = await supabase.from('registrations').select('*').eq('event_id', e.id).neq('status', 'cancelled').order('name');
         setRegistrations(regs || []);
+        // Grade de produção configurada em shirt_stock (RLS já permite leitura
+        // pro organizador dono/admin) — mostrada ao lado da contagem de
+        // inscritos por tamanho pra não confundir as duas coisas (achado
+        // 20/09/2026: o total de inscritos por tamanho não é a grade encomendada).
+        const { data: stock } = await supabase.from('shirt_stock').select('size, quantity_total').eq('event_id', e.id);
+        setShirtStock(Object.fromEntries((stock || []).map((s: any) => [s.size, s.quantity_total])));
       }
       setLoading(false);
     }
@@ -113,7 +120,8 @@ export function CheckinPage() {
           <div className="flex items-center gap-3 mt-2 flex-wrap">
             {sizeBreakdownEntries.map(([size, { checked, total }]) => (
               <span key={size} className="text-xs bg-gray-100 rounded-full px-2.5 py-1 font-medium text-gray-600">
-                {size}: <span className="text-[#C9A84C] font-bold">{checked}</span>/{total}
+                {size}: <span className="text-[#C9A84C] font-bold">{checked}</span>/{total} inscritos
+                {shirtStock[size] != null && <span className="text-gray-400"> · grade {shirtStock[size]}</span>}
               </span>
             ))}
           </div>
