@@ -264,23 +264,36 @@ export function RegistrationPage() {
 
   // Cancela a inscrição pendente antiga (mesmo CPF/evento) e segue com a nova —
   // dá à pessoa um jeito de trocar de kit sozinha, sem precisar de suporte.
+  // Quando já existe cobrança Asaas gerada, passa pela edge function
+  // cancel-pending-payment, que anula a cobrança na Asaas ANTES de cancelar no
+  // banco — sem isso, uma cobrança antiga paga por engano reviveria a inscrição
+  // pra 'paid' via asaas-webhook (é por isso que existia o bloqueio "fale com
+  // o suporte" antes: cancelar direto no banco com a cobrança ainda viva não
+  // era seguro, e não existe mais).
   const handleCancelPendingAndRetry = async () => {
-    if (!pendingDup || pendingDup.asaas_payment_id) return;
+    if (!pendingDup) return;
     setSubmitting(true);
     setError('');
     try {
-      // .select() de volta é proposital: sem isso, um UPDATE bloqueado pela
-      // RLS (ex: já existe cobrança Asaas) afeta 0 linhas sem gerar erro, e
-      // seguiríamos como se tivesse cancelado — criando uma inscrição nova
-      // duplicada em vez de bloquear.
-      const { data: cancelled, error: cancelError } = await supabase
-        .from('registrations')
-        .update({ status: 'cancelled' })
-        .eq('id', pendingDup.id)
-        .eq('status', 'pending')
-        .select('id');
-      if (cancelError) throw cancelError;
-      if (!cancelled || cancelled.length === 0) throw new Error('Não foi possível cancelar a inscrição pendente.');
+      if (pendingDup.asaas_payment_id) {
+        const { data, error: fnError } = await supabase.functions.invoke('cancel-pending-payment', {
+          body: { registrationId: pendingDup.id },
+        });
+        if (fnError) throw new Error(String(fnError.message ?? fnError));
+        if (!data?.ok) throw new Error(data?.message || 'Não foi possível cancelar a inscrição pendente.');
+      } else {
+        // .select() de volta é proposital: sem isso, um UPDATE bloqueado pela
+        // RLS afeta 0 linhas sem gerar erro, e seguiríamos como se tivesse
+        // cancelado — criando uma inscrição nova duplicada em vez de bloquear.
+        const { data: cancelled, error: cancelError } = await supabase
+          .from('registrations')
+          .update({ status: 'cancelled' })
+          .eq('id', pendingDup.id)
+          .eq('status', 'pending')
+          .select('id');
+        if (cancelError) throw cancelError;
+        if (!cancelled || cancelled.length === 0) throw new Error('Não foi possível cancelar a inscrição pendente.');
+      }
       setPendingDup(null);
       await proceedToAccountOrFinalize();
     } catch (err: any) {
@@ -715,23 +728,17 @@ export function RegistrationPage() {
             </div>
             <h3 className="text-lg font-bold text-gray-900">Inscrição pendente encontrada</h3>
             <p className="text-sm text-gray-500">
-              Você já tem uma inscrição pendente para este evento. Deseja continuar o pagamento dela{pendingDup.asaas_payment_id ? '' : ' ou cancelar e se inscrever de novo (ex: para trocar o kit)'}?
+              Você já tem uma inscrição pendente para este evento. Deseja continuar o pagamento dela ou cancelar e se inscrever de novo (ex: para trocar o kit)?
             </p>
             <div className="grid grid-cols-1 gap-2">
               <button onClick={() => navigate(`/pagamento/${pendingDup.id}`)}
                 className="w-full font-bold py-3 rounded-xl" style={{ backgroundColor: '#C9A84C', color: '#000' }}>
                 💳 Continuar Pagamento da Pendente
               </button>
-              {pendingDup.asaas_payment_id ? (
-                <p className="text-xs text-gray-400">
-                  Essa pendente já tem uma cobrança gerada, então não dá pra cancelar por aqui. Se quiser trocar de kit mesmo assim, fale com o suporte.
-                </p>
-              ) : (
-                <button onClick={handleCancelPendingAndRetry} disabled={submitting}
-                  className="w-full border font-medium py-2.5 rounded-xl disabled:opacity-50" style={{ borderColor: '#C9A84C', color: '#8a6d1f' }}>
-                  {submitting ? 'Cancelando...' : '🔄 Cancelar Pendente e Fazer Nova Inscrição'}
-                </button>
-              )}
+              <button onClick={handleCancelPendingAndRetry} disabled={submitting}
+                className="w-full border font-medium py-2.5 rounded-xl disabled:opacity-50" style={{ borderColor: '#C9A84C', color: '#8a6d1f' }}>
+                {submitting ? 'Cancelando...' : '🔄 Cancelar Pendente e Fazer Nova Inscrição'}
+              </button>
               <button onClick={() => setPendingDup(null)} disabled={submitting} className="w-full border text-gray-600 py-2.5 rounded-xl font-medium hover:bg-gray-50 disabled:opacity-50">
                 Voltar
               </button>

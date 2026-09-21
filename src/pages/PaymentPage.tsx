@@ -7,6 +7,21 @@ import { SecuritySeal } from '../components/SecuritySeal';
 
 type PaymentMethod = 'PIX' | 'CREDIT_CARD' | 'BOLETO';
 
+const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
+
+interface RegistrationTypeOption {
+  id: string;
+  name: string;
+  price: number;
+  includes_shirt: boolean;
+}
+
+interface DistanceOption {
+  id: string;
+  name: string;
+  registration_types: RegistrationTypeOption[];
+}
+
 interface PixQrCode {
   encodedImage?: string | null;
   payload?: string | null;
@@ -41,28 +56,81 @@ export function PaymentPage() {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const [eventDistances, setEventDistances] = useState<DistanceOption[]>([]);
+  const [editingKit, setEditingKit] = useState(false);
+  const [selectedKitId, setSelectedKitId] = useState('');
+  const [selectedShirtSize, setSelectedShirtSize] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState('');
+
   const expired = useMemo(() => secondsLeft <= 0, [secondsLeft]);
   const mins = useMemo(() => String(Math.floor(secondsLeft / 60)).padStart(2, '0'), [secondsLeft]);
   const secs = useMemo(() => String(secondsLeft % 60).padStart(2, '0'), [secondsLeft]);
 
+  const reloadRegistration = async () => {
+    const { data: regData } = await supabase
+      .rpc('get_registration_public', { p_id: registrationId })
+      .single() as { data: Record<string, any> | null };
+    if (regData) setReg(regData);
+    return regData;
+  };
+
   useEffect(() => {
     async function load() {
-      const { data: regData } = await supabase
-        .rpc('get_registration_public', { p_id: registrationId })
-        .single() as { data: Record<string, any> | null };
+      const regData = await reloadRegistration();
       if (regData) {
-        setReg(regData);
         const { data: evData } = await supabase
           .from('events')
           .select('*')
           .eq('id', regData.event_id)
           .single();
         setEvent(evData);
+        const { data: dists } = await supabase
+          .from('event_distances')
+          .select('*, registration_types(*)')
+          .eq('event_id', regData.event_id)
+          .order('sort_order');
+        setEventDistances((dists || []).map((d: any) => ({
+          ...d,
+          registration_types: [...(d.registration_types || [])].sort((a: any, b: any) => a.sort_order - b.sort_order),
+        })));
       }
       setLoading(false);
     }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [registrationId]);
+
+  const allKits = eventDistances.flatMap(d => d.registration_types.map(rt => ({ ...rt, distanceName: d.name })));
+  const selectedKit = allKits.find(k => k.id === selectedKitId);
+
+  const handleConfirmKitSwap = async () => {
+    if (!selectedKitId || !registrationId) return;
+    setEditSubmitting(true);
+    setEditError('');
+    try {
+      const { data, error } = await supabase.functions.invoke('edit-pending-registration', {
+        body: {
+          registrationId,
+          registrationTypeId: selectedKitId,
+          shirtSize: selectedKit?.includes_shirt ? selectedShirtSize : null,
+        },
+      });
+      if (error) throw new Error(String(error.message ?? error));
+      if (!data?.ok) throw new Error(data?.message || 'Não foi possível trocar o kit.');
+      await reloadRegistration();
+      setEditingKit(false);
+      setSelectedKitId('');
+      setSelectedShirtSize('');
+      setPaymentResult(null);
+      setCouponMessage(null);
+      setCouponInput('');
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Erro ao trocar de kit.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (secondsLeft <= 0) return;
@@ -336,6 +404,69 @@ export function PaymentPage() {
             </div>
           )}
         </div>
+
+        {/* Trocar de kit antes de pagar */}
+        {!paymentResult && !expired && reg.status === 'pending' && allKits.length > 0 && (
+          <div className="bg-white rounded-xl border shadow-sm p-5">
+            {!editingKit ? (
+              <button
+                onClick={() => setEditingKit(true)}
+                className="w-full text-sm font-semibold text-[#C9A84C] underline"
+              >
+                Quer trocar de kit ou distância?
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <h2 className="font-bold text-gray-900 text-sm">Trocar de kit</h2>
+                <select
+                  value={selectedKitId}
+                  onChange={e => { setSelectedKitId(e.target.value); setSelectedShirtSize(''); setEditError(''); }}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                >
+                  <option value="">Selecione o novo kit</option>
+                  {allKits.map(k => (
+                    <option key={k.id} value={k.id} disabled={k.id === reg.registration_type_id}>
+                      {k.distanceName} — {k.name} — R$ {Number(k.price).toFixed(2).replace('.', ',')}
+                      {k.id === reg.registration_type_id ? ' (atual)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {selectedKit?.includes_shirt && (
+                  <select
+                    value={selectedShirtSize}
+                    onChange={e => setSelectedShirtSize(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  >
+                    <option value="">Tamanho da camiseta</option>
+                    {SHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                )}
+                {editError && <p className="text-xs text-red-500">{editError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleConfirmKitSwap}
+                    disabled={editSubmitting || !selectedKitId || (!!selectedKit?.includes_shirt && !selectedShirtSize)}
+                    className="flex-1 bg-[#C9A84C] text-white font-semibold py-2.5 rounded-lg hover:bg-[#B8962E] disabled:opacity-50 text-sm"
+                  >
+                    {editSubmitting ? 'Trocando...' : 'Confirmar troca'}
+                  </button>
+                  <button
+                    onClick={() => { setEditingKit(false); setSelectedKitId(''); setSelectedShirtSize(''); setEditError(''); }}
+                    disabled={editSubmitting}
+                    className="px-4 py-2.5 rounded-lg border text-gray-600 text-sm hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                {!!reg.asaas_payment_id && (
+                  <p className="text-xs text-gray-400">
+                    Isso anula a cobrança atual gerada — você vai gerar uma nova depois de confirmar.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Countdown */}
         <div className={`rounded-xl p-4 flex items-center gap-3 ${expired ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
