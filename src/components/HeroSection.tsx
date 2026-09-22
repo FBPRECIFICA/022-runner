@@ -1,39 +1,48 @@
-﻿import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const HERO_PHRASE = 'Sua evolução começa aqui.';
 
+function HeroWords({ className }: { className: string }) {
+  return (
+    <h1 className={className}>
+      {HERO_PHRASE.split(' ').map((word, i) => (
+        // Espaço FORA do inline-block: um espaço à direita colado na borda de um
+        // inline-block é tratado como whitespace de fim-de-linha e some no render.
+        <span key={i}>
+          <span className="hero-word" style={{ animationDelay: `${i * 0.09}s` }}>{word}</span>{' '}
+        </span>
+      ))}
+    </h1>
+  );
+}
+
 export function HeroSection() {
   return (
-    <section className="relative h-[70vh] min-h-[500px] flex items-start md:items-center justify-center text-center text-white overflow-hidden">
+    <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center text-center text-white overflow-hidden">
       {/* Foto mobile e desktop são recortes diferentes da mesma cena — trocadas
-          via breakpoint, não redimensionadas, pra cada uma ficar bem enquadrada. */}
+          via breakpoint, não redimensionadas, pra cada uma ficar bem enquadrada.
+          bg-top no mobile (não bg-center): a foto é um retrato alto com céu vazio
+          em cima e os atletas ocupando a faixa do meio pra baixo — bg-center
+          cortava boa parte desse céu vazio, sobrando pouquíssimo espaço real sem
+          gente/bike pra frase não tampar ninguém (pedido Leandro, ainda tampava
+          mesmo com o texto já em cima). bg-top preserva o céu inteiro no topo. */}
       <div
-        className="absolute inset-0 bg-cover bg-center md:hidden hero-kenburns"
+        className="absolute inset-0 bg-cover bg-top md:hidden hero-kenburns"
         style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('/images/hero-mobile.jpg')" }}
       />
       <div
         className="absolute inset-0 bg-cover bg-center hidden md:block hero-kenburns"
         style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('/images/hero-desktop.jpg')" }}
       />
-      {/* Mobile: bloco de texto no topo da section (não mais centralizado
-          verticalmente), pra deixar o meio/embaixo da foto livre — pedido
-          Leandro, ainda tampava a imagem mesmo já reduzido. pt-10 evita
-          colar no header; md: volta ao centralizado original. */}
-      <div className="container mx-auto px-4 relative pt-10 md:pt-0">
-        <h1 className="text-2xl md:text-7xl font-bold mb-4">
-          {HERO_PHRASE.split(' ').map((word, i) => (
-            // Espaço FORA do inline-block: um espaço à direita colado na borda de um
-            // inline-block é tratado como whitespace de fim-de-linha e some no render.
-            <span key={i}>
-              <span className="hero-word" style={{ animationDelay: `${i * 0.09}s` }}>{word}</span>{' '}
-            </span>
-          ))}
-        </h1>
-        <p className="text-sm md:text-2xl mb-4 md:mb-12 max-w-2xl mx-auto">
+
+      {/* Desktop: bloco original, centralizado pelo flex da section, sem
+          nenhuma classe alterada. */}
+      <div className="hidden md:block container mx-auto px-4 relative">
+        <HeroWords className="text-7xl font-bold mb-4" />
+        <p className="text-2xl mb-12 max-w-2xl mx-auto">
           A plataforma de eventos esportivos da Região dos Lagos — RJ
         </p>
-        {/* Desktop: layout original intocado, sem nenhuma mudança de classe. */}
-        <div className="hidden md:flex gap-4 justify-center">
+        <div className="flex gap-4 justify-center">
           <Link
             to="/eventos"
             className="bg-[#C9A84C] hover:bg-[#B8962E] text-white px-8 py-4 rounded-xl font-semibold transition-colors text-lg"
@@ -48,14 +57,24 @@ export function HeroSection() {
           </Link>
         </div>
       </div>
-      {/* Mobile: botões pequenos nos cantos da tela, ancorados na section (não
-          no bloco de texto, que encolheu) pra nunca sobrepor o parágrafo —
-          deixa a foto de fundo visível (pedido Leandro, ticket hero mobile).
-          bottom-44 (não bottom-6): abaixo da section, o mobile já reserva a
-          faixa 0-160px pra MobileBottomNav (0-64px) + WhatsAppButton canto
-          esquerdo (24-80px) + botão flutuante do LEO canto direito (80-160px),
-          todos fixed — testado visualmente e confirmado que bottom-6 colidia
-          com os dois. */}
+
+      {/* Mobile: texto ancorado no topo da SECTION (position: absolute, não
+          depende do centralizado flex nem de cálculo de vh do navegador —
+          mesmo padrão determinístico usado nos botões abaixo), dentro do
+          espaço vazio (céu) que o bg-top acima garante. */}
+      <div className="md:hidden absolute inset-x-4 top-6 text-center">
+        <HeroWords className="text-2xl font-bold mb-2" />
+        <p className="text-sm">
+          A plataforma de eventos esportivos da Região dos Lagos — RJ
+        </p>
+      </div>
+
+      {/* Mobile: botões pequenos bem nos cantos inferiores, ancorados na
+          section. bottom-44 (não mais perto da borda): a faixa 0-160px do
+          mobile já é reservada por elementos fixed de fora do Hero —
+          MobileBottomNav (0-64px), WhatsAppButton no canto esquerdo
+          (24-80px) e o botão flutuante do LEO no canto direito (80-160px) —
+          testado visualmente e confirmado que descer mais colide com eles. */}
       <div className="md:hidden absolute inset-x-4 bottom-44 flex flex-row justify-between gap-2">
         <Link
           to="/eventos"
