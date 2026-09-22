@@ -6,7 +6,7 @@ import { LAGOS_REGION_CITIES } from '../types';
 import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, Clock, ClipboardCheck, Search, Tag, X, Percent } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
-import { computeAthleteStats } from '../lib/athleteStats';
+import { computeAthleteStats, GENDER_LABELS, EXPORT_STATUS_LABELS } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
 import { asaasFeeFromNetValue, netForOrganizer, paymentMethodLabel, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
@@ -578,6 +578,8 @@ export function OrganizerDashboard() {
           'Distância': r.distance_name,
           'Kit': includesShirt ? 'Completo' : 'Econômico',
           'Tamanho': includesShirt ? r.shirt_size : '',
+          'Sexo': GENDER_LABELS[r.gender] || r.gender || '',
+          'Status': EXPORT_STATUS_LABELS[r.status] || r.status,
           ' ': '',
         };
       });

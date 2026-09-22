@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Users, Calendar, Award, Star, Shield, XCircle, Trash2, MessageCircle, X, Eye, BarChart3, Download, Briefcase, ClipboardCheck, AlertTriangle, FileText } from 'lucide-react';
-import { computeAthleteStats } from '../lib/athleteStats';
+import { computeAthleteStats, GENDER_LABELS, EXPORT_STATUS_LABELS } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
 import { netForOrganizer, platformFeeFromOriginal, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
@@ -249,6 +249,8 @@ export function AdminDashboard() {
           'Distância': r.distance_name,
           'Kit': includesShirt ? 'Completo' : 'Econômico',
           'Tamanho': includesShirt ? r.shirt_size : '',
+          'Sexo': GENDER_LABELS[r.gender] || r.gender || '',
+          'Status': EXPORT_STATUS_LABELS[r.status] || r.status,
           ' ': '',
         };
       });

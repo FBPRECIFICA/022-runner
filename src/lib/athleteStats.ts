@@ -7,6 +7,10 @@ interface AthleteStatsRow {
 }
 
 export const GENDER_LABELS: Record<string, string> = { M: 'Masculino', F: 'Feminino', O: 'Outro' };
+// Coluna "Status" do export Excel — distingue pago (Asaas) de confirmado (grátis/cupom 100%).
+export const EXPORT_STATUS_LABELS: Record<string, string> = {
+  paid: 'Pago', confirmed: 'Confirmado', pending: 'Pendente', awaiting_payment: 'Pendente', cancelled: 'Cancelado',
+};
 const GENDER_COLORS: Record<string, string> = { M: '#3B82F6', F: '#EC4899', O: '#9CA3AF' };
 
 function calcAge(birthDate: string): number {
