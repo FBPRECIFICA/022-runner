@@ -69,13 +69,15 @@ export function HeroSection() {
         </p>
       </div>
 
-      {/* Mobile: botões pequenos bem nos cantos inferiores, ancorados na
-          section. bottom-44 (não mais perto da borda): a faixa 0-160px do
-          mobile já é reservada por elementos fixed de fora do Hero —
-          MobileBottomNav (0-64px), WhatsAppButton no canto esquerdo
-          (24-80px) e o botão flutuante do LEO no canto direito (80-160px) —
-          testado visualmente e confirmado que descer mais colide com eles. */}
-      <div className="md:hidden absolute inset-x-4 bottom-44 flex flex-row justify-between gap-2">
+      {/* Mobile: botões pequenos bem nos cantos inferiores da foto, ancorados
+          na section. bottom-32: o mais baixo que dá sem colidir com o botão
+          flutuante do LEO (canto direito, fixed — sobe/desce com a altura da
+          tela, já que a section usa 70vh mas o LEO usa offset fixo em px, a
+          folga entre os dois muda por aparelho). Testado em 3 alturas de tela
+          mobile (667/844/915px): bottom-8 e bottom-16 colidiam com o LEO nas
+          telas mais baixas (ex. 667px), bottom-32 é o primeiro valor limpo
+          nas três. Não descer mais sem retestar em telas baixas. */}
+      <div className="md:hidden absolute inset-x-4 bottom-32 flex flex-row justify-between gap-2">
         <Link
           to="/eventos"
           className="bg-[#C9A84C] hover:bg-[#B8962E] text-white px-3 py-2 rounded-lg font-semibold transition-colors text-xs"
