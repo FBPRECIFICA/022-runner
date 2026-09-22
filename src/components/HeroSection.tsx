@@ -4,7 +4,7 @@ const HERO_PHRASE = 'Sua evolução começa aqui.';
 
 export function HeroSection() {
   return (
-    <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center text-center text-white overflow-hidden">
+    <section className="relative h-[70vh] min-h-[500px] flex items-start md:items-center justify-center text-center text-white overflow-hidden">
       {/* Foto mobile e desktop são recortes diferentes da mesma cena — trocadas
           via breakpoint, não redimensionadas, pra cada uma ficar bem enquadrada. */}
       <div
@@ -15,7 +15,11 @@ export function HeroSection() {
         className="absolute inset-0 bg-cover bg-center hidden md:block hero-kenburns"
         style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('/images/hero-desktop.jpg')" }}
       />
-      <div className="container mx-auto px-4 relative">
+      {/* Mobile: bloco de texto no topo da section (não mais centralizado
+          verticalmente), pra deixar o meio/embaixo da foto livre — pedido
+          Leandro, ainda tampava a imagem mesmo já reduzido. pt-10 evita
+          colar no header; md: volta ao centralizado original. */}
+      <div className="container mx-auto px-4 relative pt-10 md:pt-0">
         <h1 className="text-2xl md:text-7xl font-bold mb-4">
           {HERO_PHRASE.split(' ').map((word, i) => (
             // Espaço FORA do inline-block: um espaço à direita colado na borda de um
