@@ -264,36 +264,26 @@ export function RegistrationPage() {
 
   // Cancela a inscrição pendente antiga (mesmo CPF/evento) e segue com a nova —
   // dá à pessoa um jeito de trocar de kit sozinha, sem precisar de suporte.
-  // Quando já existe cobrança Asaas gerada, passa pela edge function
-  // cancel-pending-payment, que anula a cobrança na Asaas ANTES de cancelar no
-  // banco — sem isso, uma cobrança antiga paga por engano reviveria a inscrição
-  // pra 'paid' via asaas-webhook (é por isso que existia o bloqueio "fale com
-  // o suporte" antes: cancelar direto no banco com a cobrança ainda viva não
-  // era seguro, e não existe mais).
+  // SEMPRE via edge function (service role), nunca update direto no client:
+  // essa checagem de duplicata roda em handleTermoAccepted, ANTES da etapa de
+  // login/conta — ou seja, o visitante costuma estar ANÔNIMO aqui. A policy
+  // de auto-cancelamento exige auth.uid()=user_id, então pra quem ainda não
+  // logou o UPDATE direto sempre afetava 0 linhas (bug real, confirmado:
+  // Louhana, 22/09/2026 — loop Cancelar→Termo→Cancelar infinito, e o erro nem
+  // aparecia, escondido atrás do modal que continuava aberto). A edge
+  // function não depende de auth.uid() e também anula a cobrança Asaas ANTES
+  // de cancelar no banco quando existe uma gerada — sem isso, uma cobrança
+  // antiga paga por engano reviveria a inscrição pra 'paid' via asaas-webhook.
   const handleCancelPendingAndRetry = async () => {
     if (!pendingDup) return;
     setSubmitting(true);
     setError('');
     try {
-      if (pendingDup.asaas_payment_id) {
-        const { data, error: fnError } = await supabase.functions.invoke('cancel-pending-payment', {
-          body: { registrationId: pendingDup.id },
-        });
-        if (fnError) throw new Error(String(fnError.message ?? fnError));
-        if (!data?.ok) throw new Error(data?.message || 'Não foi possível cancelar a inscrição pendente.');
-      } else {
-        // .select() de volta é proposital: sem isso, um UPDATE bloqueado pela
-        // RLS afeta 0 linhas sem gerar erro, e seguiríamos como se tivesse
-        // cancelado — criando uma inscrição nova duplicada em vez de bloquear.
-        const { data: cancelled, error: cancelError } = await supabase
-          .from('registrations')
-          .update({ status: 'cancelled' })
-          .eq('id', pendingDup.id)
-          .eq('status', 'pending')
-          .select('id');
-        if (cancelError) throw cancelError;
-        if (!cancelled || cancelled.length === 0) throw new Error('Não foi possível cancelar a inscrição pendente.');
-      }
+      const { data, error: fnError } = await supabase.functions.invoke('cancel-pending-payment', {
+        body: { registrationId: pendingDup.id },
+      });
+      if (fnError) throw new Error(String(fnError.message ?? fnError));
+      if (!data?.ok) throw new Error(data?.message || 'Não foi possível cancelar a inscrição pendente.');
       setPendingDup(null);
       await proceedToAccountOrFinalize();
     } catch (err: any) {
@@ -730,6 +720,7 @@ export function RegistrationPage() {
             <p className="text-sm text-gray-500">
               Você já tem uma inscrição pendente para este evento. Deseja continuar o pagamento dela ou cancelar e se inscrever de novo (ex: para trocar o kit)?
             </p>
+            {error && <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-sm text-left">{error}</div>}
             <div className="grid grid-cols-1 gap-2">
               <button onClick={() => navigate(`/pagamento/${pendingDup.id}`)}
                 className="w-full font-bold py-3 rounded-xl" style={{ backgroundColor: '#C9A84C', color: '#000' }}>
