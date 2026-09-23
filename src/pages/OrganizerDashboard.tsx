@@ -10,6 +10,7 @@ import { computeAthleteStats, GENDER_LABELS, EXPORT_STATUS_LABELS } from '../lib
 import { summarizeCouponUsage } from '../lib/couponStats';
 import { auditFigures, isFinancialRow, paymentMethodLabel, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
+import { fetchAllRows } from '../lib/fetchAllRows';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 
@@ -213,12 +214,12 @@ export function OrganizerDashboard() {
   const ensureEventRegsLoaded = async (eventId: string, forceRefresh = false) => {
     if (eventRegistrations[eventId] && !forceRefresh) return;
     setLoadingRegs(true);
-    const { data, error } = await supabase
+    const { data, error } = await fetchAllRows(() => supabase
       .from('registrations')
       .select('*')
       .eq('event_id', eventId)
       .neq('status', 'cancelled')
-      .order('registration_number');
+      .order('registration_number'));
     if (error) {
       toast.error('Erro ao carregar inscrições: ' + error.message);
       setLoadingRegs(false);
@@ -258,11 +259,11 @@ export function OrganizerDashboard() {
     setEvents(data || []);
     if (data && data.length > 0) {
       const eventIds = data.map((e: any) => e.id);
-      const { data: regs } = await supabase
+      const { data: regs } = await fetchAllRows(() => supabase
         .from('registrations')
         .select('*')
         .in('event_id', eventIds)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }));
       setAllRegistrations(regs || []);
     } else {
       setAllRegistrations([]);
@@ -277,11 +278,11 @@ export function OrganizerDashboard() {
     setCoupons(data || []);
 
     setLoadingCouponUsages(true);
-    const { data: usages } = await supabase
+    const { data: usages } = await fetchAllRows(() => supabase
       .from('registrations')
-      .select('name, full_name, email, cpf, shirt_size, created_at, discount_amount, coupon_code, status, events(title)')
+      .select('id, name, full_name, email, cpf, shirt_size, created_at, discount_amount, coupon_code, status, events(title)')
       .not('coupon_code', 'is', null)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }));
     setCouponUsages(usages || []);
     setLoadingCouponUsages(false);
   };
@@ -551,7 +552,7 @@ export function OrganizerDashboard() {
   };
 
   const exportExcel = async (event: any, statusFilter: ExportStatusFilter) => {
-    const { data, error } = await supabase.from('registrations').select('*, registration_types(name, includes_shirt)').eq('event_id', event.id).order('registration_number');
+    const { data, error } = await fetchAllRows(() => supabase.from('registrations').select('*, registration_types(name, includes_shirt)').eq('event_id', event.id).order('registration_number'));
     if (error) {
       toast.error('Erro ao buscar inscritos pra exportar: ' + error.message);
       return;
@@ -669,7 +670,7 @@ export function OrganizerDashboard() {
       // Contagem retroativa direto de `registrations` (RLS já dá acesso ao
       // organizador dono) — funciona mesmo antes de shirt_stock ter qualquer
       // linha, pra informar quanto já foi "gasto" antes da primeira configuração.
-      const { data: shirtRegs } = await supabase.from('registrations').select('shirt_size, status').eq('event_id', event.id);
+      const { data: shirtRegs } = await fetchAllRows(() => supabase.from('registrations').select('id, shirt_size, status').eq('event_id', event.id));
       const counts: Record<string, { confirmed: number; pending: number }> = {};
       for (const r of shirtRegs || []) {
         if (!r.shirt_size) continue;
@@ -1149,7 +1150,9 @@ export function OrganizerDashboard() {
                       <p className="text-center text-gray-400 text-sm py-6">Nenhum inscrito ainda.</p>
                     ) : (() => {
                       const regs = eventRegistrations[event.id] || [];
-                      const evFigures = sumAuditFigures(regs);
+                      // allRegistrations (todos os status): a lista acima exclui canceladas, mas um
+                      // estorno (cancelled + refunded_amount) ainda conta no dinheiro.
+                      const evFigures = sumAuditFigures(allRegistrations.filter(r => r.event_id === event.id));
                       const kitCounts = regs.reduce((acc: Record<string, number>, r) => {
                         if (r.registration_type_name) acc[r.registration_type_name] = (acc[r.registration_type_name] || 0) + 1;
                         return acc;

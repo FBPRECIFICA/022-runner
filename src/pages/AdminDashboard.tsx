@@ -8,6 +8,7 @@ import { computeAthleteStats, GENDER_LABELS, EXPORT_STATUS_LABELS } from '../lib
 import { summarizeCouponUsage } from '../lib/couponStats';
 import { auditFigures, isFinancialRow, platformFeeFromOriginal, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
+import { fetchAllRows } from '../lib/fetchAllRows';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 const LEO_PAGE_SIZE = 20;
@@ -88,7 +89,7 @@ export function AdminDashboard() {
     try {
       // Busca direto do banco na hora do clique (não usa o estado em memória) — garante que o
       // PDF nunca fica desatualizado, mesmo que o realtime acima tenha atrasado por algum motivo.
-      const { data, error } = await supabase.from('registrations').select('*').eq('event_id', event.id);
+      const { data, error } = await fetchAllRows(() => supabase.from('registrations').select('*').eq('event_id', event.id));
       if (error) { toast.error('Erro ao gerar PDF: ' + error.message); return; }
       const paid = (data || []).filter(r => r.status === 'paid' || r.status === 'confirmed');
       setAuditPrint({ event, figures: sumAuditFigures(data || []), paidCount: paid.length, generatedAt: new Date() });
@@ -134,8 +135,8 @@ export function AdminDashboard() {
   const loadAll = async () => {
     const [{ data: evts }, { data: usrs }, { data: regs }, { data: wds }] = await Promise.all([
       supabase.from('events').select('*').order('created_at', { ascending: false }),
-      supabase.from('users').select('*').order('created_at', { ascending: false }),
-      supabase.from('registrations').select('*').order('created_at', { ascending: false }),
+      fetchAllRows(() => supabase.from('users').select('*').order('created_at', { ascending: false })),
+      fetchAllRows(() => supabase.from('registrations').select('*').order('created_at', { ascending: false })),
       supabase.from('withdrawals').select('*').order('withdrawn_at', { ascending: false }),
     ]);
     setEvents(evts || []);
@@ -217,10 +218,10 @@ export function AdminDashboard() {
   };
 
   const exportEventExcel = async (event: any, statusFilter: ExportStatusFilter) => {
-    const { data: evtRegsData, error: evtRegsError } = await supabase
+    const { data: evtRegsData, error: evtRegsError } = await fetchAllRows(() => supabase
       .from('registrations')
       .select('*, registration_types(name, includes_shirt)')
-      .eq('event_id', event.id);
+      .eq('event_id', event.id));
     if (evtRegsError) {
       toast.error('Erro ao buscar inscritos pra exportar: ' + evtRegsError.message);
       return;
