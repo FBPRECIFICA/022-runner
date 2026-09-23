@@ -56,8 +56,16 @@ serve(async (req) => {
 
       // Atualiza status para 'paid' e registra paid_at + valor líquido real do Asaas
       // (netValue já vem no payload do webhook — nunca estimar por fórmula, testado e não bate com a realidade)
+      // Grava asaas_net_value só na PRIMEIRA vez: em cartão antecipado, o PAYMENT_RECEIVED chega
+      // com netValue = valor bruto (a taxa já foi cobrada na antecipação) e sobrescrevia a taxa
+      // real gravada no PAYMENT_CONFIRMED — foi o que zerou a taxa do nº079 da Arena MMP.
+      const { data: current } = await supabase
+        .from('registrations')
+        .select('asaas_net_value')
+        .eq('id', registrationId)
+        .maybeSingle()
       const updatePayload: Record<string, unknown> = { status: 'paid', paid_at: now }
-      if (typeof payment?.netValue === 'number') updatePayload.asaas_net_value = payment.netValue
+      if (typeof payment?.netValue === 'number' && current?.asaas_net_value == null) updatePayload.asaas_net_value = payment.netValue
       if (payment?.billingType) updatePayload.payment_method = payment.billingType
 
       const { error: updateError } = await supabase

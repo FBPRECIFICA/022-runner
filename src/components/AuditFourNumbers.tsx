@@ -16,7 +16,7 @@ const fmt = (n: number) => `${n < 0 ? '-' : ''}R$ ${Math.abs(n).toFixed(2).repla
 
 export function AuditFourNumbers({ bruto, comissao, taxaAsaas, liquido, dark, className }: Props) {
   const items = [
-    { label: 'Bruto (total pago pelo atleta)', value: bruto, color: '#C9A84C', icon: <DollarSign size={16} /> },
+    { label: 'Bruto (pago pelo atleta, − estornos)', value: bruto, color: '#C9A84C', icon: <DollarSign size={16} /> },
     { label: '(−) Comissão da Plataforma', value: comissao, color: '#f87171', icon: <Percent size={16} /> },
     { label: '(−) Taxa Asaas (real)', value: taxaAsaas, color: '#fbbf24', icon: <Landmark size={16} /> },
     { label: '(=) Líquido do Organizador', value: liquido, color: '#22c55e', icon: <TrendingUp size={16} /> },

@@ -41,26 +41,42 @@ export interface AuditFigures {
 }
 
 type AuditableRow = {
+  status?: string | null;
   amount?: number | null;
   base_amount?: number | null;
   platform_fee?: number | null;
   asaas_net_value?: number | null;
+  asaas_anticipation_fee?: number | null;
+  refunded_amount?: number | null;
 };
+
+// Linhas que entram na conta de dinheiro: pagas/confirmadas E estornadas (status 'cancelled' com
+// refunded_amount > 0). Uma inscrição estornada não é mais inscrito, mas as taxas Asaas da
+// transação original não voltam — sem ela aqui, o líquido do organizador fica maior que o real.
+// Para CONTAR inscritos, continue filtrando só por status paid/confirmed.
+export function isFinancialRow(r: AuditableRow): boolean {
+  return r.status === 'paid' || r.status === 'confirmed' || Number(r.refunded_amount ?? 0) > 0;
+}
 
 // Os "4 números" de auditoria — fonte única usada em painel Organizador, painel Admin e no PDF
 // de Auditoria, pra nunca mais divergir entre telas. Bruto = amount (total pago pelo atleta, já
-// com a comissão embutida) — não base_amount, ver CLAUDE.md "Nota sobre Bruto". Os 4 sempre
+// com a comissão embutida) menos estornos devolvidos — não base_amount, ver CLAUDE.md "Nota sobre
+// Bruto". Taxa Asaas = PAYMENT_FEE (via netValue) + mensageria + antecipação de recebíveis
+// (`asaas_anticipation_fee`, só existe no extrato Asaas — nunca entra no netValue). Os 4 sempre
 // reconciliam por construção: Bruto − Comissão − TaxaAsaas = Líquido.
 export function auditFigures(r: AuditableRow): AuditFigures {
-  const bruto = Number(r.amount ?? r.base_amount ?? 0);
+  const estorno = Number(r.refunded_amount ?? 0);
+  const bruto = Number(r.amount ?? r.base_amount ?? 0) - estorno;
   const comissao = Number(r.platform_fee ?? 0);
-  const taxaAsaas = asaasFeeFromNetValue(bruto, r.asaas_net_value) ?? 0;
-  const liquido = netForOrganizer(comissao, r.asaas_net_value) ?? (bruto - comissao);
+  const antecipacao = Number(r.asaas_anticipation_fee ?? 0);
+  const taxaAsaas = (asaasFeeFromNetValue(Number(r.amount ?? r.base_amount ?? 0), r.asaas_net_value) ?? 0) + antecipacao;
+  const liquido = (netForOrganizer(comissao, r.asaas_net_value) ?? (bruto + estorno - comissao)) - antecipacao - estorno;
   return { bruto, comissao, taxaAsaas, liquido };
 }
 
+// Soma só as linhas financeiras (isFinancialRow) — pode passar a lista inteira do evento.
 export function sumAuditFigures(regs: AuditableRow[]): AuditFigures {
-  return regs.reduce((acc, r) => {
+  return regs.filter(isFinancialRow).reduce((acc, r) => {
     const f = auditFigures(r);
     return {
       bruto: acc.bruto + f.bruto,

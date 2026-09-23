@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import { computeAthleteStats, GENDER_LABELS, EXPORT_STATUS_LABELS } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
-import { asaasFeeFromNetValue, netForOrganizer, paymentMethodLabel, sumAuditFigures } from '../lib/asaasFee';
+import { auditFigures, isFinancialRow, paymentMethodLabel, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
@@ -973,7 +973,7 @@ export function OrganizerDashboard() {
         {tab === 'eventos' && (() => {
           const paidRegs = allRegistrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
           const pendingRegs = allRegistrations.filter(r => r.status === 'pending' || r.status === 'awaiting_payment');
-          const { bruto: totalBruto, comissao: totalComissao, taxaAsaas: totalTaxaAsaas, liquido: estimadoAReceber } = sumAuditFigures(paidRegs);
+          const { bruto: totalBruto, comissao: totalComissao, taxaAsaas: totalTaxaAsaas, liquido: estimadoAReceber } = sumAuditFigures(allRegistrations);
 
           const weeklyData = (() => {
             const weeks: Record<string, number> = {};
@@ -1060,9 +1060,9 @@ export function OrganizerDashboard() {
                       <tbody>
                         {filteredRegs.slice(0, 50).map(r => {
                           const valorInscricao = Number(r.base_amount ?? r.amount ?? 0);
-                          const valorCobrado = Number(r.amount ?? r.base_amount ?? 0);
-                          const taxaAsaas = asaasFeeFromNetValue(valorCobrado, r.asaas_net_value);
-                          const estLiquido = netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value);
+                          const rowFig = r.asaas_net_value != null ? auditFigures(r) : null;
+                          const taxaAsaas = rowFig?.taxaAsaas ?? null;
+                          const estLiquido = rowFig?.liquido ?? null;
                           const isPaid = r.status === 'paid' || r.status === 'confirmed';
                           const isCancelled = r.status === 'cancelled';
                           return (
@@ -1149,8 +1149,7 @@ export function OrganizerDashboard() {
                       <p className="text-center text-gray-400 text-sm py-6">Nenhum inscrito ainda.</p>
                     ) : (() => {
                       const regs = eventRegistrations[event.id] || [];
-                      const evPaidRegs = regs.filter(r => r.status === 'paid' || r.status === 'confirmed');
-                      const evFigures = sumAuditFigures(evPaidRegs);
+                      const evFigures = sumAuditFigures(regs);
                       const kitCounts = regs.reduce((acc: Record<string, number>, r) => {
                         if (r.registration_type_name) acc[r.registration_type_name] = (acc[r.registration_type_name] || 0) + 1;
                         return acc;
@@ -1739,11 +1738,11 @@ export function OrganizerDashboard() {
 
         {/* Saques (somente leitura — quem registra é o Admin) */}
         {tab === 'saques' && (() => {
-          const paidRegs = allRegistrations.filter(r => r.status === 'paid');
+          const paidRegs = allRegistrations.filter(isFinancialRow);
           const perEvent = events.map(ev => {
             const liquidoConfirmado = paidRegs
               .filter(r => r.event_id === ev.id)
-              .reduce((s, r) => s + (netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value) ?? 0), 0);
+              .reduce((s, r) => s + auditFigures(r).liquido, 0);
             const jaSacado = withdrawals
               .filter(w => w.event_id === ev.id)
               .reduce((s, w) => s + Number(w.amount), 0);

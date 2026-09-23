@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveCo
 import { Users, Calendar, Award, Star, Shield, XCircle, Trash2, MessageCircle, X, Eye, BarChart3, Download, Briefcase, ClipboardCheck, AlertTriangle, FileText } from 'lucide-react';
 import { computeAthleteStats, GENDER_LABELS, EXPORT_STATUS_LABELS } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
-import { netForOrganizer, platformFeeFromOriginal, sumAuditFigures } from '../lib/asaasFee';
+import { auditFigures, isFinancialRow, platformFeeFromOriginal, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
@@ -91,7 +91,7 @@ export function AdminDashboard() {
       const { data, error } = await supabase.from('registrations').select('*').eq('event_id', event.id);
       if (error) { toast.error('Erro ao gerar PDF: ' + error.message); return; }
       const paid = (data || []).filter(r => r.status === 'paid' || r.status === 'confirmed');
-      setAuditPrint({ event, figures: sumAuditFigures(paid), paidCount: paid.length, generatedAt: new Date() });
+      setAuditPrint({ event, figures: sumAuditFigures(data || []), paidCount: paid.length, generatedAt: new Date() });
     } finally {
       setGeneratingAuditPdf(null);
     }
@@ -356,7 +356,7 @@ export function AdminDashboard() {
                   <h1 className="text-2xl font-bold text-white">Visão Geral</h1>
                   {(() => {
                     const paidRegsAll = registrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
-                    const totalFigures = sumAuditFigures(paidRegsAll);
+                    const totalFigures = sumAuditFigures(registrations);
                     // Ajuste histórico: diferença entre o que a fórmula ATUAL de comissão (10% do
                     // valor original) cobraria e o que foi realmente cobrado/gravado em platform_fee
                     // — só existe pra inscrições com cupom feitas antes da correção de 11/08/2026
@@ -444,8 +444,7 @@ export function AdminDashboard() {
                       <tbody>
                         {events.map(e => {
                           const evRegs = registrations.filter(r => r.event_id === e.id);
-                          const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
-                          const f = sumAuditFigures(evPaidRegs);
+                          const f = sumAuditFigures(evRegs);
                           const organizerName = users.find(u => u.id === e.organizer_id)?.name || '—';
                           const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
                           return (
@@ -718,8 +717,7 @@ export function AdminDashboard() {
         const orgEvents = events.filter(e => e.organizer_id === selectedOrganizerId);
         const orgEventIds = orgEvents.map(e => e.id);
         const orgRegs = registrations.filter(r => orgEventIds.includes(r.event_id));
-        const orgPaidRegs = orgRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
-        const orgFigures = sumAuditFigures(orgPaidRegs);
+        const orgFigures = sumAuditFigures(orgRegs);
         const recentRegs = [...orgRegs]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 20);
@@ -943,9 +941,9 @@ export function AdminDashboard() {
                 {(() => {
                   const orgWithdrawals = withdrawals.filter(w => orgEventIds.includes(w.event_id));
                   const perEvent = orgEvents.map(ev => {
-                    const liquidoConfirmado = orgPaidRegs
-                      .filter(r => r.event_id === ev.id)
-                      .reduce((s, r) => s + (netForOrganizer(Number(r.platform_fee ?? 0), r.asaas_net_value) ?? 0), 0);
+                    const liquidoConfirmado = orgRegs
+                      .filter(r => r.event_id === ev.id && isFinancialRow(r))
+                      .reduce((s, r) => s + auditFigures(r).liquido, 0);
                     const jaSacado = orgWithdrawals
                       .filter(w => w.event_id === ev.id)
                       .reduce((s, w) => s + Number(w.amount), 0);
@@ -1111,8 +1109,7 @@ export function AdminDashboard() {
       {selectedEventPreview && (() => {
         const ev = selectedEventPreview;
         const evRegs = registrations.filter(r => r.event_id === ev.id);
-        const evPaidRegs = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
-        const evFigures = sumAuditFigures(evPaidRegs);
+        const evFigures = sumAuditFigures(evRegs);
         const mdRegsEv = evRegs.filter(r => r.status !== 'cancelled');
         const { confirmed: mdConfirmedEv, pending: mdPendingEv, genderData: genderDataEv, avgAge: avgAgeEv, minAge: minAgeEv, maxAge: maxAgeEv, lastRegs: lastRegsEv } = computeAthleteStats(mdRegsEv);
         const evCouponSummary = summarizeCouponUsage(evRegs);
@@ -1395,7 +1392,7 @@ export function AdminDashboard() {
         <table className="w-full text-sm mb-6" style={{ borderCollapse: 'collapse' }}>
           <tbody>
             {[
-              ['Bruto (total pago pelo atleta)', auditPrint.figures.bruto, false],
+              ['Bruto (total pago pelo atleta, já descontados estornos)', auditPrint.figures.bruto, false],
               ['(−) Comissão da Plataforma', auditPrint.figures.comissao, true],
               ['(−) Taxa Asaas (valor real, nunca estimado)', auditPrint.figures.taxaAsaas, true],
               ['(=) Líquido do Organizador', auditPrint.figures.liquido, false],
@@ -1413,7 +1410,8 @@ export function AdminDashboard() {
         <p className="text-xs text-gray-500 leading-relaxed">
           Bruto = valor total (<code>amount</code>) efetivamente pago pelo atleta via Asaas, já incluindo a comissão da plataforma.
           Comissão = coluna <code>platform_fee</code> gravada no momento de cada inscrição (nunca recalculada por fórmula sobre dado histórico).
-          Taxa Asaas = valor real da transação, obtido do <code>netValue</code> retornado pela Asaas por pagamento (nunca uma estimativa de mercado).
+          Taxa Asaas = valor real da transação, obtido do <code>netValue</code> retornado pela Asaas por pagamento (nunca uma estimativa de mercado), mais a mensageria e a antecipação de recebíveis de cartão lida do extrato Asaas.
+          Estornos devolvidos ao atleta saem do Bruto; as taxas Asaas da transação original não são devolvidas pela Asaas e continuam contando.
           Líquido do Organizador = Bruto − Comissão − Taxa Asaas. Este total é acumulado desde sempre e não desconta saques já feitos.
         </p>
       </div>
