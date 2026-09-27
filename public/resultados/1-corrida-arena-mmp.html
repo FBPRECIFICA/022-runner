@@ -1,204 +1,634 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pódio · 1ª Corrida do Aniversário da Arena MMP</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pódio</title>
 <style>
-  :root {
-    --bg: #0d0d0d; --card: #171717; --card2: #1f1f1f; --line: #2a2a2a;
-    --gold: #C9A84C; --gold2: #E8CE7A; --silver: #C0C0C0; --bronze: #CD7F32;
-    --text: #f2f2f2; --muted: #9a9a9a;
+  :root{
+    --gold:#d4af37; --gold-light:#f1d98a;
+    --silver:#c7ccd6; --bronze:#cd7f32;
+    --bg:#0a0d13; --card:#12161f; --card2:#161b24; --line:#232a36;
+    --text:#e6e6e6; --muted:#8891a0;
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
-  header { text-align: center; margin-bottom: 28px; }
-  header .kicker { color: var(--gold); letter-spacing: .2em; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-  header h1 { margin: 8px 0 6px; font-size: clamp(22px, 5vw, 34px); line-height: 1.15; }
-  header p { margin: 0; color: var(--muted); font-size: 14px; }
-  .badge { display: inline-block; margin-top: 10px; padding: 4px 10px; border: 1px solid var(--gold); color: var(--gold);
-    border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .06em; }
-  h2 { font-size: 18px; margin: 32px 0 14px; color: var(--gold2); display: flex; align-items: center; gap: 8px; }
-  .podiums { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-  .podium-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 14px 14px; }
-  .podium-card h3 { margin: 0 0 16px; text-align: center; font-size: 15px; text-transform: uppercase; letter-spacing: .08em; }
-  .podium { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: end; gap: 8px; }
-  .step { text-align: center; }
-  .step .who { font-size: 12.5px; font-weight: 600; line-height: 1.25; min-height: 3.2em; display: flex; align-items: flex-end; justify-content: center; padding: 0 2px; word-break: break-word; }
-  .step .time { font-size: 12px; color: var(--muted); margin: 4px 0 6px; font-variant-numeric: tabular-nums; }
-  .step .block { border-radius: 10px 10px 4px 4px; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px;
-    font-size: 22px; font-weight: 800; color: #111; }
-  .p1 .block { height: 110px; background: linear-gradient(180deg, var(--gold2), var(--gold)); }
-  .p2 .block { height: 80px; background: linear-gradient(180deg, #e6e6e6, var(--silver)); }
-  .p3 .block { height: 60px; background: linear-gradient(180deg, #e0a067, var(--bronze)); }
-  .cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-  .cat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
-  .cat h4 { margin: 0 0 8px; font-size: 13px; color: var(--gold); letter-spacing: .05em; }
-  .cat ol { margin: 0; padding: 0; list-style: none; }
-  .cat li { display: flex; gap: 8px; align-items: baseline; font-size: 13px; padding: 4px 0; border-top: 1px solid var(--line); }
-  .cat li:first-child { border-top: 0; }
-  .cat .m { width: 20px; flex: none; }
-  .cat .n { flex: 1; min-width: 0; }
-  .cat .t { color: var(--muted); font-variant-numeric: tabular-nums; }
-  .actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 34px 0 8px; }
-  .btn { appearance: none; border: 0; cursor: pointer; text-decoration: none; font: inherit; font-weight: 700; font-size: 14px;
-    padding: 12px 20px; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; }
-  .btn-gold { background: var(--gold); color: #111; }
-  .btn-gold:hover { background: var(--gold2); }
-  .btn-ghost { background: transparent; color: var(--gold); border: 1px solid var(--gold); }
-  .btn-ghost:hover { background: rgba(201,168,76,.1); }
-  #full { display: none; margin-top: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
-  #full.open { display: block; }
-  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .tab { background: var(--card2); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px;
-    font-size: 13px; font-weight: 600; cursor: pointer; }
-  .tab.active { background: var(--gold); border-color: var(--gold); color: #111; }
-  .search { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text);
-    font-size: 14px; margin-bottom: 10px; }
-  .search:focus { outline: 2px solid var(--gold); outline-offset: -1px; }
-  .tbl-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  td.nm { white-space: normal; min-width: 160px; }
-  th { color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
-  td.num { font-variant-numeric: tabular-nums; }
-  tr.top td:first-child { color: var(--gold); font-weight: 800; }
-  .count { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
-  .empty { text-align: center; color: var(--muted); padding: 24px 8px; font-size: 14px; }
-  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 36px; }
-  footer a { color: var(--gold); }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:radial-gradient(circle at 50% -10%, #1b2130 0%, #0a0d13 55%);
+    font-family:'Helvetica Neue',Arial,sans-serif; color:var(--text); padding:28px 16px 60px;
+  }
+  .wrap{max-width:1000px;margin:0 auto;}
+  .top{text-align:center;margin-bottom:34px;}
+  .brand{font-size:15px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;font-weight:700;}
+  .brand span{color:#fff;}
+  .event{font-size:30px;font-weight:800;color:#fff;margin:10px 0 4px;letter-spacing:.5px;}
+  .event .accent{color:var(--gold);}
+  .sub{font-size:12.5px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+
+  .section-title{
+    display:flex;align-items:center;gap:12px;margin:46px 0 20px;
+  }
+  .section-title h2{
+    font-size:16px;letter-spacing:2px;text-transform:uppercase;color:#fff;margin:0;white-space:nowrap;
+    font-weight:700;
+  }
+  .section-title .line{flex:1;height:1px;background:linear-gradient(90deg,var(--gold),transparent);}
+  .section-title .tag{
+    font-size:10px;letter-spacing:1.5px;color:#0a0d13;background:var(--gold);
+    padding:3px 10px;border-radius:20px;font-weight:800;text-transform:uppercase;
+  }
+
+  .podium-row{
+    display:flex;align-items:flex-end;justify-content:center;gap:14px;margin-bottom:10px;
+  }
+  .pod-card{
+    background:var(--card2); border:1px solid var(--line); border-radius:14px;
+    padding:18px 14px 20px; text-align:center; width:210px; position:relative;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  .pod-card.ouro{ order:2; border-color:rgba(212,175,55,.55); padding-top:26px;
+    background:linear-gradient(180deg,rgba(212,175,55,.14),#161b24 55%); transform:translateY(-14px);}
+  .pod-card.prata{ order:1; border-color:rgba(199,204,214,.4);}
+  .pod-card.bronze{ order:3; border-color:rgba(205,127,50,.4);}
+  .medal{
+    width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    margin:0 auto 10px; font-size:22px; font-weight:900; color:#0a0d13;
+  }
+  .ouro .medal{background:linear-gradient(145deg,#f1d98a,#b8892a); width:64px;height:64px;font-size:26px;
+    box-shadow:0 0 24px rgba(212,175,55,.55);}
+  .prata .medal{background:linear-gradient(145deg,#eef1f5,#9aa2af);}
+  .bronze .medal{background:linear-gradient(145deg,#e3a565,#9c5a24);}
+  .pos-label{font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .ouro .pos-label{color:var(--gold-light);}
+  .pname{font-size:14px;font-weight:700;color:#fff;line-height:1.3;min-height:36px;
+    display:flex;align-items:center;justify-content:center;}
+  .ouro .pname{font-size:16px;}
+  .ptime{font-size:12px;color:var(--gold);font-weight:700;margin-top:6px;}
+  .pnum{font-size:10.5px;color:var(--muted);margin-top:2px;}
+
+  .cat-grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px;
+  }
+  .cat-card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px;
+  }
+  .cat-head{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;
+    padding-bottom:10px; border-bottom:1px solid var(--line);
+  }
+  .cat-head h3{margin:0;font-size:13px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;}
+  .cat-head .fx{font-size:10px;color:var(--muted);}
+  .cat-list{list-style:none;margin:0;padding:0;}
+  .cat-list li{
+    display:flex; align-items:center; gap:10px; padding:7px 0; font-size:12.5px;
+    border-bottom:1px dashed rgba(255,255,255,.05);
+  }
+  .cat-list li:last-child{border-bottom:none;}
+  .rank{
+    width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    font-size:10.5px;font-weight:800;color:#0a0d13;
+  }
+  .rank.r1{background:linear-gradient(145deg,#f1d98a,#b8892a);}
+  .rank.r2{background:linear-gradient(145deg,#eef1f5,#9aa2af);}
+  .rank.r3{background:linear-gradient(145deg,#e3a565,#9c5a24);}
+  .cname{flex:1;color:#e6e6e6;font-weight:600;}
+  .ctime{color:var(--muted);font-size:11px;white-space:nowrap;}
+
+  .footer{margin-top:50px;text-align:center;font-size:10.5px;color:#4a5262;letter-spacing:1px;}
+  .footer .b{color:var(--gold);font-weight:700;}
+
+  /* Resultado completo */
+  .full-toggle-wrap{text-align:center;margin:46px 0 10px;display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}
+  .full-toggle{
+    background:linear-gradient(145deg,var(--gold-light),var(--gold));
+    color:#12161f; border:none; border-radius:30px; padding:13px 30px;
+    font-size:13px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
+    cursor:pointer; box-shadow:0 8px 24px rgba(212,175,55,.3);
+  }
+  .full-toggle:hover{filter:brightness(1.05);}
+  .full-toggle .arrow{display:inline-block;margin-left:8px;transition:transform .25s;}
+  .full-toggle.open .arrow{transform:rotate(180deg);}
+
+  .official-link{
+    display:inline-flex; align-items:center; gap:8px;
+    background:transparent; color:var(--gold); border:1.5px solid var(--gold);
+    border-radius:30px; padding:11px 26px; font-size:12.5px; font-weight:800;
+    letter-spacing:1px; text-transform:uppercase; text-decoration:none;
+  }
+  .official-link:hover{background:rgba(212,175,55,.1);}
+  .official-link svg{width:13px;height:13px;}
+
+  .full-results{
+    max-height:0; overflow:hidden; transition:max-height .35s ease;
+  }
+  .full-results.open{max-height:100000px;}
+  .full-results-inner{padding-top:20px;}
+
+  .tabs{display:flex;justify-content:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .tab-btn{
+    background:var(--card2); border:1px solid var(--line); color:var(--muted);
+    padding:9px 20px; border-radius:20px; font-size:12px; font-weight:700;
+    letter-spacing:.5px; text-transform:uppercase; cursor:pointer;
+  }
+  .tab-btn.active{background:var(--gold); color:#12161f; border-color:var(--gold);}
+
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .res-search{
+    width:100%; max-width:340px; display:block; margin:0 auto 16px;
+    background:var(--card2); border:1px solid var(--line); border-radius:20px;
+    padding:9px 16px; color:#fff; font-size:12.5px; outline:none;
+  }
+  .res-search::placeholder{color:var(--muted);}
+
+  table.full-table{width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  table.full-table thead th{
+    text-align:left; font-size:9.5px; letter-spacing:1px; text-transform:uppercase;
+    color:#0a0d13; background:var(--gold); padding:9px 10px; position:sticky; top:0;
+  }
+  table.full-table thead th.c{text-align:center;}
+  table.full-table tbody td{
+    padding:8px 10px; border-bottom:1px solid var(--line); font-size:12px; color:#d6dae2;
+  }
+  table.full-table tbody td.c{text-align:center; color:var(--muted);}
+  table.full-table tbody tr:nth-child(even){background:#161b24;}
+  table.full-table tbody tr.pos-1 td:first-child, table.full-table tbody tr.pos-2 td:first-child, table.full-table tbody tr.pos-3 td:first-child{
+    font-weight:800; color:var(--gold);
+  }
+  .table-scroll{max-height:640px; overflow-y:auto; border-radius:10px;}
+  .res-name{color:#fff; font-weight:600;}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div class="kicker">022Runners · Resultados</div>
-    <h1>🏆 1ª Corrida do Aniversário da Arena MMP</h1>
-    <p>5KM · Caminhada</p>
-    <span class="badge">RESULTADO EXTRAOFICIAL · APURAÇÃO DE TEMPOS</span>
-  </header>
 
-  <div id="content"></div>
-
-  <div class="actions">
-    <button class="btn btn-gold" id="toggleFull" type="button">📋 Ver resultado completo</button>
-    <a class="btn btn-ghost" target="_blank" rel="noopener"
-       href="https://www.apuracaodetempos.com.br/Resultados/1corridaarenammp/ResultadosParciais.html">↗ Resultado oficial (Apuração de Tempos)</a>
+  <div class="top">
+    <div class="brand">022<span>RUNNERS</span></div>
+    <div class="event">1ª Corrida do Aniversário <span class="accent">Arena MMP</span></div>
+    <div class="sub">Resultado Extra Oficial · 5KM</div>
   </div>
 
-  <section id="full" aria-label="Resultado completo">
-    <div class="tabs" id="tabs"></div>
-    <input class="search" id="search" type="search" placeholder="Buscar por nome, número de peito ou categoria…" autocomplete="off" />
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>Pos.</th><th>Nº</th><th>Nome</th><th>Categoria</th><th>Tempo</th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table></div>
-    <p class="count" id="count"></p>
-  </section>
+  <!-- GERAL FEMININO -->
+  <div class="section-title"><h2>Pódio Geral · Feminino</h2><div class="line"></div><span class="tag">5KM</span></div>
+  <div class="podium-row">
+    <div class="pod-card prata">
+      <div class="medal">🥈</div>
+      <div class="pos-label">2º Lugar</div>
+      <div class="pname">Kariny Guimarães</div>
+      <div class="ptime">22:43</div>
+      <div class="pnum">Nº 41</div>
+    </div>
+    <div class="pod-card ouro">
+      <div class="medal">🥇</div>
+      <div class="pos-label">Campeã</div>
+      <div class="pname">Magnólia de Abreu Maurício</div>
+      <div class="ptime">22:09</div>
+      <div class="pnum">Nº 105</div>
+    </div>
+    <div class="pod-card bronze">
+      <div class="medal">🥉</div>
+      <div class="pos-label">3º Lugar</div>
+      <div class="pname">Luciane Mendes</div>
+      <div class="ptime">23:33</div>
+      <div class="pnum">Nº 42</div>
+    </div>
+  </div>
 
-  <footer>Tempos e classificações conforme apuração oficial. Em caso de divergência, vale o
-    <a target="_blank" rel="noopener" href="https://www.apuracaodetempos.com.br/Resultados/1corridaarenammp/ResultadosParciais.html">resultado oficial</a>.
-  </footer>
+  <!-- GERAL MASCULINO -->
+  <div class="section-title"><h2>Pódio Geral · Masculino</h2><div class="line"></div><span class="tag">5KM</span></div>
+  <div class="podium-row">
+    <div class="pod-card prata">
+      <div class="medal">🥈</div>
+      <div class="pos-label">2º Lugar</div>
+      <div class="pname">Everton Santos da Silva Daudt</div>
+      <div class="ptime">17:21</div>
+      <div class="pnum">Nº 152</div>
+    </div>
+    <div class="pod-card ouro">
+      <div class="medal">🥇</div>
+      <div class="pos-label">Campeão</div>
+      <div class="pname">Gleison de Souza</div>
+      <div class="ptime">16:43</div>
+      <div class="pnum">Nº 94</div>
+    </div>
+    <div class="pod-card bronze">
+      <div class="medal">🥉</div>
+      <div class="pos-label">3º Lugar</div>
+      <div class="pname">William China</div>
+      <div class="ptime">17:28</div>
+      <div class="pnum">Nº 153</div>
+    </div>
+  </div>
+
+  <!-- CATEGORIAS FEMININO -->
+  <div class="section-title"><h2>Melhores por Categoria · Feminino</h2><div class="line"></div></div>
+  <div class="cat-grid">
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>15 a 19 anos</h3><span class="fx">F1419</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Maria Eduarda Maia Coutinho Macedo</span><span class="ctime">29:16</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Angelina de Azevedo da Silva de Moraes</span><span class="ctime">31:47</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>20 a 29 anos</h3><span class="fx">F2029</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Beatriz Araújo de Andrade</span><span class="ctime">27:33</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Letícia Nunes de Oliveira</span><span class="ctime">28:44</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Lara Rezende Ferreira Gross</span><span class="ctime">29:50</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>30 a 39 anos</h3><span class="fx">F3039</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Lidiane Alvarenga Guimarães</span><span class="ctime">23:47</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Luanda Janaiara Delmiro Pessoa Leal</span><span class="ctime">24:44</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Roana Moreira</span><span class="ctime">25:36</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>40 a 49 anos</h3><span class="fx">F4049</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Daniela Martins</span><span class="ctime">24:31</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Danila Ribeiro Bonzi</span><span class="ctime">25:24</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Viviane Mello Faria</span><span class="ctime">27:10</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>50 a 59 anos</h3><span class="fx">F5059</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Cristiane Murray Soares</span><span class="ctime">29:18</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Nilma Cristina Cerqueira Machado</span><span class="ctime">31:22</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Jociane Almeida</span><span class="ctime">32:00</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>60+ anos</h3><span class="fx">F6099</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Rosa Maria da Silva Barreto</span><span class="ctime">28:51</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Sirley Arcoverde</span><span class="ctime">33:21</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>Até 13 anos</h3><span class="fx">F0013</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Sofia Nogueira Jotta</span><span class="ctime">39:42</span></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- CATEGORIAS MASCULINO -->
+  <div class="section-title"><h2>Melhores por Categoria · Masculino</h2><div class="line"></div></div>
+  <div class="cat-grid">
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>Até 13 anos</h3><span class="fx">M0013</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Miguel dos Santos Cardoso</span><span class="ctime">25:50</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Joaquim Ribeiro Paixão</span><span class="ctime">27:34</span></li>
+        <li><span class="rank r3">3</span><span class="cname">João Kayque Vecchia da Silva</span><span class="ctime">28:43</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>15 a 19 anos</h3><span class="fx">M1419</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Davi de Souza Araujo</span><span class="ctime">23:55</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Pedro Medeiros dos Santos</span><span class="ctime">24:33</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Erick Costa dos Santos</span><span class="ctime">24:56</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>20 a 29 anos</h3><span class="fx">M2029</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Laercio Silveira Dutra Filho</span><span class="ctime">19:44</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Geovanni da Silva</span><span class="ctime">21:04</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Kayk Gomes Santos Souza</span><span class="ctime">21:21</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>30 a 39 anos</h3><span class="fx">M3039</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Tiago de Oliveira Costa</span><span class="ctime">18:38</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Wellington Paixão de Oliveira</span><span class="ctime">18:56</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Lucas Pereira Moreira</span><span class="ctime">19:45</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>40 a 49 anos</h3><span class="fx">M4049</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Leandro Barbosa de Araujo</span><span class="ctime">20:16</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Lucivaldo Oliveira dos Santos</span><span class="ctime">20:18</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Helio Gomes de Souza Oliveira</span><span class="ctime">20:25</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>50 a 59 anos</h3><span class="fx">M5059</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Anderson Cardoso de Vasconcelos</span><span class="ctime">19:49</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Elias Paula</span><span class="ctime">23:17</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Marcelo Tolentino Vaz</span><span class="ctime">24:16</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>60+ anos</h3><span class="fx">M6099</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Robson Edson Gonçalves da Silva</span><span class="ctime">29:44</span></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- CAMINHADA -->
+  <div class="section-title"><h2>Caminhada · Feminino</h2><div class="line"></div><span class="tag">Extra Oficial</span></div>
+  <div class="cat-grid">
+    <div class="cat-card">
+      <div class="cat-head"><h3>Geral</h3><span class="fx">Caminhada</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Bruna Carvalho de Oliveira</span><span class="ctime">27:53</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Thayza da Silva Oliveira Duarte</span><span class="ctime">34:39</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- RESULTADO COMPLETO -->
+  <div class="full-toggle-wrap">
+    <button class="full-toggle" id="fullToggleBtn" onclick="toggleFull()">Ver resultado completo <span class="arrow">▾</span></button>
+    <a class="official-link" href="https://www.apuracaodetempos.com.br/Resultados/1corridaarenammp/ResultadosParciais.html" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+      Resultado Oficial · Cronometragem
+    </a>
+  </div>
+
+  <div class="full-results" id="fullResults">
+    <div class="full-results-inner">
+      <div class="section-title"><h2>Resultado Completo · 5KM</h2><div class="line"></div><span class="tag">Extra Oficial</span></div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('fem')" id="tabBtnFem">Feminino</button>
+        <button class="tab-btn" onclick="showTab('masc')" id="tabBtnMasc">Masculino</button>
+        <button class="tab-btn" onclick="showTab('cam')" id="tabBtnCam">Caminhada</button>
+      </div>
+
+      <input class="res-search" id="resSearch" placeholder="Buscar por nome ou número..." oninput="filterTable()">
+
+      <div class="tab-panel active" id="panel-fem">
+        <div class="table-scroll">
+        <table class="full-table" id="table-fem">
+          <thead><tr><th class="c">Pos.</th><th class="c">Nº</th><th>Nome</th><th class="c">Categoria</th><th class="c">Tempo</th></tr></thead>
+          <tbody>
+<tr class="pos-1"><td class="c">1º</td><td class="c">105</td><td class="res-name">Magnólia de Abreu Maurício</td><td class="c">F40-49</td><td class="c">22:09</td></tr>
+<tr class="pos-2"><td class="c">2º</td><td class="c">41</td><td class="res-name">Kariny Guimarães</td><td class="c">F30-39</td><td class="c">22:43</td></tr>
+<tr class="pos-3"><td class="c">3º</td><td class="c">42</td><td class="res-name">Luciane Mendes</td><td class="c">F20-29</td><td class="c">23:33</td></tr>
+<tr class=""><td class="c">4º</td><td class="c">106</td><td class="res-name">Lidiane Alvarenga Guimarães</td><td class="c">F30-39</td><td class="c">23:47</td></tr>
+<tr class=""><td class="c">5º</td><td class="c">173</td><td class="res-name">Daniela Martins</td><td class="c">F40-49</td><td class="c">24:31</td></tr>
+<tr class=""><td class="c">6º</td><td class="c">47</td><td class="res-name">Luanda Janaiara Delmiro Pessoa Leal</td><td class="c">F30-39</td><td class="c">24:44</td></tr>
+<tr class=""><td class="c">7º</td><td class="c">104</td><td class="res-name">Danila Ribeiro Bonzi</td><td class="c">F40-49</td><td class="c">25:24</td></tr>
+<tr class=""><td class="c">8º</td><td class="c">172</td><td class="res-name">Roana Moreira</td><td class="c">F30-39</td><td class="c">25:36</td></tr>
+<tr class=""><td class="c">9º</td><td class="c">16</td><td class="res-name">Ursulla Sabino de Brito</td><td class="c">F30-39</td><td class="c">26:39</td></tr>
+<tr class=""><td class="c">10º</td><td class="c">140</td><td class="res-name">Alloma Dusty</td><td class="c">F30-39</td><td class="c">26:38</td></tr>
+<tr class=""><td class="c">11º</td><td class="c">199</td><td class="res-name">Viviane Mello Faria</td><td class="c">F40-49</td><td class="c">27:10</td></tr>
+<tr class=""><td class="c">12º</td><td class="c">58</td><td class="res-name">Gabriela de Souza Silveira</td><td class="c">F40-49</td><td class="c">27:10</td></tr>
+<tr class=""><td class="c">13º</td><td class="c">198</td><td class="res-name">Daniele Matos</td><td class="c">F40-49</td><td class="c">27:23</td></tr>
+<tr class=""><td class="c">14º</td><td class="c">102</td><td class="res-name">Beatriz Araújo de Andrade</td><td class="c">F20-29</td><td class="c">27:33</td></tr>
+<tr class=""><td class="c">15º</td><td class="c">18</td><td class="res-name">Fernanda Mattos</td><td class="c">F40-49</td><td class="c">28:09</td></tr>
+<tr class=""><td class="c">16º</td><td class="c">32</td><td class="res-name">Dihana Neves Noronha</td><td class="c">F30-39</td><td class="c">28:20</td></tr>
+<tr class=""><td class="c">17º</td><td class="c">114</td><td class="res-name">Letícia Nunes de Oliveira</td><td class="c">F20-29</td><td class="c">28:44</td></tr>
+<tr class=""><td class="c">18º</td><td class="c">43</td><td class="res-name">Verônica dos Santos Lima</td><td class="c">F40-49</td><td class="c">28:51</td></tr>
+<tr class=""><td class="c">19º</td><td class="c">157</td><td class="res-name">Rosa Maria da Silva Barreto</td><td class="c">F60-99</td><td class="c">28:51</td></tr>
+<tr class=""><td class="c">20º</td><td class="c">10</td><td class="res-name">Cristiane Murray Soares</td><td class="c">F50-59</td><td class="c">29:18</td></tr>
+<tr class=""><td class="c">21º</td><td class="c">100</td><td class="res-name">Loanny de Oliveira Negreiros</td><td class="c">F30-39</td><td class="c">29:20</td></tr>
+<tr class=""><td class="c">22º</td><td class="c">108</td><td class="res-name">Renata Rodrigues Rigueira Pereira</td><td class="c">F30-39</td><td class="c">29:20</td></tr>
+<tr class=""><td class="c">23º</td><td class="c">117</td><td class="res-name">Jomara Sinfronio Sales Gouvêa</td><td class="c">F30-39</td><td class="c">29:16</td></tr>
+<tr class=""><td class="c">24º</td><td class="c">95</td><td class="res-name">Maria Eduarda Maia Coutinho Macedo</td><td class="c">F15-19</td><td class="c">29:16</td></tr>
+<tr class=""><td class="c">25º</td><td class="c">35</td><td class="res-name">Deliane de Oliveira Santos</td><td class="c">F30-39</td><td class="c">29:50</td></tr>
+<tr class=""><td class="c">26º</td><td class="c">9</td><td class="res-name">Jéssica Murray Soares</td><td class="c">F30-39</td><td class="c">29:54</td></tr>
+<tr class=""><td class="c">27º</td><td class="c">121</td><td class="res-name">Lara Rezende Ferreira Gross</td><td class="c">F20-29</td><td class="c">29:50</td></tr>
+<tr class=""><td class="c">28º</td><td class="c">130</td><td class="res-name">Angélica Patrícia Matias Brandão</td><td class="c">F40-49</td><td class="c">29:53</td></tr>
+<tr class=""><td class="c">29º</td><td class="c">162</td><td class="res-name">Maria Mariana da Soledade da Silv</td><td class="c">F20-29</td><td class="c">30:04</td></tr>
+<tr class=""><td class="c">30º</td><td class="c">61</td><td class="res-name">Thaisa Moreira Lopes</td><td class="c">F30-39</td><td class="c">30:07</td></tr>
+<tr class=""><td class="c">31º</td><td class="c">36</td><td class="res-name">Jaqueline Renata do Nascimento Silva</td><td class="c">F40-49</td><td class="c">30:19</td></tr>
+<tr class=""><td class="c">32º</td><td class="c">129</td><td class="res-name">Andryele da Silva Saraiva</td><td class="c">F20-29</td><td class="c">30:37</td></tr>
+<tr class=""><td class="c">33º</td><td class="c">81</td><td class="res-name">Carla Caroline Silveira dos Santos</td><td class="c">F40-49</td><td class="c">30:52</td></tr>
+<tr class=""><td class="c">34º</td><td class="c">197</td><td class="res-name">Yasmin Mello</td><td class="c">F20-29</td><td class="c">31:15</td></tr>
+<tr class=""><td class="c">35º</td><td class="c">64</td><td class="res-name">Janine Moreira</td><td class="c">F30-39</td><td class="c">31:02</td></tr>
+<tr class=""><td class="c">36º</td><td class="c">195</td><td class="res-name">Thaiane Araújo Ribeiro Paixão</td><td class="c">F30-39</td><td class="c">31:11</td></tr>
+<tr class=""><td class="c">37º</td><td class="c">200</td><td class="res-name">Isabele Cavalcante Matos</td><td class="c">F30-39</td><td class="c">31:12</td></tr>
+<tr class=""><td class="c">38º</td><td class="c">92</td><td class="res-name">Nilma Cristina Cerqueira Machado</td><td class="c">F50-59</td><td class="c">31:22</td></tr>
+<tr class=""><td class="c">39º</td><td class="c">128</td><td class="res-name">Joyce Azevedo</td><td class="c">F30-39</td><td class="c">31:19</td></tr>
+<tr class=""><td class="c">40º</td><td class="c">13</td><td class="res-name">Vitória Valladares</td><td class="c">F30-39</td><td class="c">31:33</td></tr>
+<tr class=""><td class="c">41º</td><td class="c">184</td><td class="res-name">Sabrina Batista da Silva</td><td class="c">F30-39</td><td class="c">31:34</td></tr>
+<tr class=""><td class="c">42º</td><td class="c">83</td><td class="res-name">Angelina de Azevedo da Silva de Moraes</td><td class="c">F15-19</td><td class="c">31:47</td></tr>
+<tr class=""><td class="c">43º</td><td class="c">48</td><td class="res-name">Gabrielly Cardoso do Vale</td><td class="c">F20-29</td><td class="c">31:52</td></tr>
+<tr class=""><td class="c">44º</td><td class="c">70</td><td class="res-name">Larissa Dutra da Silveira</td><td class="c">F30-39</td><td class="c">32:08</td></tr>
+<tr class=""><td class="c">45º</td><td class="c">84</td><td class="res-name">Jociane Almeida</td><td class="c">F50-59</td><td class="c">32:00</td></tr>
+<tr class=""><td class="c">46º</td><td class="c">55</td><td class="res-name">Amanda de Mendonça Fonseca Cardoso</td><td class="c">F30-39</td><td class="c">32:24</td></tr>
+<tr class=""><td class="c">47º</td><td class="c">158</td><td class="res-name">Márcia Moura da Silva</td><td class="c">F50-59</td><td class="c">32:20</td></tr>
+<tr class=""><td class="c">48º</td><td class="c">165</td><td class="res-name">Raquel Nascimento</td><td class="c">F30-39</td><td class="c">32:48</td></tr>
+<tr class=""><td class="c">49º</td><td class="c">12</td><td class="res-name">Erika de Souza Werneck</td><td class="c">F40-49</td><td class="c">32:58</td></tr>
+<tr class=""><td class="c">50º</td><td class="c">68</td><td class="res-name">Anna Cristina Carvalho da Silva</td><td class="c">F30-39</td><td class="c">33:00</td></tr>
+<tr class=""><td class="c">51º</td><td class="c">177</td><td class="res-name">Daiana de Freitas Gomes</td><td class="c">F30-39</td><td class="c">33:11</td></tr>
+<tr class=""><td class="c">52º</td><td class="c">122</td><td class="res-name">Sirley Arcoverde</td><td class="c">F60-99</td><td class="c">33:21</td></tr>
+<tr class=""><td class="c">53º</td><td class="c">109</td><td class="res-name">Luana da Silva Santos Martins Miranda</td><td class="c">F30-39</td><td class="c">33:13</td></tr>
+<tr class=""><td class="c">54º</td><td class="c">127</td><td class="res-name">Aline Huguinin Donald</td><td class="c">F40-49</td><td class="c">33:53</td></tr>
+<tr class=""><td class="c">55º</td><td class="c">82</td><td class="res-name">Cedelir Maria de Azevedo Cardoso</td><td class="c">F50-59</td><td class="c">33:48</td></tr>
+<tr class=""><td class="c">56º</td><td class="c">167</td><td class="res-name">Clarissa Farias Soffiatti Pereira</td><td class="c">F30-39</td><td class="c">33:58</td></tr>
+<tr class=""><td class="c">57º</td><td class="c">25</td><td class="res-name">Andressa Alves Nascimento de Melo Belício</td><td class="c">F30-39</td><td class="c">34:19</td></tr>
+<tr class=""><td class="c">58º</td><td class="c">59</td><td class="res-name">Ana Paula Santos de Amorim</td><td class="c">F50-59</td><td class="c">34:38</td></tr>
+<tr class=""><td class="c">59º</td><td class="c">71</td><td class="res-name">Larissa de Souza Mello Insabralde</td><td class="c">F30-39</td><td class="c">34:46</td></tr>
+<tr class=""><td class="c">60º</td><td class="c">51</td><td class="res-name">Ianderci Sant Anna dos Santos Silva</td><td class="c">F40-49</td><td class="c">34:54</td></tr>
+<tr class=""><td class="c">61º</td><td class="c">85</td><td class="res-name">Verônica Nascimento Ferreira</td><td class="c">F50-59</td><td class="c">34:58</td></tr>
+<tr class=""><td class="c">62º</td><td class="c">166</td><td class="res-name">Gabriela dos Santos Costa Ribeiro</td><td class="c">F40-49</td><td class="c">35:33</td></tr>
+<tr class=""><td class="c">63º</td><td class="c">187</td><td class="res-name">Rita de Cássia Martins Ramos de Souza</td><td class="c">F50-59</td><td class="c">35:39</td></tr>
+<tr class=""><td class="c">64º</td><td class="c">174</td><td class="res-name">Mariah Castro</td><td class="c">F30-39</td><td class="c">35:45</td></tr>
+<tr class=""><td class="c">65º</td><td class="c">77</td><td class="res-name">Lais Carmo Santos Silva</td><td class="c">F30-39</td><td class="c">35:54</td></tr>
+<tr class=""><td class="c">66º</td><td class="c">155</td><td class="res-name">Fernanda da Silva Pinheiro</td><td class="c">F40-49</td><td class="c">36:13</td></tr>
+<tr class=""><td class="c">67º</td><td class="c">159</td><td class="res-name">Ana Beatriz da Silva Rabelo</td><td class="c">F20-29</td><td class="c">36:15</td></tr>
+<tr class=""><td class="c">68º</td><td class="c">24</td><td class="res-name">Kelly Gomes</td><td class="c">F40-49</td><td class="c">36:31</td></tr>
+<tr class=""><td class="c">69º</td><td class="c">74</td><td class="res-name">Tatiana S da F Martins</td><td class="c">F30-39</td><td class="c">36:54</td></tr>
+<tr class=""><td class="c">70º</td><td class="c">141</td><td class="res-name">Louhana Conceição Costa Corrêa</td><td class="c">F30-39</td><td class="c">36:55</td></tr>
+<tr class=""><td class="c">71º</td><td class="c">72</td><td class="res-name">Kesiane Leite Rodrigues</td><td class="c">F30-39</td><td class="c">36:56</td></tr>
+<tr class=""><td class="c">72º</td><td class="c">78</td><td class="res-name">Alessandra Costa Tavares Amoêdo</td><td class="c">F30-39</td><td class="c">37:03</td></tr>
+<tr class=""><td class="c">73º</td><td class="c">73</td><td class="res-name">Francyne Prevatto</td><td class="c">F30-39</td><td class="c">37:13</td></tr>
+<tr class=""><td class="c">74º</td><td class="c">185</td><td class="res-name">Fernanda de Souza Santos</td><td class="c">F40-49</td><td class="c">37:41</td></tr>
+<tr class=""><td class="c">75º</td><td class="c">90</td><td class="res-name">Maria Mônica Ferreira Mota</td><td class="c">F30-39</td><td class="c">37:44</td></tr>
+<tr class=""><td class="c">76º</td><td class="c">147</td><td class="res-name">Nívia Olavo</td><td class="c">F30-39</td><td class="c">38:04</td></tr>
+<tr class=""><td class="c">77º</td><td class="c">156</td><td class="res-name">Beatriz Patricio</td><td class="c">F20-29</td><td class="c">37:57</td></tr>
+<tr class=""><td class="c">78º</td><td class="c">76</td><td class="res-name">Danielle Dutra da Silveira</td><td class="c">F30-39</td><td class="c">38:24</td></tr>
+<tr class=""><td class="c">79º</td><td class="c">119</td><td class="res-name">Carina Estela de Oliveira Ferreira</td><td class="c">-</td><td class="c">38:43</td></tr>
+<tr class=""><td class="c">80º</td><td class="c">17</td><td class="res-name">Tânia Isaura Rodrigues</td><td class="c">F40-49</td><td class="c">38:47</td></tr>
+<tr class=""><td class="c">81º</td><td class="c">135</td><td class="res-name">Lorenna Gomes</td><td class="c">F20-29</td><td class="c">39:17</td></tr>
+<tr class=""><td class="c">82º</td><td class="c">161</td><td class="res-name">Andrea Santos de Souza</td><td class="c">F50-59</td><td class="c">39:44</td></tr>
+<tr class=""><td class="c">83º</td><td class="c">192</td><td class="res-name">Sofia Nogueira Jotta</td><td class="c">F0-13</td><td class="c">39:42</td></tr>
+<tr class=""><td class="c">84º</td><td class="c">2</td><td class="res-name">Marilena Pinto de Araujo</td><td class="c">F40-49</td><td class="c">40:28</td></tr>
+<tr class=""><td class="c">85º</td><td class="c">111</td><td class="res-name">Jhenyffer Freitas dos Santos Pita</td><td class="c">F30-39</td><td class="c">40:39</td></tr>
+<tr class=""><td class="c">86º</td><td class="c">14</td><td class="res-name">Priscila Correa Pessanha Brito</td><td class="c">F40-49</td><td class="c">40:39</td></tr>
+<tr class=""><td class="c">87º</td><td class="c">23</td><td class="res-name">Romas Ribeiro da Silva</td><td class="c">-</td><td class="c">40:50</td></tr>
+<tr class=""><td class="c">88º</td><td class="c">178</td><td class="res-name">Elis Pimenta</td><td class="c">F50-59</td><td class="c">40:45</td></tr>
+<tr class=""><td class="c">89º</td><td class="c">69</td><td class="res-name">Bruna Lopes Ribeiro</td><td class="c">F30-39</td><td class="c">40:54</td></tr>
+<tr class=""><td class="c">90º</td><td class="c">20</td><td class="res-name">Julienne de Oliveira Silva</td><td class="c">F40-49</td><td class="c">41:08</td></tr>
+<tr class=""><td class="c">91º</td><td class="c">15</td><td class="res-name">Rosilaine Figueiredo</td><td class="c">F40-49</td><td class="c">41:07</td></tr>
+<tr class=""><td class="c">92º</td><td class="c">160</td><td class="res-name">Rosa Mario de Souza Mauricio</td><td class="c">F50-59</td><td class="c">41:08</td></tr>
+<tr class=""><td class="c">93º</td><td class="c">170</td><td class="res-name">Gilsimeri e Silva Muniz</td><td class="c">F40-49</td><td class="c">41:58</td></tr>
+<tr class=""><td class="c">94º</td><td class="c">101</td><td class="res-name">Joanne dos Santos Teófilo Albuquerque</td><td class="c">F30-39</td><td class="c">42:14</td></tr>
+<tr class=""><td class="c">95º</td><td class="c">31</td><td class="res-name">Tatiana Ribeiro dos Santos</td><td class="c">F40-49</td><td class="c">43:06</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-masc">
+        <div class="table-scroll">
+        <table class="full-table" id="table-masc">
+          <thead><tr><th class="c">Pos.</th><th class="c">Nº</th><th>Nome</th><th class="c">Categoria</th><th class="c">Tempo</th></tr></thead>
+          <tbody>
+<tr class="pos-1"><td class="c">1º</td><td class="c">94</td><td class="res-name">Gleison de Souza</td><td class="c">M20-29</td><td class="c">16:43</td></tr>
+<tr class="pos-2"><td class="c">2º</td><td class="c">152</td><td class="res-name">Everton Santos da Silva Daudt</td><td class="c">M30-39</td><td class="c">17:21</td></tr>
+<tr class="pos-3"><td class="c">3º</td><td class="c">153</td><td class="res-name">William China</td><td class="c">M30-39</td><td class="c">17:28</td></tr>
+<tr class=""><td class="c">4º</td><td class="c">164</td><td class="res-name">Tiago de Oliveira Costa</td><td class="c">M30-39</td><td class="c">18:38</td></tr>
+<tr class=""><td class="c">5º</td><td class="c">66</td><td class="res-name">Wellington Paixão de Oliveira</td><td class="c">M30-39</td><td class="c">18:56</td></tr>
+<tr class=""><td class="c">6º</td><td class="c">30</td><td class="res-name">Laercio Silveira Dutra Filho</td><td class="c">M20-29</td><td class="c">19:44</td></tr>
+<tr class=""><td class="c">7º</td><td class="c">93</td><td class="res-name">Lucas Pereira Moreira</td><td class="c">M30-39</td><td class="c">19:45</td></tr>
+<tr class=""><td class="c">8º</td><td class="c">118</td><td class="res-name">Anderson Cardoso de Vasconcelos</td><td class="c">M50-59</td><td class="c">19:49</td></tr>
+<tr class=""><td class="c">9º</td><td class="c">86</td><td class="res-name">Allan Chaves</td><td class="c">M30-39</td><td class="c">20:00</td></tr>
+<tr class=""><td class="c">10º</td><td class="c">180</td><td class="res-name">Lucas Gago da Silva</td><td class="c">M30-39</td><td class="c">20:02</td></tr>
+<tr class=""><td class="c">11º</td><td class="c">125</td><td class="res-name">Leandro Barbosa de Araujo</td><td class="c">M40-49</td><td class="c">20:16</td></tr>
+<tr class=""><td class="c">12º</td><td class="c">33</td><td class="res-name">Lucivaldo Oliveira dos Santos</td><td class="c">M40-49</td><td class="c">20:18</td></tr>
+<tr class=""><td class="c">13º</td><td class="c">54</td><td class="res-name">Helio Gomes de Souza Oliveira</td><td class="c">M40-49</td><td class="c">20:25</td></tr>
+<tr class=""><td class="c">14º</td><td class="c">132</td><td class="res-name">Geovanni da Silva</td><td class="c">M20-29</td><td class="c">21:04</td></tr>
+<tr class=""><td class="c">15º</td><td class="c">103</td><td class="res-name">Kayk Gomes Santos Souza</td><td class="c">M20-29</td><td class="c">21:21</td></tr>
+<tr class=""><td class="c">16º</td><td class="c">150</td><td class="res-name">Lucas Gomes da Fonseca</td><td class="c">M30-39</td><td class="c">22:27</td></tr>
+<tr class=""><td class="c">17º</td><td class="c">40</td><td class="res-name">Weverthon Silva Pedro</td><td class="c">M40-49</td><td class="c">22:26</td></tr>
+<tr class=""><td class="c">18º</td><td class="c">142</td><td class="res-name">Pedro Lucas de Oliveira</td><td class="c">M20-29</td><td class="c">22:42</td></tr>
+<tr class=""><td class="c">19º</td><td class="c">163</td><td class="res-name">Jhonathan da Silva Pereira</td><td class="c">M30-39</td><td class="c">23:00</td></tr>
+<tr class=""><td class="c">20º</td><td class="c">6</td><td class="res-name">Renan Calais Batista</td><td class="c">M30-39</td><td class="c">23:08</td></tr>
+<tr class=""><td class="c">21º</td><td class="c">107</td><td class="res-name">Daniel da Rocha Alves</td><td class="c">M30-39</td><td class="c">23:14</td></tr>
+<tr class=""><td class="c">22º</td><td class="c">34</td><td class="res-name">Elias Paula</td><td class="c">M50-59</td><td class="c">23:17</td></tr>
+<tr class=""><td class="c">23º</td><td class="c">56</td><td class="res-name">Otávio de Souza Braga</td><td class="c">M30-39</td><td class="c">23:27</td></tr>
+<tr class=""><td class="c">24º</td><td class="c">87</td><td class="res-name">Jeferson Eris das Neves Passos</td><td class="c">M30-39</td><td class="c">23:37</td></tr>
+<tr class=""><td class="c">25º</td><td class="c">46</td><td class="res-name">Alex Sandro Leal da Silveira Delmiro</td><td class="c">M30-39</td><td class="c">23:37</td></tr>
+<tr class=""><td class="c">26º</td><td class="c">154</td><td class="res-name">Davi de Souza Araujo</td><td class="c">M15-19</td><td class="c">23:55</td></tr>
+<tr class=""><td class="c">27º</td><td class="c">26</td><td class="res-name">Marcos Pinheiro</td><td class="c">M30-39</td><td class="c">23:45</td></tr>
+<tr class=""><td class="c">28º</td><td class="c">67</td><td class="res-name">Ciedi Vieira da Costa</td><td class="c">M40-49</td><td class="c">24:23</td></tr>
+<tr class=""><td class="c">29º</td><td class="c">193</td><td class="res-name">Fausto Rogério dos Santos Jotta</td><td class="c">M40-49</td><td class="c">23:58</td></tr>
+<tr class=""><td class="c">30º</td><td class="c">96</td><td class="res-name">Rafael Neves de Oliveira</td><td class="c">M30-39</td><td class="c">24:17</td></tr>
+<tr class=""><td class="c">31º</td><td class="c">57</td><td class="res-name">Augusto Cesar Macedo Alves</td><td class="c">M40-49</td><td class="c">24:16</td></tr>
+<tr class=""><td class="c">32º</td><td class="c">53</td><td class="res-name">Marcelo Tolentino Vaz</td><td class="c">M50-59</td><td class="c">24:16</td></tr>
+<tr class=""><td class="c">33º</td><td class="c">131</td><td class="res-name">Michel Maciel</td><td class="c">M40-49</td><td class="c">24:30</td></tr>
+<tr class=""><td class="c">34º</td><td class="c">123</td><td class="res-name">Pedro Medeiros dos Santos</td><td class="c">M15-19</td><td class="c">24:33</td></tr>
+<tr class=""><td class="c">35º</td><td class="c">37</td><td class="res-name">Julio Cruz</td><td class="c">M20-29</td><td class="c">24:46</td></tr>
+<tr class=""><td class="c">36º</td><td class="c">65</td><td class="res-name">Erick Costa dos Santos</td><td class="c">M15-19</td><td class="c">24:56</td></tr>
+<tr class=""><td class="c">37º</td><td class="c">38</td><td class="res-name">Flavio Gondim</td><td class="c">M30-39</td><td class="c">24:43</td></tr>
+<tr class=""><td class="c">38º</td><td class="c">113</td><td class="res-name">Leonardo Jose da Silva</td><td class="c">M30-39</td><td class="c">24:52</td></tr>
+<tr class=""><td class="c">39º</td><td class="c">144</td><td class="res-name">Daniel da Silva Aleixo</td><td class="c">M30-39</td><td class="c">25:14</td></tr>
+<tr class=""><td class="c">40º</td><td class="c">49</td><td class="res-name">Daniel Pereira Pains Junior</td><td class="c">M40-49</td><td class="c">25:18</td></tr>
+<tr class=""><td class="c">41º</td><td class="c">5</td><td class="res-name">Carlos Eduardo Coriolano Dias</td><td class="c">M15-19</td><td class="c">25:37</td></tr>
+<tr class=""><td class="c">42º</td><td class="c">89</td><td class="res-name">Miguel dos Santos Cardoso</td><td class="c">M0-13</td><td class="c">25:50</td></tr>
+<tr class=""><td class="c">43º</td><td class="c">88</td><td class="res-name">Alexon Azevedo</td><td class="c">M30-39</td><td class="c">25:51</td></tr>
+<tr class=""><td class="c">44º</td><td class="c">181</td><td class="res-name">Victor Hugo Melo de Souza</td><td class="c">M20-29</td><td class="c">26:20</td></tr>
+<tr class=""><td class="c">45º</td><td class="c">183</td><td class="res-name">Hugo Renan Martins de Souza</td><td class="c">M40-49</td><td class="c">26:20</td></tr>
+<tr class=""><td class="c">46º</td><td class="c">91</td><td class="res-name">Leonardo Ramos Dutra</td><td class="c">M20-29</td><td class="c">26:18</td></tr>
+<tr class=""><td class="c">47º</td><td class="c">149</td><td class="res-name">Gabriel Garcia Souza Passos</td><td class="c">M15-19</td><td class="c">26:06</td></tr>
+<tr class=""><td class="c">48º</td><td class="c">44</td><td class="res-name">Thiago de Souza Marques</td><td class="c">M30-39</td><td class="c">26:31</td></tr>
+<tr class=""><td class="c">49º</td><td class="c">115</td><td class="res-name">Joao Luiz da Silva Júnior</td><td class="c">M40-49</td><td class="c">26:41</td></tr>
+<tr class=""><td class="c">50º</td><td class="c">110</td><td class="res-name">Jonatan dos Santos</td><td class="c">M30-39</td><td class="c">26:33</td></tr>
+<tr class=""><td class="c">51º</td><td class="c">196</td><td class="res-name">Fernado Paixão da Silva</td><td class="c">M30-39</td><td class="c">26:57</td></tr>
+<tr class=""><td class="c">52º</td><td class="c">190</td><td class="res-name">Kauan Vecchia da Silva</td><td class="c">M20-29</td><td class="c">27:27</td></tr>
+<tr class=""><td class="c">53º</td><td class="c">194</td><td class="res-name">Joaquim Ribeiro Paixão</td><td class="c">M0-13</td><td class="c">27:34</td></tr>
+<tr class=""><td class="c">54º</td><td class="c">145</td><td class="res-name">Thiago Oliveira</td><td class="c">M30-39</td><td class="c">28:25</td></tr>
+<tr class=""><td class="c">55º</td><td class="c">171</td><td class="res-name">Felipe Silva</td><td class="c">M40-49</td><td class="c">28:17</td></tr>
+<tr class=""><td class="c">56º</td><td class="c">52</td><td class="res-name">Romario Carlos Costa Paes</td><td class="c">M30-39</td><td class="c">29:00</td></tr>
+<tr class=""><td class="c">57º</td><td class="c">191</td><td class="res-name">João Kayque Vecchia da Silva</td><td class="c">M0-13</td><td class="c">28:43</td></tr>
+<tr class=""><td class="c">58º</td><td class="c">175</td><td class="res-name">Fernando de Sousa Ribeiro</td><td class="c">M40-49</td><td class="c">29:03</td></tr>
+<tr class=""><td class="c">59º</td><td class="c">8</td><td class="res-name">Nielson Zanon Soares</td><td class="c">M50-59</td><td class="c">29:18</td></tr>
+<tr class=""><td class="c">60º</td><td class="c">99</td><td class="res-name">Luiz Pedro Cavalcante Santana</td><td class="c">M15-19</td><td class="c">29:10</td></tr>
+<tr class=""><td class="c">61º</td><td class="c">79</td><td class="res-name">Gustavo Amoedo Lima</td><td class="c">M40-49</td><td class="c">29:09</td></tr>
+<tr class=""><td class="c">62º</td><td class="c">98</td><td class="res-name">Willian Robert Ferreira Santana</td><td class="c">M30-39</td><td class="c">29:12</td></tr>
+<tr class=""><td class="c">63º</td><td class="c">1</td><td class="res-name">Thiago Ramos da Costa</td><td class="c">M30-39</td><td class="c">29:05</td></tr>
+<tr class=""><td class="c">64º</td><td class="c">169</td><td class="res-name">Miguel Muniz Santos</td><td class="c">M15-19</td><td class="c">29:16</td></tr>
+<tr class=""><td class="c">65º</td><td class="c">29</td><td class="res-name">Márcio de Almeida</td><td class="c">M40-49</td><td class="c">29:36</td></tr>
+<tr class=""><td class="c">66º</td><td class="c">27</td><td class="res-name">Rodolpho Valladares</td><td class="c">M30-39</td><td class="c">29:40</td></tr>
+<tr class=""><td class="c">67º</td><td class="c">179</td><td class="res-name">Pedro Lucas Silva</td><td class="c">M20-29</td><td class="c">29:39</td></tr>
+<tr class=""><td class="c">68º</td><td class="c">39</td><td class="res-name">Robson Edson Gonçalves da Silva</td><td class="c">M60-99</td><td class="c">29:44</td></tr>
+<tr class=""><td class="c">69º</td><td class="c">182</td><td class="res-name">João Hélio Melo de Souza</td><td class="c">M15-19</td><td class="c">30:58</td></tr>
+<tr class=""><td class="c">70º</td><td class="c">62</td><td class="res-name">Rodrigo Pree Silva</td><td class="c">M30-39</td><td class="c">31:16</td></tr>
+<tr class=""><td class="c">71º</td><td class="c">7</td><td class="res-name">Júlio Cézar de Souza</td><td class="c">M40-49</td><td class="c">31:21</td></tr>
+<tr class=""><td class="c">72º</td><td class="c">80</td><td class="res-name">Diego Santos da Silva</td><td class="c">M30-39</td><td class="c">31:38</td></tr>
+<tr class=""><td class="c">73º</td><td class="c">143</td><td class="res-name">Lucas Matheus</td><td class="c">M20-29</td><td class="c">31:43</td></tr>
+<tr class=""><td class="c">74º</td><td class="c">75</td><td class="res-name">Leonardo Almeida de Souza Prevatto</td><td class="c">M30-39</td><td class="c">31:42</td></tr>
+<tr class=""><td class="c">75º</td><td class="c">168</td><td class="res-name">Marcelo Antônio de Oliveira Pereira</td><td class="c">M30-39</td><td class="c">31:45</td></tr>
+<tr class=""><td class="c">76º</td><td class="c">11</td><td class="res-name">Pedro Henrique Valverde Soares da Silva</td><td class="c">M30-39</td><td class="c">32:55</td></tr>
+<tr class=""><td class="c">77º</td><td class="c">176</td><td class="res-name">Caio Rosf Peroni Fernandes</td><td class="c">M30-39</td><td class="c">32:51</td></tr>
+<tr class=""><td class="c">78º</td><td class="c">136</td><td class="res-name">Weverton da Conceição Melo</td><td class="c">M20-29</td><td class="c">33:16</td></tr>
+<tr class=""><td class="c">79º</td><td class="c">50</td><td class="res-name">Pedro Oliveira de Souza</td><td class="c">M20-29</td><td class="c">33:51</td></tr>
+<tr class=""><td class="c">80º</td><td class="c">138</td><td class="res-name">Francisco Furlani</td><td class="c">M50-59</td><td class="c">35:00</td></tr>
+<tr class=""><td class="c">81º</td><td class="c">137</td><td class="res-name">Lucas Furlani</td><td class="c">M30-39</td><td class="c">35:00</td></tr>
+<tr class=""><td class="c">82º</td><td class="c">139</td><td class="res-name">Adriano Reis Pinto</td><td class="c">M50-59</td><td class="c">35:00</td></tr>
+<tr class=""><td class="c">83º</td><td class="c">97</td><td class="res-name">José Victor Coutinho da Costa</td><td class="c">M30-39</td><td class="c">39:53</td></tr>
+<tr class=""><td class="c">84º</td><td class="c">112</td><td class="res-name">Gilberto Marinho Freitas</td><td class="c">M30-39</td><td class="c">40:42</td></tr>
+<tr class=""><td class="c">85º</td><td class="c">124</td><td class="res-name">Anderson Ribeiro dos Santos</td><td class="c">M50-59</td><td class="c">44:17</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-cam">
+        <div class="table-scroll">
+        <table class="full-table" id="table-cam">
+          <thead><tr><th class="c">Pos.</th><th class="c">Nº</th><th>Nome</th><th class="c">Categoria</th><th class="c">Tempo</th></tr></thead>
+          <tbody>
+<tr class="pos-1"><td class="c">1º</td><td class="c">186</td><td class="res-name">Bruna Carvalho de Oliveira</td><td class="c">F30-39</td><td class="c">27:53</td></tr>
+<tr class="pos-2"><td class="c">2º</td><td class="c">120</td><td class="res-name">Thayza da Silva Oliveira Duarte</td><td class="c">F30-39</td><td class="c">34:39</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">Resultados extra oficiais · apuração <span class="b">apuracaodetempos.com.br</span> · 022<span class="b">RUNNERS</span></div>
+
 </div>
 
 <script>
-/*
- * DADOS DOS RESULTADOS
- * Cada linha: [posição geral, número de peito, "NOME", "CATEGORIA/FAIXA", "HH:MM:SS"]
- * Copiado da fonte oficial:
- * https://www.apuracaodetempos.com.br/Resultados/1corridaarenammp/ResultadosParciais.html
- */
-var RESULTS = {
-  "5km-fem":       { label: "5KM Feminino",       rows: [] },
-  "5km-masc":      { label: "5KM Masculino",      rows: [] },
-  "caminhada-fem": { label: "Caminhada Feminina", rows: [] }
-};
-
-(function () {
-  var MEDAL = ["🥇", "🥈", "🥉"];
-  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
-    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function norm(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
-  function sortRows(r) { return r.slice().sort(function (a, b) { return a[0] - b[0]; }); }
-
-  var keys = Object.keys(RESULTS);
-  var total = keys.reduce(function (n, k) { return n + RESULTS[k].rows.length; }, 0);
-  var content = document.getElementById("content");
-
-  if (!total) {
-    content.innerHTML = '<div class="empty">Os resultados estão sendo publicados. Enquanto isso, confira o resultado oficial no botão abaixo.</div>';
-    document.getElementById("toggleFull").style.display = "none";
-    return;
-  }
-
-  function podiumCard(title, rows) {
-    var r = sortRows(rows);
-    var order = [[1, "p2"], [0, "p1"], [2, "p3"]];
-    var html = '<div class="podium-card"><h3>' + esc(title) + '</h3><div class="podium">';
-    order.forEach(function (o) {
-      var a = r[o[0]];
-      html += '<div class="step ' + o[1] + '"><div class="who">' + (a ? esc(a[2]) : "—") + '</div>' +
-              '<div class="time">' + (a ? esc(a[4]) : "") + '</div><div class="block">' + (o[0] + 1) + 'º</div></div>';
-    });
-    return html + "</div></div>";
-  }
-
-  var html = "<h2>Pódio Geral</h2><div class=\"podiums\">";
-  keys.forEach(function (k) { if (RESULTS[k].rows.length) html += podiumCard(RESULTS[k].label, RESULTS[k].rows); });
-  html += "</div>";
-
-  // Top 3 por categoria/faixa etária (dentro de cada prova)
-  var catHtml = "";
-  keys.forEach(function (k) {
-    var groups = {};
-    sortRows(RESULTS[k].rows).forEach(function (a) { var c = a[3] || "Geral"; (groups[c] = groups[c] || []).push(a); });
-    Object.keys(groups).sort().forEach(function (c) {
-      catHtml += '<div class="cat"><h4>' + esc(RESULTS[k].label) + " · " + esc(c) + "</h4><ol>";
-      groups[c].slice(0, 3).forEach(function (a, i) {
-        catHtml += '<li><span class="m">' + MEDAL[i] + '</span><span class="n">' + esc(a[2]) +
-                   '</span><span class="t">' + esc(a[4]) + "</span></li>";
-      });
-      catHtml += "</ol></div>";
-    });
+function toggleFull(){
+  const el = document.getElementById('fullResults');
+  const btn = document.getElementById('fullToggleBtn');
+  const open = el.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  btn.innerHTML = (open ? 'Ocultar resultado completo' : 'Ver resultado completo') + ' <span class="arrow">▾</span>';
+}
+function showTab(name){
+  ['fem','masc','cam'].forEach(function(n){
+    document.getElementById('panel-'+n).classList.toggle('active', n===name);
+    document.getElementById('tabBtn'+n.charAt(0).toUpperCase()+n.slice(1)).classList.toggle('active', n===name);
   });
-  if (catHtml) html += '<h2>Top 3 por Categoria</h2><div class="cats">' + catHtml + "</div>";
-  content.innerHTML = html;
-
-  // Resultado completo: abas + busca
-  var current = keys.filter(function (k) { return RESULTS[k].rows.length; })[0];
-  var tabs = document.getElementById("tabs");
-  var search = document.getElementById("search");
-  function renderTabs() {
-    tabs.innerHTML = keys.filter(function (k) { return RESULTS[k].rows.length; }).map(function (k) {
-      return '<button type="button" class="tab' + (k === current ? " active" : "") + '" data-k="' + k + '">' +
-             esc(RESULTS[k].label) + " (" + RESULTS[k].rows.length + ")</button>";
-    }).join("");
-  }
-  function renderRows() {
-    var q = norm(search.value.trim());
-    var rows = sortRows(RESULTS[current].rows).filter(function (a) {
-      return !q || norm(a[2]).indexOf(q) >= 0 || String(a[1]).indexOf(q) >= 0 || norm(a[3]).indexOf(q) >= 0;
-    });
-    document.getElementById("rows").innerHTML = rows.length ? rows.map(function (a) {
-      return '<tr class="' + (a[0] <= 3 ? "top" : "") + '"><td class="num">' + esc(a[0]) + 'º</td><td class="num">' + esc(a[1]) +
-             '</td><td class="nm">' + esc(a[2]) + "</td><td>" + esc(a[3]) + '</td><td class="num">' + esc(a[4]) + "</td></tr>";
-    }).join("") : '<tr><td colspan="5" class="empty">Nenhum atleta encontrado.</td></tr>';
-    document.getElementById("count").textContent = rows.length + " de " + RESULTS[current].rows.length + " atletas";
-  }
-  tabs.addEventListener("click", function (e) {
-    var b = e.target.closest(".tab"); if (!b) return;
-    current = b.getAttribute("data-k"); renderTabs(); renderRows();
+  document.getElementById('resSearch').value='';
+  filterTable();
+}
+function filterTable(){
+  const q = document.getElementById('resSearch').value.trim().toLowerCase();
+  const active = document.querySelector('.tab-panel.active');
+  const rows = active.querySelectorAll('tbody tr');
+  rows.forEach(function(r){
+    const txt = r.textContent.toLowerCase();
+    r.style.display = txt.indexOf(q) !== -1 ? '' : 'none';
   });
-  search.addEventListener("input", renderRows);
-  document.getElementById("toggleFull").addEventListener("click", function () {
-    var f = document.getElementById("full"); var open = f.classList.toggle("open");
-    this.textContent = open ? "✕ Fechar resultado completo" : "📋 Ver resultado completo";
-    if (open) f.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-  renderTabs(); renderRows();
-})();
+}
 </script>
 </body>
 </html>
