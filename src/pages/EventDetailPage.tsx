@@ -149,6 +149,14 @@ export function EventDetailPage() {
           <Link to="/" className="inline-flex items-center gap-1 text-gray-400 hover:text-gray-700 text-sm mb-3">
             <ChevronLeft size={16} /> Voltar
           </Link>
+          {event.slug === '1-corrida-do-aniversario-da-arena-mmp-' && (
+            <Link
+              to={`/evento/${event.slug}/resultados`}
+              className="flex items-center justify-center gap-2 w-full sm:w-auto sm:inline-flex mb-4 px-6 py-3 rounded-xl font-bold text-[#111] shadow-md bg-gradient-to-r from-[#C9A84C] to-[#E8CE7A] hover:from-[#B8962E] hover:to-[#C9A84C] transition-colors"
+            >
+              🏆 Pódio · Ver Resultados
+            </Link>
+          )}
           <div className="flex flex-wrap gap-2 mb-3">
             {event.status === 'published' && (
               registrationOpen ? (

@@ -11,6 +11,7 @@ const LoginPage          = lazy(() => import('./pages/LoginPage').then(m => ({ d
 const RegisterPage       = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
 const NotFoundPage       = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 const EventDetailPage    = lazy(() => import('./pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })));
+const EventResultsPage   = lazy(() => import('./pages/EventResultsPage').then(m => ({ default: m.EventResultsPage })));
 const EventsPage         = lazy(() => import('./pages/EventsPage').then(m => ({ default: m.EventsPage })));
 const SearchPage         = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })));
 const RegistrationPage   = lazy(() => import('./pages/RegistrationPage').then(m => ({ default: m.RegistrationPage })));
@@ -51,6 +52,7 @@ function App() {
                 <Route path="login" element={<LoginPage />} />
                 <Route path="cadastro" element={<RegisterPage />} />
                 <Route path="evento/:slug" element={<EventDetailPage />} />
+                <Route path="evento/:slug/resultados" element={<EventResultsPage />} />
                 <Route path="eventos" element={<EventsPage />} />
                 <Route path="buscar" element={<SearchPage />} />
                 <Route path="inscricao/:eventSlug" element={<RegistrationPage />} />

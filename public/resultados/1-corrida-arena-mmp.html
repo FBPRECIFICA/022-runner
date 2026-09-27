@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pódio · 1ª Corrida do Aniversário da Arena MMP</title>
+<style>
+  :root {
+    --bg: #0d0d0d; --card: #171717; --card2: #1f1f1f; --line: #2a2a2a;
+    --gold: #C9A84C; --gold2: #E8CE7A; --silver: #C0C0C0; --bronze: #CD7F32;
+    --text: #f2f2f2; --muted: #9a9a9a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { text-align: center; margin-bottom: 28px; }
+  header .kicker { color: var(--gold); letter-spacing: .2em; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+  header h1 { margin: 8px 0 6px; font-size: clamp(22px, 5vw, 34px); line-height: 1.15; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  .badge { display: inline-block; margin-top: 10px; padding: 4px 10px; border: 1px solid var(--gold); color: var(--gold);
+    border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+  h2 { font-size: 18px; margin: 32px 0 14px; color: var(--gold2); display: flex; align-items: center; gap: 8px; }
+  .podiums { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .podium-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 14px 14px; }
+  .podium-card h3 { margin: 0 0 16px; text-align: center; font-size: 15px; text-transform: uppercase; letter-spacing: .08em; }
+  .podium { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: end; gap: 8px; }
+  .step { text-align: center; }
+  .step .who { font-size: 12.5px; font-weight: 600; line-height: 1.25; min-height: 3.2em; display: flex; align-items: flex-end; justify-content: center; padding: 0 2px; word-break: break-word; }
+  .step .time { font-size: 12px; color: var(--muted); margin: 4px 0 6px; font-variant-numeric: tabular-nums; }
+  .step .block { border-radius: 10px 10px 4px 4px; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px;
+    font-size: 22px; font-weight: 800; color: #111; }
+  .p1 .block { height: 110px; background: linear-gradient(180deg, var(--gold2), var(--gold)); }
+  .p2 .block { height: 80px; background: linear-gradient(180deg, #e6e6e6, var(--silver)); }
+  .p3 .block { height: 60px; background: linear-gradient(180deg, #e0a067, var(--bronze)); }
+  .cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .cat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .cat h4 { margin: 0 0 8px; font-size: 13px; color: var(--gold); letter-spacing: .05em; }
+  .cat ol { margin: 0; padding: 0; list-style: none; }
+  .cat li { display: flex; gap: 8px; align-items: baseline; font-size: 13px; padding: 4px 0; border-top: 1px solid var(--line); }
+  .cat li:first-child { border-top: 0; }
+  .cat .m { width: 20px; flex: none; }
+  .cat .n { flex: 1; min-width: 0; }
+  .cat .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 34px 0 8px; }
+  .btn { appearance: none; border: 0; cursor: pointer; text-decoration: none; font: inherit; font-weight: 700; font-size: 14px;
+    padding: 12px 20px; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-gold { background: var(--gold); color: #111; }
+  .btn-gold:hover { background: var(--gold2); }
+  .btn-ghost { background: transparent; color: var(--gold); border: 1px solid var(--gold); }
+  .btn-ghost:hover { background: rgba(201,168,76,.1); }
+  #full { display: none; margin-top: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  #full.open { display: block; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .tab { background: var(--card2); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px;
+    font-size: 13px; font-weight: 600; cursor: pointer; }
+  .tab.active { background: var(--gold); border-color: var(--gold); color: #111; }
+  .search { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text);
+    font-size: 14px; margin-bottom: 10px; }
+  .search:focus { outline: 2px solid var(--gold); outline-offset: -1px; }
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td.nm { white-space: normal; min-width: 160px; }
+  th { color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td.num { font-variant-numeric: tabular-nums; }
+  tr.top td:first-child { color: var(--gold); font-weight: 800; }
+  .count { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+  .empty { text-align: center; color: var(--muted); padding: 24px 8px; font-size: 14px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 36px; }
+  footer a { color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">022Runners · Resultados</div>
+    <h1>🏆 1ª Corrida do Aniversário da Arena MMP</h1>
+    <p>5KM · Caminhada</p>
+    <span class="badge">RESULTADO EXTRAOFICIAL · APURAÇÃO DE TEMPOS</span>
+  </header>
+
+  <div id="content"></div>
+
+  <div class="actions">
+    <button class="btn btn-gold" id="toggleFull" type="button">📋 Ver resultado completo</button>
+    <a class="btn btn-ghost" target="_blank" rel="noopener"
+       href="https://www.apuracaodetempos.com.br/Resultados/1corridaarenammp/ResultadosParciais.html">↗ Resultado oficial (Apuração de Tempos)</a>
+  </div>
+
+  <section id="full" aria-label="Resultado completo">
+    <div class="tabs" id="tabs"></div>
+    <input class="search" id="search" type="search" placeholder="Buscar por nome, número de peito ou categoria…" autocomplete="off" />
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Pos.</th><th>Nº</th><th>Nome</th><th>Categoria</th><th>Tempo</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <p class="count" id="count"></p>
+  </section>
+
+  <footer>Tempos e classificações conforme apuração oficial. Em caso de divergência, vale o
+    <a target="_blank" rel="noopener" href="https://www.apuracaodetempos.com.br/Resultados/1corridaarenammp/ResultadosParciais.html">resultado oficial</a>.
+  </footer>
+</div>
+
+<script>
+/*
+ * DADOS DOS RESULTADOS
+ * Cada linha: [posição geral, número de peito, "NOME", "CATEGORIA/FAIXA", "HH:MM:SS"]
+ * Copiado da fonte oficial:
+ * https://www.apuracaodetempos.com.br/Resultados/1corridaarenammp/ResultadosParciais.html
+ */
+var RESULTS = {
+  "5km-fem":       { label: "5KM Feminino",       rows: [] },
+  "5km-masc":      { label: "5KM Masculino",      rows: [] },
+  "caminhada-fem": { label: "Caminhada Feminina", rows: [] }
+};
+
+(function () {
+  var MEDAL = ["🥇", "🥈", "🥉"];
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function norm(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+  function sortRows(r) { return r.slice().sort(function (a, b) { return a[0] - b[0]; }); }
+
+  var keys = Object.keys(RESULTS);
+  var total = keys.reduce(function (n, k) { return n + RESULTS[k].rows.length; }, 0);
+  var content = document.getElementById("content");
+
+  if (!total) {
+    content.innerHTML = '<div class="empty">Os resultados estão sendo publicados. Enquanto isso, confira o resultado oficial no botão abaixo.</div>';
+    document.getElementById("toggleFull").style.display = "none";
+    return;
+  }
+
+  function podiumCard(title, rows) {
+    var r = sortRows(rows);
+    var order = [[1, "p2"], [0, "p1"], [2, "p3"]];
+    var html = '<div class="podium-card"><h3>' + esc(title) + '</h3><div class="podium">';
+    order.forEach(function (o) {
+      var a = r[o[0]];
+      html += '<div class="step ' + o[1] + '"><div class="who">' + (a ? esc(a[2]) : "—") + '</div>' +
+              '<div class="time">' + (a ? esc(a[4]) : "") + '</div><div class="block">' + (o[0] + 1) + 'º</div></div>';
+    });
+    return html + "</div></div>";
+  }
+
+  var html = "<h2>Pódio Geral</h2><div class=\"podiums\">";
+  keys.forEach(function (k) { if (RESULTS[k].rows.length) html += podiumCard(RESULTS[k].label, RESULTS[k].rows); });
+  html += "</div>";
+
+  // Top 3 por categoria/faixa etária (dentro de cada prova)
+  var catHtml = "";
+  keys.forEach(function (k) {
+    var groups = {};
+    sortRows(RESULTS[k].rows).forEach(function (a) { var c = a[3] || "Geral"; (groups[c] = groups[c] || []).push(a); });
+    Object.keys(groups).sort().forEach(function (c) {
+      catHtml += '<div class="cat"><h4>' + esc(RESULTS[k].label) + " · " + esc(c) + "</h4><ol>";
+      groups[c].slice(0, 3).forEach(function (a, i) {
+        catHtml += '<li><span class="m">' + MEDAL[i] + '</span><span class="n">' + esc(a[2]) +
+                   '</span><span class="t">' + esc(a[4]) + "</span></li>";
+      });
+      catHtml += "</ol></div>";
+    });
+  });
+  if (catHtml) html += '<h2>Top 3 por Categoria</h2><div class="cats">' + catHtml + "</div>";
+  content.innerHTML = html;
+
+  // Resultado completo: abas + busca
+  var current = keys.filter(function (k) { return RESULTS[k].rows.length; })[0];
+  var tabs = document.getElementById("tabs");
+  var search = document.getElementById("search");
+  function renderTabs() {
+    tabs.innerHTML = keys.filter(function (k) { return RESULTS[k].rows.length; }).map(function (k) {
+      return '<button type="button" class="tab' + (k === current ? " active" : "") + '" data-k="' + k + '">' +
+             esc(RESULTS[k].label) + " (" + RESULTS[k].rows.length + ")</button>";
+    }).join("");
+  }
+  function renderRows() {
+    var q = norm(search.value.trim());
+    var rows = sortRows(RESULTS[current].rows).filter(function (a) {
+      return !q || norm(a[2]).indexOf(q) >= 0 || String(a[1]).indexOf(q) >= 0 || norm(a[3]).indexOf(q) >= 0;
+    });
+    document.getElementById("rows").innerHTML = rows.length ? rows.map(function (a) {
+      return '<tr class="' + (a[0] <= 3 ? "top" : "") + '"><td class="num">' + esc(a[0]) + 'º</td><td class="num">' + esc(a[1]) +
+             '</td><td class="nm">' + esc(a[2]) + "</td><td>" + esc(a[3]) + '</td><td class="num">' + esc(a[4]) + "</td></tr>";
+    }).join("") : '<tr><td colspan="5" class="empty">Nenhum atleta encontrado.</td></tr>';
+    document.getElementById("count").textContent = rows.length + " de " + RESULTS[current].rows.length + " atletas";
+  }
+  tabs.addEventListener("click", function (e) {
+    var b = e.target.closest(".tab"); if (!b) return;
+    current = b.getAttribute("data-k"); renderTabs(); renderRows();
+  });
+  search.addEventListener("input", renderRows);
+  document.getElementById("toggleFull").addEventListener("click", function () {
+    var f = document.getElementById("full"); var open = f.classList.toggle("open");
+    this.textContent = open ? "✕ Fechar resultado completo" : "📋 Ver resultado completo";
+    if (open) f.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  renderTabs(); renderRows();
+})();
+</script>
+</body>
+</html>
