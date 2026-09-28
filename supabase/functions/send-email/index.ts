@@ -19,6 +19,15 @@ function row(label: string, value: string) {
   return `<tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:13px;width:40%;">${label}</td><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-size:13px;font-weight:600;">${value}</td></tr>`
 }
 
+// Texto de retirada de kit vem do evento (events.kit_pickup_instructions). Antes era fixo
+// "No dia do evento: chegue 30 minutos antes" — no Arena MMP o kit foi entregue na véspera
+// e um atleta perdeu o kit confiando nisso. Sem texto do evento, fica neutro.
+function kitPickupHtml(text: unknown) {
+  const t = String(text ?? '').trim()
+  if (!t) return 'O local, a data e o horario de retirada do kit serao informados pelo organizador. Fique atento ao seu email e as redes do evento.'
+  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+}
+
 function buildHtml(templateType: string, data: Record<string, unknown>): { subject: string; html: string } {
   if (templateType === 'atleta_confirmacao') {
     const valueRows = data.baseAmount
@@ -26,7 +35,7 @@ function buildHtml(templateType: string, data: Record<string, unknown>): { subje
       : row('Valor', `R$ ${data.amount}`)
     return {
       subject: `Inscricao confirmada - ${data.eventTitle}`,
-      html: `${HTML_OPEN}<div style="${BASE_STYLE}">${HEADER}<div style="padding:32px 24px;"><p style="color:#374151;font-size:16px;margin:0 0 16px;">Ola, <strong>${data.athleteName}</strong>!</p><p style="color:#374151;font-size:15px;margin:0 0 24px;">Sua inscricao foi confirmada. Boa corrida!</p><div style="background:#fffbeb;border:2px solid #C9A84C;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;"><p style="color:#92400e;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;">Numero de Peito</p><p style="color:#C9A84C;font-size:56px;font-weight:900;font-family:monospace;margin:0;">#${data.registrationNumber}</p><p style="color:#92400e;font-size:12px;margin:8px 0 0;">Apresente este email no check-in</p></div><table style="width:100%;border-collapse:collapse;margin:0 0 24px;">${row('Evento', String(data.eventTitle))}${row('Data', String(data.eventDate))}${row('Local', String(data.eventCity))}${row('Distancia', String(data.distanceName))}${valueRows}</table><div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;font-size:13px;color:#166534;"><strong>No dia do evento:</strong><br>- Chegue 30 minutos antes<br>- Apresente este email ou numero de peito</div></div>${FOOTER}</div>${HTML_CLOSE}`,
+      html: `${HTML_OPEN}<div style="${BASE_STYLE}">${HEADER}<div style="padding:32px 24px;"><p style="color:#374151;font-size:16px;margin:0 0 16px;">Ola, <strong>${data.athleteName}</strong>!</p><p style="color:#374151;font-size:15px;margin:0 0 24px;">Sua inscricao foi confirmada. Boa corrida!</p><div style="background:#fffbeb;border:2px solid #C9A84C;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;"><p style="color:#92400e;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;">Numero de Peito</p><p style="color:#C9A84C;font-size:56px;font-weight:900;font-family:monospace;margin:0;">#${data.registrationNumber}</p><p style="color:#92400e;font-size:12px;margin:8px 0 0;">Apresente este email no check-in</p></div><table style="width:100%;border-collapse:collapse;margin:0 0 24px;">${row('Evento', String(data.eventTitle))}${row('Data', String(data.eventDate))}${row('Local', String(data.eventCity))}${row('Distancia', String(data.distanceName))}${valueRows}</table><div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;font-size:13px;color:#166534;"><strong>Retirada de kit:</strong><br>${kitPickupHtml(data.kitPickupInstructions)}<br><br>- Apresente este email ou numero de peito na retirada e no check-in</div></div>${FOOTER}</div>${HTML_CLOSE}`,
     }
   }
 

@@ -230,6 +230,7 @@ export function PaymentPage() {
                 eventCity: (event.city as string) ?? '',
                 distanceName: refreshed.distance_name || '',
                 registrationNumber: refreshed.registration_number,
+                kitPickupInstructions: (event.kit_pickup_instructions as string) ?? '',
                 amount: '0,00',
                 baseAmount: '0,00',
                 platformFee: '0,00',

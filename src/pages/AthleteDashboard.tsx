@@ -124,7 +124,7 @@ export function AthleteDashboard() {
                     <p className="font-bold text-[#C9A84C] text-sm">R$ {Number(r.amount).toFixed(2).replace('.', ',')}</p>
                     <div className="flex flex-col items-center rounded-lg px-3 py-1" style={{ backgroundColor: '#111', border: '1px solid #C9A84C44' }}>
                       <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#C9A84C66', fontSize: '9px' }}>Nº Peito</span>
-                      <span className="font-black font-mono text-xl leading-tight" style={{ color: '#C9A84C' }}>#{r.registration_number}</span>
+                      <span className="font-black font-mono text-xl leading-tight" style={{ color: '#C9A84C' }}>{r.registration_number ? `#${r.registration_number}` : '—'}</span>
                     </div>
                     {isPendingPayment(r.status) && (
                       <div className="flex flex-col gap-1">

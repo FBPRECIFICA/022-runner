@@ -451,6 +451,7 @@ export function RegistrationPage() {
                 eventCity: event.city ?? '',
                 distanceName: chosenDistance?.name || '',
                 registrationNumber: data.registration_number,
+                kitPickupInstructions: event.kit_pickup_instructions ?? '',
                 amount: '0,00',
                 baseAmount: '0,00',
                 platformFee: '0,00',

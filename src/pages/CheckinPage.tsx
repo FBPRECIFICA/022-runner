@@ -152,7 +152,7 @@ export function CheckinPage() {
               <div className="flex-1">
                 <p className="font-bold text-gray-900 text-base">{r.name}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="text-sm font-mono font-bold text-[#C9A84C]">#{r.registration_number}</span>
+                  <span className="text-sm font-mono font-bold text-[#C9A84C]">{r.registration_number ? `#${r.registration_number}` : 'sem nº (não pago)'}</span>
                   <span className="text-xs text-gray-400">·</span>
                   <span className="text-xs text-gray-500">{r.distance_name}</span>
                   {r.shirt_size && (

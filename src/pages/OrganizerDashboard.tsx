@@ -51,6 +51,7 @@ interface EventForm {
   event_type: string;
   kit_items: string[];
   additional_info: string;
+  kit_pickup_instructions: string;
   sponsors: { name: string; logo_url: string }[];
   distances: DistanceWithLots[];
   link_percurso: string;
@@ -73,6 +74,7 @@ const emptyForm: EventForm = {
   event_type: '',
   kit_items: [],
   additional_info: '',
+  kit_pickup_instructions: '',
   sponsors: [],
   distances: [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
   link_percurso: '',
@@ -227,6 +229,58 @@ export function OrganizerDashboard() {
     }
     setEventRegistrations(prev => ({ ...prev, [eventId]: data || [] }));
     setLoadingRegs(false);
+  };
+
+  // Reflete a mudança nas duas listas locais (evento expandido e allRegistrations) sem recarregar.
+  const patchRegistration = (eventId: string, id: string, patch: Record<string, any>) => {
+    setEventRegistrations(prev => ({
+      ...prev,
+      [eventId]: patch.status === 'cancelled'
+        ? (prev[eventId] || []).filter(r => r.id !== id)
+        : (prev[eventId] || []).map(r => r.id === id ? { ...r, ...patch } : r),
+    }));
+    setAllRegistrations(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+  };
+
+  const cancelRegistration = async (r: any) => {
+    const valor = `R$ ${Number(r.amount || 0).toFixed(2).replace('.', ',')}`;
+    if (!window.confirm(`Cancelar a inscrição de ${r.name} (nº ${r.registration_number || '—'}, ${valor})?\n\nIsso só muda o status no sistema — o estorno do dinheiro é feito no Asaas.`)) return;
+    // Pendente com cobrança Asaas viva: anula a cobrança antes (senão o atleta ainda consegue pagar).
+    if (r.status === 'pending' && r.asaas_payment_id) {
+      const { data, error } = await supabase.functions.invoke('cancel-pending-payment', { body: { registrationId: r.id } });
+      if (error || !data?.ok) { toast.error('Erro ao cancelar: ' + (data?.message || error?.message)); return; }
+    } else {
+      const { error } = await supabase.rpc('organizer_cancel_registration', { p_id: r.id });
+      if (error) { toast.error('Erro ao cancelar: ' + error.message); return; }
+    }
+    patchRegistration(r.event_id, r.id, { status: 'cancelled' });
+    toast.success(`Inscrição de ${r.name} cancelada.`);
+  };
+
+  const [transferReg, setTransferReg] = useState<any | null>(null);
+  const [transferForm, setTransferForm] = useState({ name: '', cpf: '', email: '', phone: '', birth_date: '', gender: '', shirt_size: '' });
+  const openTransfer = (r: any) => {
+    setTransferReg(r);
+    setTransferForm({ name: '', cpf: '', email: '', phone: '', birth_date: '', gender: '', shirt_size: r.shirt_size || '' });
+  };
+  const saveTransfer = async () => {
+    const f = transferForm;
+    const { error } = await supabase.rpc('organizer_transfer_registration', {
+      p_id: transferReg.id, p_name: f.name, p_cpf: f.cpf, p_email: f.email, p_phone: f.phone,
+      p_birth_date: f.birth_date || null, p_gender: f.gender, p_shirt_size: f.shirt_size,
+    });
+    if (error) {
+      toast.error(error.code === '23505' ? 'Esse CPF já está inscrito nesse evento.' : 'Erro ao transferir: ' + error.message);
+      return;
+    }
+    const cpf = f.cpf.replace(/\D/g, '');
+    patchRegistration(transferReg.event_id, transferReg.id, {
+      name: f.name.trim(), full_name: f.name.trim(), cpf, document: cpf, email: f.email.trim() || null,
+      phone: f.phone.replace(/\D/g, '') || null, birth_date: f.birth_date || null, gender: f.gender || null,
+      shirt_size: transferReg.shirt_size ? f.shirt_size || null : null,
+    });
+    toast.success(`Inscrição nº ${transferReg.registration_number || '—'} transferida para ${f.name.trim()}.`);
+    setTransferReg(null);
   };
 
   const toggleInscritos = async (eventId: string) => {
@@ -694,6 +748,7 @@ export function OrganizerDashboard() {
         event_type: event.event_type || '',
         kit_items: event.kit_items || [],
         additional_info: event.additional_info || '',
+        kit_pickup_instructions: event.kit_pickup_instructions || '',
         sponsors: event.sponsors || [],
         distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
         link_percurso: event.link_percurso || '',
@@ -770,6 +825,7 @@ export function OrganizerDashboard() {
         event_type: form.event_type || null,
         kit_items: form.kit_items.length > 0 ? form.kit_items : null,
         additional_info: form.additional_info || null,
+        kit_pickup_instructions: form.kit_pickup_instructions.trim() || null,
         sponsors: form.sponsors.length > 0 ? form.sponsors : null,
         link_percurso: form.link_percurso || null,
         quality_score: score,
@@ -1180,12 +1236,13 @@ export function OrganizerDashboard() {
                               <th className="px-4 py-2 font-medium">Categoria</th>
                               <th className="px-4 py-2 font-medium">Kit</th>
                               <th className="px-4 py-2 font-medium">Pagamento</th>
+                              <th className="px-4 py-2 font-medium">Ações</th>
                             </tr>
                           </thead>
                           <tbody>
                             {regs.map(r => (
                               <tr key={r.id} className="border-b last:border-0 hover:bg-white transition-colors">
-                                <td className="px-4 py-2 font-mono font-bold text-[#C9A84C]">{r.registration_number}</td>
+                                <td className="px-4 py-2 font-mono font-bold text-[#C9A84C]">{r.registration_number || <span className="text-xs font-sans font-normal text-gray-400">aguardando pgto</span>}</td>
                                 <td className="px-4 py-2 text-gray-900">{r.name}</td>
                                 <td className="px-4 py-2 text-gray-500">{r.distance_name}</td>
                                 <td className="px-4 py-2 text-gray-500">{r.registration_type_name || '-'}</td>
@@ -1198,6 +1255,10 @@ export function OrganizerDashboard() {
                                     {r.status === 'paid' || r.status === 'confirmed' ? '✅ Pago' :
                                      r.status === 'pending' ? '⏳ Pendente' : r.status}
                                   </span>
+                                </td>
+                                <td className="px-4 py-2 whitespace-nowrap">
+                                  <button onClick={() => openTransfer(r)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 mr-2">Transferir</button>
+                                  <button onClick={() => cancelRegistration(r)} className="text-xs px-2 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Cancelar</button>
                                 </td>
                               </tr>
                             ))}
@@ -1219,6 +1280,53 @@ export function OrganizerDashboard() {
             que abre isso vive na aba Eventos, mas antes ficava preso dentro do bloco da
             aba Cupons: o clique setava o estado certo, só não tinha onde renderizar até
             trocar de aba. */}
+        {transferReg && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setTransferReg(null)}>
+            <div className="w-full max-w-md rounded-2xl bg-white max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b">
+                <h3 className="text-lg font-bold text-gray-900">Transferir titularidade</h3>
+                <button onClick={() => setTransferReg(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
+              </div>
+              <form className="p-5 space-y-3" onSubmit={e => { e.preventDefault(); saveTransfer(); }}>
+                <p className="text-sm text-gray-500">
+                  Inscrição nº <strong>{transferReg.registration_number || '—'}</strong> de <strong>{transferReg.name}</strong>.
+                  Número de peito, kit e valor pago continuam os mesmos — só o titular muda.
+                </p>
+                {([
+                  ['name', 'Nome completo do novo titular', 'text', true],
+                  ['cpf', 'CPF', 'text', true],
+                  ['email', 'E-mail', 'email', false],
+                  ['phone', 'Telefone', 'tel', false],
+                  ['birth_date', 'Data de nascimento', 'date', false],
+                ] as const).map(([key, label, type, required]) => (
+                  <label key={key} className="block text-sm">
+                    <span className="text-gray-600">{label}</span>
+                    <input type={type} required={required} value={transferForm[key]}
+                      onChange={e => setTransferForm(p => ({ ...p, [key]: e.target.value }))}
+                      className="mt-1 w-full border rounded-lg px-3 py-2" />
+                  </label>
+                ))}
+                <label className="block text-sm">
+                  <span className="text-gray-600">Sexo</span>
+                  <select value={transferForm.gender} onChange={e => setTransferForm(p => ({ ...p, gender: e.target.value }))} className="mt-1 w-full border rounded-lg px-3 py-2">
+                    <option value="">—</option>
+                    {Object.entries(GENDER_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </label>
+                {transferReg.shirt_size && (
+                  <label className="block text-sm">
+                    <span className="text-gray-600">Tamanho da camisa</span>
+                    <select value={transferForm.shirt_size} onChange={e => setTransferForm(p => ({ ...p, shirt_size: e.target.value }))} className="mt-1 w-full border rounded-lg px-3 py-2">
+                      {SHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </label>
+                )}
+                <button type="submit" className="w-full py-2.5 rounded-lg font-bold text-black" style={{ background: '#C9A84C' }}>Salvar novo titular</button>
+              </form>
+            </div>
+          </div>
+        )}
+
         {exportModalEvent && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setExportModalEvent(null)}>
             <div className="w-full max-w-sm rounded-2xl bg-white" onClick={e => e.stopPropagation()}>
@@ -1929,6 +2037,14 @@ export function OrganizerDashboard() {
                 <textarea value={form.additional_info} onChange={e => setForm(p => ({ ...p, additional_info: e.target.value }))}
                   rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   placeholder="Regras, percurso detalhado, informações de kit, etc..." />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Retirada de Kit</label>
+                <textarea value={form.kit_pickup_instructions} onChange={e => setForm(p => ({ ...p, kit_pickup_instructions: e.target.value }))}
+                  rows={2} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  placeholder="Ex.: Sábado 04/10, das 9h às 17h, na loja X (Rua Y, 123). Não haverá entrega de kit no dia da prova." />
+                <p className="text-xs text-gray-400 mt-1">Aparece na página do evento, na confirmação e no e-mail de inscrição confirmada.</p>
               </div>
 
               {/* Patrocinadores com upload */}

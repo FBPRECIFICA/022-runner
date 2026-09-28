@@ -44,7 +44,7 @@ export function ConfirmationPage() {
   const handleDownload = () => {
     const lines = [
       '=== COMPROVANTE DE INSCRIÇÃO ===',
-      `Nº Inscrição: ${reg.registration_number}`,
+      `Nº Inscrição: ${reg.registration_number || 'aguardando confirmação do pagamento'}`,
       `Evento: ${event.title}`,
       `Data: ${new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`,
       `Local: ${event.location} — ${event.city}`,
@@ -59,7 +59,7 @@ export function ConfirmationPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `comprovante-${reg.registration_number}.txt`;
+    a.download = `comprovante-${reg.registration_number || reg.id}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -86,7 +86,9 @@ export function ConfirmationPage() {
           <p className="text-gray-500 text-sm mb-4">Você está inscrito. Aguarde a confirmação do pagamento.</p>
           <div className="rounded-2xl px-8 py-6 mt-2" style={{ background: '#111', border: '2px solid #C9A84C' }}>
             <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#C9A84C' }}>SEU NÚMERO DE PEITO</p>
-            <p className="text-6xl font-black font-mono" style={{ color: '#C9A84C' }}>#{reg.registration_number}</p>
+            {reg.registration_number
+              ? <p className="text-6xl font-black font-mono" style={{ color: '#C9A84C' }}>#{reg.registration_number}</p>
+              : <p className="text-lg font-bold" style={{ color: '#C9A84C' }}>Aguardando confirmação do pagamento</p>}
             <p className="text-xs mt-3" style={{ color: '#9ca3af' }}>Apresente este número no check-in do evento</p>
           </div>
         </div>
@@ -100,6 +102,13 @@ export function ConfirmationPage() {
               <span className="font-medium text-gray-900 text-right">{value}</span>
             </div>
           ))}
+        </div>
+
+        <div className="bg-white rounded-xl border shadow-sm p-5">
+          <h2 className="font-bold text-gray-900 mb-2">Retirada de Kit</h2>
+          <p className="text-sm text-gray-700 whitespace-pre-line">
+            {event.kit_pickup_instructions || 'O local, a data e o horário de retirada do kit serão informados pelo organizador. Fique atento ao e-mail e às redes do evento.'}
+          </p>
         </div>
 
         {/* Aguardando Pagamento */}
@@ -141,7 +150,7 @@ export function ConfirmationPage() {
 
         {/* WhatsApp confirmação */}
         <a
-          href={`https://wa.me/?text=${encodeURIComponent(confirmationMessage(event.title, new Date(event.date).toLocaleDateString('pt-BR'), reg.registration_number))}`}
+          href={`https://wa.me/?text=${encodeURIComponent(confirmationMessage(event.title, new Date(event.date).toLocaleDateString('pt-BR'), reg.registration_number || '—'))}`}
           target="_blank" rel="noreferrer"
           className="flex items-center justify-center gap-2 bg-green-500 text-white font-semibold py-3 rounded-xl hover:bg-green-600 transition-colors text-sm"
         >

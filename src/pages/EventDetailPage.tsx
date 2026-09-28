@@ -290,6 +290,13 @@ export function EventDetailPage() {
               </div>
             )}
 
+            {event.kit_pickup_instructions && (
+              <div className="bg-white rounded-xl border p-5 shadow-sm">
+                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Retirada de Kit</h2>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.kit_pickup_instructions}</p>
+              </div>
+            )}
+
             {/* Regulamento */}
             {(event.regulations || event.additional_info) && (
               <div className="bg-white rounded-xl border p-5 shadow-sm">
