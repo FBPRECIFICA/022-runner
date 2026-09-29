@@ -11,6 +11,7 @@ import { summarizeCouponUsage } from '../lib/couponStats';
 import { auditFigures, isFinancialRow, paymentMethodLabel, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
 import { fetchAllRows } from '../lib/fetchAllRows';
+import { DEFAULT_KIT_PICKUP_INSTRUCTIONS, kitPickupText } from '../lib/kitPickup';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 
@@ -74,7 +75,7 @@ const emptyForm: EventForm = {
   event_type: '',
   kit_items: [],
   additional_info: '',
-  kit_pickup_instructions: '',
+  kit_pickup_instructions: DEFAULT_KIT_PICKUP_INSTRUCTIONS,
   sponsors: [],
   distances: [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
   link_percurso: '',
@@ -748,7 +749,7 @@ export function OrganizerDashboard() {
         event_type: event.event_type || '',
         kit_items: event.kit_items || [],
         additional_info: event.additional_info || '',
-        kit_pickup_instructions: event.kit_pickup_instructions || '',
+        kit_pickup_instructions: kitPickupText(event.kit_pickup_instructions),
         sponsors: event.sponsors || [],
         distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
         link_percurso: event.link_percurso || '',
@@ -825,7 +826,8 @@ export function OrganizerDashboard() {
         event_type: form.event_type || null,
         kit_items: form.kit_items.length > 0 ? form.kit_items : null,
         additional_info: form.additional_info || null,
-        kit_pickup_instructions: form.kit_pickup_instructions.trim() || null,
+        // Igual ao padrão (ou vazio) vira null, pra seguir a regra da plataforma se ela mudar
+        kit_pickup_instructions: kitPickupText(form.kit_pickup_instructions) === DEFAULT_KIT_PICKUP_INSTRUCTIONS ? null : form.kit_pickup_instructions.trim(),
         sponsors: form.sponsors.length > 0 ? form.sponsors : null,
         link_percurso: form.link_percurso || null,
         quality_score: score,
@@ -2044,7 +2046,7 @@ export function OrganizerDashboard() {
                 <textarea value={form.kit_pickup_instructions} onChange={e => setForm(p => ({ ...p, kit_pickup_instructions: e.target.value }))}
                   rows={2} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   placeholder="Ex.: Sábado 04/10, das 9h às 17h, na loja X (Rua Y, 123). Não haverá entrega de kit no dia da prova." />
-                <p className="text-xs text-gray-400 mt-1">Aparece na página do evento, na confirmação e no e-mail de inscrição confirmada.</p>
+                <p className="text-xs text-gray-400 mt-1">Padrão da plataforma: retirada na véspera. Só altere se este evento for uma exceção. Aparece na página do evento, na confirmação e no e-mail.</p>
               </div>
 
               {/* Patrocinadores com upload */}

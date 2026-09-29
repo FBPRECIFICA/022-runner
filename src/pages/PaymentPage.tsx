@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { CheckCircle, Clock, Copy, CreditCard, FileText, QrCode } from 'lucide-react';
 import { SecurityBadges } from '../components/SecurityBadges';
 import { SecuritySeal } from '../components/SecuritySeal';
+import { kitPickupText } from '../lib/kitPickup';
 
 type PaymentMethod = 'PIX' | 'CREDIT_CARD' | 'BOLETO';
 
@@ -230,7 +231,7 @@ export function PaymentPage() {
                 eventCity: (event.city as string) ?? '',
                 distanceName: refreshed.distance_name || '',
                 registrationNumber: refreshed.registration_number,
-                kitPickupInstructions: (event.kit_pickup_instructions as string) ?? '',
+                kitPickupInstructions: kitPickupText(event.kit_pickup_instructions as string | null),
                 amount: '0,00',
                 baseAmount: '0,00',
                 platformFee: '0,00',

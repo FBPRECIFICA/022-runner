@@ -21,10 +21,10 @@ function row(label: string, value: string) {
 
 // Texto de retirada de kit vem do evento (events.kit_pickup_instructions). Antes era fixo
 // "No dia do evento: chegue 30 minutos antes" — no Arena MMP o kit foi entregue na véspera
-// e um atleta perdeu o kit confiando nisso. Sem texto do evento, fica neutro.
+// e um atleta perdeu o kit confiando nisso. Sem texto do evento, vale a regra da plataforma (vespera).
 function kitPickupHtml(text: unknown) {
   const t = String(text ?? '').trim()
-  if (!t) return 'O local, a data e o horario de retirada do kit serao informados pelo organizador. Fique atento ao seu email e as redes do evento.'
+  if (!t) return 'A retirada do kit e feita sempre um dia antes do evento, em local e horario informados pela organizacao.'
   return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
 }
 

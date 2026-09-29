@@ -9,6 +9,7 @@ import { TermoResponsabilidade } from '../components/TermoResponsabilidade';
 import { AccountGate } from '../components/AccountGate';
 import { SecurityBadges } from '../components/SecurityBadges';
 import { isRegistrationOpen, isSoldOut } from '../utils/registrationStatus';
+import { kitPickupText } from '../lib/kitPickup';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não sei'];
@@ -451,7 +452,7 @@ export function RegistrationPage() {
                 eventCity: event.city ?? '',
                 distanceName: chosenDistance?.name || '',
                 registrationNumber: data.registration_number,
-                kitPickupInstructions: event.kit_pickup_instructions ?? '',
+                kitPickupInstructions: kitPickupText(event.kit_pickup_instructions),
                 amount: '0,00',
                 baseAmount: '0,00',
                 platformFee: '0,00',

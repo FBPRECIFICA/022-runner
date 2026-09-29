@@ -7,6 +7,7 @@ import { Helmet } from 'react-helmet-async';
 import { trackEventView, trackShare } from '../utils/analytics';
 import { ReviewSection } from '../components/ReviewSection';
 import { isRegistrationOpen, isSoldOut } from '../utils/registrationStatus';
+import { kitPickupText } from '../lib/kitPickup';
 
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -290,12 +291,10 @@ export function EventDetailPage() {
               </div>
             )}
 
-            {event.kit_pickup_instructions && (
-              <div className="bg-white rounded-xl border p-5 shadow-sm">
-                <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Retirada de Kit</h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{event.kit_pickup_instructions}</p>
-              </div>
-            )}
+            <div className="bg-white rounded-xl border p-5 shadow-sm">
+              <h2 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Retirada de Kit</h2>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">{kitPickupText(event.kit_pickup_instructions)}</p>
+            </div>
 
             {/* Regulamento */}
             {(event.regulations || event.additional_info) && (

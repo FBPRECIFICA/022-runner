@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Share2, Download, Home, MessageCircle } from 'lucide-react';
 import { confirmationMessage } from '../utils/whatsappNotifier';
+import { kitPickupText } from '../lib/kitPickup';
 
 export function ConfirmationPage() {
   const { registrationId } = useParams<{ registrationId: string }>();
@@ -107,7 +108,7 @@ export function ConfirmationPage() {
         <div className="bg-white rounded-xl border shadow-sm p-5">
           <h2 className="font-bold text-gray-900 mb-2">Retirada de Kit</h2>
           <p className="text-sm text-gray-700 whitespace-pre-line">
-            {event.kit_pickup_instructions || 'O local, a data e o horário de retirada do kit serão informados pelo organizador. Fique atento ao e-mail e às redes do evento.'}
+            {kitPickupText(event.kit_pickup_instructions)}
           </p>
         </div>
 
