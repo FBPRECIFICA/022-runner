@@ -4,22 +4,16 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Users, Calendar, Award, Star, Shield, XCircle, Trash2, MessageCircle, X, Eye, BarChart3, Download, Briefcase, ClipboardCheck, AlertTriangle, FileText } from 'lucide-react';
-import { computeAthleteStats, GENDER_LABELS, EXPORT_STATUS_LABELS } from '../lib/athleteStats';
+import { computeAthleteStats } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
 import { auditFigures, isFinancialRow, platformFeeFromOriginal, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
 import { fetchAllRows } from '../lib/fetchAllRows';
+import { EXPORT_STATUS_OPTIONS, type ExportStatusFilter, matchesStatusFilter, downloadRegistrationsExcel, loadExportColumns, saveExportColumns } from '../lib/registrationExport';
+import { ExportColumnPicker } from '../components/ExportColumnPicker';
 
 const COLORS = ['#C9A84C', '#C9A84C', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'];
 const LEO_PAGE_SIZE = 20;
-
-type ExportStatusFilter = 'all' | 'paid' | 'pending' | 'cancelled';
-const EXPORT_STATUS_OPTIONS: { value: ExportStatusFilter; label: string }[] = [
-  { value: 'all', label: 'Todos' },
-  { value: 'paid', label: 'Apenas Pagos/Confirmados' },
-  { value: 'pending', label: 'Apenas Pendentes/Aguardando' },
-  { value: 'cancelled', label: 'Apenas Cancelados' },
-];
 
 type Tab = 'overview' | 'events' | 'users' | 'registrations' | 'leo' | 'organizers';
 
@@ -54,6 +48,8 @@ export function AdminDashboard() {
   const [selectedOrganizerId, setSelectedOrganizerId] = useState<string | null>(null);
   const [orgMaisDadosEventId, setOrgMaisDadosEventId] = useState<string | null>(null);
   const [exportModalEvent, setExportModalEvent] = useState<any | null>(null);
+  const [exportColumns, setExportColumns] = useState<string[]>(loadExportColumns);
+  const changeExportColumns = (keys: string[]) => { setExportColumns(keys); saveExportColumns(keys); };
   const [selectedEventPreview, setSelectedEventPreview] = useState<any | null>(null);
   const [eventCoupons, setEventCoupons] = useState<any[]>([]);
   const [loadingEventCoupons, setLoadingEventCoupons] = useState(false);
@@ -226,45 +222,20 @@ export function AdminDashboard() {
       toast.error('Erro ao buscar inscritos pra exportar: ' + evtRegsError.message);
       return;
     }
+    if (exportColumns.length === 0) {
+      toast.error('Marque pelo menos uma coluna pra exportar.');
+      return;
+    }
     const evtRegs = (evtRegsData || [])
-      .filter(r => {
-        if (statusFilter === 'all') return true;
-        if (statusFilter === 'paid') return r.status === 'paid' || r.status === 'confirmed';
-        if (statusFilter === 'pending') return r.status === 'pending' || r.status === 'awaiting_payment';
-        return r.status === 'cancelled';
-      })
+      .filter(r => matchesStatusFilter(r.status, statusFilter))
       .sort((a, b) => (a.registration_number || '').localeCompare(b.registration_number || ''));
     try {
-      const rows = evtRegs.map((r: any) => {
-        // includes_shirt vem do kit vinculado (fonte da verdade); quando não há
-        // vínculo, cai pro nome do kit em texto — nunca assume que inclui camisa.
-        const includesShirt = r.registration_types
-          ? r.registration_types.includes_shirt
-          : !(r.registration_type_name || '').toLowerCase().includes('econ');
-        return {
-          'Nome Completo': r.full_name || r.name,
-          'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
-          'Nº Peito': r.registration_number,
-          'Telefone': r.phone,
-          'Categoria': r.distance_name,
-          'Distância': r.distance_name,
-          'Kit': includesShirt ? 'Completo' : 'Econômico',
-          'Tamanho': includesShirt ? r.shirt_size : '',
-          'Sexo': GENDER_LABELS[r.gender] || r.gender || '',
-          'Status': EXPORT_STATUS_LABELS[r.status] || r.status,
-          ' ': '',
-        };
-      });
-      if (rows.length === 0) {
+      const count = downloadRegistrationsExcel(evtRegs, event, exportColumns);
+      if (count === 0) {
         toast.error('Nenhum inscrito nesse filtro pra exportar.');
         return;
       }
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
-      const date = new Date().toISOString().split('T')[0];
-      XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
-      toast.success(`${rows.length} inscrito(s) exportado(s).`);
+      toast.success(`${count} inscrito(s) exportado(s).`);
       setExportModalEvent(null);
     } catch (err: any) {
       // ponytail: mesmo hardening aplicado em OrganizerDashboard.tsx — falha
@@ -1348,13 +1319,14 @@ export function AdminDashboard() {
       {/* Modal de seleção de status pra exportação */}
       {exportModalEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => setExportModalEvent(null)}>
-          <div className="w-full max-w-sm rounded-2xl" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#334155' }}>
               <h3 className="text-lg font-bold text-white">Exportar Excel</h3>
               <button onClick={() => setExportModalEvent(null)} className="p-1 rounded-lg hover:bg-white/10"><X size={20} className="text-white" /></button>
             </div>
             <div className="p-5 space-y-2">
-              <p className="text-sm mb-3" style={{ color: '#94a3b8' }}>Quais inscritos de "{exportModalEvent.title}" você quer exportar?</p>
+              <ExportColumnPicker selected={exportColumns} onChange={changeExportColumns} dark />
+              <p className="text-sm pt-3 mb-3 border-t" style={{ color: '#94a3b8', borderColor: '#334155' }}>Quais inscritos de "{exportModalEvent.title}" você quer exportar?</p>
               {EXPORT_STATUS_OPTIONS.map(opt => (
                 <button
                   key={opt.value}

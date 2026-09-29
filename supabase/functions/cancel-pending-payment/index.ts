@@ -25,7 +25,7 @@ serve(async (req) => {
   }
 
   try {
-    const { registrationId } = await req.json()
+    const { registrationId, note } = await req.json()
     if (!registrationId) {
       return new Response(JSON.stringify({ ok: false, message: 'registrationId é obrigatório.' }), {
         status: 400,
@@ -37,7 +37,7 @@ serve(async (req) => {
 
     const { data: reg, error: fetchError } = await supabase
       .from('registrations')
-      .select('id, status, asaas_payment_id')
+      .select('id, status, asaas_payment_id, user_id, event_id, registration_number, name, cpf, amount')
       .eq('id', registrationId)
       .single()
 
@@ -84,6 +84,8 @@ serve(async (req) => {
       })
     }
 
+    await logOrganizerCancel(supabase, req, reg, note)
+
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
@@ -95,3 +97,37 @@ serve(async (req) => {
     })
   }
 })
+
+// Rastro em registration_manual_actions quando quem cancelou foi o organizador do evento (ou
+// admin), não o próprio atleta — mesma tabela que organizer_cancel_registration alimenta.
+// Não bloqueia: a cobrança já foi anulada e a inscrição cancelada, falha só vai pro log.
+// deno-lint-ignore no-explicit-any
+async function logOrganizerCancel(supabase: any, req: Request, reg: any, note: unknown) {
+  try {
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+    if (!token) return
+    const { data: { user } } = await supabase.auth.getUser(token)
+    if (!user || user.id === reg.user_id) return
+
+    const [{ data: ev }, { data: profile }] = await Promise.all([
+      supabase.from('events').select('organizer_id').eq('id', reg.event_id).single(),
+      supabase.from('users').select('role').eq('id', user.id).maybeSingle(),
+    ])
+    if (ev?.organizer_id !== user.id && profile?.role !== 'admin') return
+
+    const { error } = await supabase.from('registration_manual_actions').insert({
+      registration_id: reg.id,
+      event_id: reg.event_id,
+      action: 'cancel',
+      actor_id: user.id,
+      note: typeof note === 'string' && note.trim() ? note.trim() : null,
+      details: {
+        previous_status: 'pending', asaas_payment_voided: reg.asaas_payment_id,
+        registration_number: reg.registration_number, name: reg.name, cpf: reg.cpf, amount: reg.amount,
+      },
+    })
+    if (error) console.error('[cancel-pending-payment] Falha ao gravar registration_manual_actions:', error.message)
+  } catch (e) {
+    console.error('[cancel-pending-payment] Falha ao gravar registration_manual_actions:', String(e))
+  }
+}

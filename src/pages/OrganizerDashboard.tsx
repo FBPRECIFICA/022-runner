@@ -6,7 +6,7 @@ import { LAGOS_REGION_CITIES } from '../types';
 import { Plus, Calendar, Users, TrendingUp, Image, Trash2, Eye, Edit, Download, Upload, Clock, ClipboardCheck, Search, Tag, X, Percent } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
-import { computeAthleteStats, GENDER_LABELS, EXPORT_STATUS_LABELS } from '../lib/athleteStats';
+import { computeAthleteStats, GENDER_LABELS } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
 import { auditFigures, isFinancialRow, paymentMethodLabel, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
@@ -14,14 +14,8 @@ import { fetchAllRows } from '../lib/fetchAllRows';
 import { DEFAULT_KIT_PICKUP_INSTRUCTIONS, kitPickupText } from '../lib/kitPickup';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
-
-type ExportStatusFilter = 'all' | 'paid' | 'pending' | 'cancelled';
-const EXPORT_STATUS_OPTIONS: { value: ExportStatusFilter; label: string }[] = [
-  { value: 'all', label: 'Todos' },
-  { value: 'paid', label: 'Apenas Pagos/Confirmados' },
-  { value: 'pending', label: 'Apenas Pendentes/Aguardando' },
-  { value: 'cancelled', label: 'Apenas Cancelados' },
-];
+import { EXPORT_STATUS_OPTIONS, type ExportStatusFilter, matchesStatusFilter, downloadRegistrationsExcel, loadExportColumns, saveExportColumns } from '../lib/registrationExport';
+import { ExportColumnPicker } from '../components/ExportColumnPicker';
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
 const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Bag', 'Squeeze (Garrafinha de água)', 'Outros'];
@@ -166,6 +160,8 @@ export function OrganizerDashboard() {
   const [regSearch, setRegSearch] = useState('');
   const [maisDadosEventId, setMaisDadosEventId] = useState<string | null>(null);
   const [exportModalEvent, setExportModalEvent] = useState<any | null>(null);
+  const [exportColumns, setExportColumns] = useState<string[]>(loadExportColumns);
+  const changeExportColumns = (keys: string[]) => { setExportColumns(keys); saveExportColumns(keys); };
 
   useEffect(() => { loadEvents(); loadCoupons(); loadWithdrawals(); }, []);
 
@@ -245,13 +241,15 @@ export function OrganizerDashboard() {
 
   const cancelRegistration = async (r: any) => {
     const valor = `R$ ${Number(r.amount || 0).toFixed(2).replace('.', ',')}`;
-    if (!window.confirm(`Cancelar a inscrição de ${r.name} (nº ${r.registration_number || '—'}, ${valor})?\n\nIsso só muda o status no sistema — o estorno do dinheiro é feito no Asaas.`)) return;
+    // prompt em vez de confirm: o motivo vai pro rastro (registration_manual_actions). null = desistiu.
+    const note = window.prompt(`Cancelar a inscrição de ${r.name} (nº ${r.registration_number || '—'}, ${valor})?\n\nIsso só muda o status no sistema — o estorno do dinheiro é feito no Asaas.\n\nMotivo (opcional, fica registrado):`, '');
+    if (note === null) return;
     // Pendente com cobrança Asaas viva: anula a cobrança antes (senão o atleta ainda consegue pagar).
     if (r.status === 'pending' && r.asaas_payment_id) {
-      const { data, error } = await supabase.functions.invoke('cancel-pending-payment', { body: { registrationId: r.id } });
+      const { data, error } = await supabase.functions.invoke('cancel-pending-payment', { body: { registrationId: r.id, note } });
       if (error || !data?.ok) { toast.error('Erro ao cancelar: ' + (data?.message || error?.message)); return; }
     } else {
-      const { error } = await supabase.rpc('organizer_cancel_registration', { p_id: r.id });
+      const { error } = await supabase.rpc('organizer_cancel_registration', { p_id: r.id, p_note: note });
       if (error) { toast.error('Erro ao cancelar: ' + error.message); return; }
     }
     patchRegistration(r.event_id, r.id, { status: 'cancelled' });
@@ -259,16 +257,16 @@ export function OrganizerDashboard() {
   };
 
   const [transferReg, setTransferReg] = useState<any | null>(null);
-  const [transferForm, setTransferForm] = useState({ name: '', cpf: '', email: '', phone: '', birth_date: '', gender: '', shirt_size: '' });
+  const [transferForm, setTransferForm] = useState({ name: '', cpf: '', email: '', phone: '', birth_date: '', gender: '', shirt_size: '', note: '' });
   const openTransfer = (r: any) => {
     setTransferReg(r);
-    setTransferForm({ name: '', cpf: '', email: '', phone: '', birth_date: '', gender: '', shirt_size: r.shirt_size || '' });
+    setTransferForm({ name: '', cpf: '', email: '', phone: '', birth_date: '', gender: '', shirt_size: r.shirt_size || '', note: '' });
   };
   const saveTransfer = async () => {
     const f = transferForm;
     const { error } = await supabase.rpc('organizer_transfer_registration', {
       p_id: transferReg.id, p_name: f.name, p_cpf: f.cpf, p_email: f.email, p_phone: f.phone,
-      p_birth_date: f.birth_date || null, p_gender: f.gender, p_shirt_size: f.shirt_size,
+      p_birth_date: f.birth_date || null, p_gender: f.gender, p_shirt_size: f.shirt_size, p_note: f.note,
     });
     if (error) {
       toast.error(error.code === '23505' ? 'Esse CPF já está inscrito nesse evento.' : 'Erro ao transferir: ' + error.message);
@@ -612,43 +610,18 @@ export function OrganizerDashboard() {
       toast.error('Erro ao buscar inscritos pra exportar: ' + error.message);
       return;
     }
-    const filtered = (data || []).filter(r => {
-      if (statusFilter === 'all') return true;
-      if (statusFilter === 'paid') return r.status === 'paid' || r.status === 'confirmed';
-      if (statusFilter === 'pending') return r.status === 'pending' || r.status === 'awaiting_payment';
-      return r.status === 'cancelled';
-    });
+    if (exportColumns.length === 0) {
+      toast.error('Marque pelo menos uma coluna pra exportar.');
+      return;
+    }
+    const filtered = (data || []).filter(r => matchesStatusFilter(r.status, statusFilter));
     try {
-      const rows = filtered.map(r => {
-        // includes_shirt vem do kit vinculado (fonte da verdade); quando não há
-        // vínculo, cai pro nome do kit em texto — nunca assume que inclui camisa.
-        const includesShirt = r.registration_types
-          ? r.registration_types.includes_shirt
-          : !(r.registration_type_name || '').toLowerCase().includes('econ');
-        return {
-          'Nome Completo': r.full_name || r.name,
-          'Data de Nascimento': r.birth_date ? r.birth_date.split('-').reverse().join('/') : '-',
-          'Nº Peito': r.registration_number,
-          'Telefone': r.phone,
-          'Categoria': r.distance_name,
-          'Distância': r.distance_name,
-          'Kit': includesShirt ? 'Completo' : 'Econômico',
-          'Tamanho': includesShirt ? r.shirt_size : '',
-          'Sexo': GENDER_LABELS[r.gender] || r.gender || '',
-          'Status': EXPORT_STATUS_LABELS[r.status] || r.status,
-          ' ': '',
-        };
-      });
-      if (rows.length === 0) {
+      const count = downloadRegistrationsExcel(filtered, event, exportColumns);
+      if (count === 0) {
         toast.error('Nenhum inscrito nesse filtro pra exportar.');
         return;
       }
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Inscritos');
-      const date = new Date().toISOString().split('T')[0];
-      XLSX.writeFile(wb, `inscritos-${event.slug}-${date}.xlsx`);
-      toast.success(`${rows.length} inscrito(s) exportado(s).`);
+      toast.success(`${count} inscrito(s) exportado(s).`);
       setExportModalEvent(null);
     } catch (err: any) {
       // ponytail: nenhuma exceção síncrona daqui pra baixo tinha catch antes —
@@ -1323,6 +1296,11 @@ export function OrganizerDashboard() {
                     </select>
                   </label>
                 )}
+                <label className="block text-sm">
+                  <span className="text-gray-600">Observação (opcional, fica registrada)</span>
+                  <input type="text" value={transferForm.note} onChange={e => setTransferForm(p => ({ ...p, note: e.target.value }))}
+                    placeholder="Ex.: atleta lesionado, pediu por WhatsApp" className="mt-1 w-full border rounded-lg px-3 py-2" />
+                </label>
                 <button type="submit" className="w-full py-2.5 rounded-lg font-bold text-black" style={{ background: '#C9A84C' }}>Salvar novo titular</button>
               </form>
             </div>
@@ -1331,13 +1309,14 @@ export function OrganizerDashboard() {
 
         {exportModalEvent && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setExportModalEvent(null)}>
-            <div className="w-full max-w-sm rounded-2xl bg-white" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-lg rounded-2xl bg-white max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between p-5 border-b">
                 <h3 className="text-lg font-bold text-gray-900">Exportar Excel</h3>
                 <button onClick={() => setExportModalEvent(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
               </div>
               <div className="p-5 space-y-2">
-                <p className="text-sm text-gray-500 mb-3">Quais inscritos de "{exportModalEvent.title}" você quer exportar?</p>
+                <ExportColumnPicker selected={exportColumns} onChange={changeExportColumns} />
+                <p className="text-sm text-gray-500 pt-3 mb-3 border-t">Quais inscritos de "{exportModalEvent.title}" você quer exportar?</p>
                 {EXPORT_STATUS_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
