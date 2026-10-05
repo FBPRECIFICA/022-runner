@@ -227,8 +227,12 @@ export function RegistrationPage() {
       // SELECT direto sempre voltaria vazio aqui, que foi exatamente a causa
       // dos 7 pares duplicados na Corrida Solidária (2026-08-26).
       const cleanCpf = form.cpf.replace(/\D/g, '');
-      const { data: existingRegs } = await supabase
-        .rpc('check_cpf_registration', { p_event_id: event.id, p_cpf: cleanCpf });
+      // Timeout de 15s: rede ruim não pode deixar o atleta preso no spinner "Salvando..."
+      const { data: existingRegs } = await Promise.race([
+        supabase.rpc('check_cpf_registration', { p_event_id: event.id, p_cpf: cleanCpf }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('A conexão demorou demais. Verifique sua internet e tente novamente.')), 15000)),
+      ]);
       const existingReg = existingRegs?.[0];
       if (existingReg) {
         if (existingReg.status === 'paid' || existingReg.status === 'confirmed') {

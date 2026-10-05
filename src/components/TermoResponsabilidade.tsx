@@ -1,4 +1,4 @@
-﻿import { useState, useRef } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { Shield, CheckCircle } from 'lucide-react';
 
 interface Props {
@@ -23,11 +23,30 @@ export function TermoResponsabilidade({ registration, event, userId, onAccepted 
   const [accepted, setAccepted] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleScroll = () => {
+  // Tolerância generosa: em celulares com zoom / fonte grande / barra de endereço dinâmica,
+  // scrollTop fica fracionado e nunca chega exatamente a scrollHeight - 10, o que deixava o
+  // checkbox travado pra sempre (caso Mauro Sérgio, 05/10/2026).
+  const checkBottom = () => {
     const el = scrollRef.current;
     if (!el) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) setScrolledToBottom(true);
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) setScrolledToBottom(true);
   };
+  const handleScroll = checkBottom;
+
+  // Sentinela no fim do texto: se ficar visível dentro da caixa, considera lido.
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    checkBottom(); // texto curto / tela grande: já cabe sem rolar
+    const root = scrollRef.current;
+    const target = endRef.current;
+    if (!root || !target || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      entries => { if (entries.some(e => e.isIntersecting)) setScrolledToBottom(true); },
+      { root, threshold: 0.1 },
+    );
+    io.observe(target);
+    return () => io.disconnect();
+  }, []);
 
   const handleAccept = () => {
     if (!accepted) return;
@@ -69,10 +88,21 @@ export function TermoResponsabilidade({ registration, event, userId, onAccepted 
         <p className="mt-2">Em caso de cancelamento da inscrição solicitado pelo atleta com <strong>7 (sete) dias ou mais</strong> de antecedência em relação à data do evento, fica assegurado o estorno integral do valor pago. Em caso de cancelamento solicitado com <strong>menos de 7 (sete) dias</strong> de antecedência, o valor a ser estornado corresponderá ao montante pago, descontada a taxa de processamento de pagamento (Asaas) já incorrida na respectiva transação. Esta política se aplica a todos os eventos disponibilizados na plataforma 022 RUNNER, independentemente do organizador.</p>
 
         <p className="mt-4 text-xs text-gray-400">Assinado digitalmente em: {now} — Plataforma: 022runners.com.br</p>
+        <div ref={endRef} style={{ height: 1 }} />
       </div>
 
       {!scrolledToBottom && (
-        <p className="text-xs text-amber-600 mb-3 font-medium">⬇ Role até o final para habilitar a aceitação</p>
+        <div className="mb-3">
+          <p className="text-xs text-amber-600 font-medium">⬇ Role até o final para habilitar a aceitação</p>
+          {/* Saída de emergência: nunca deixa o atleta preso se o aparelho não registrar a rolagem */}
+          <button
+            type="button"
+            onClick={() => setScrolledToBottom(true)}
+            className="mt-1 text-xs underline text-gray-500"
+          >
+            Já li o termo inteiro / não consigo rolar
+          </button>
+        </div>
       )}
 
       {/* Checkbox */}
