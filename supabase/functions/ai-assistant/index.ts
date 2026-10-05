@@ -93,11 +93,37 @@ async function fetchAllEvents(): Promise<string> {
   }
 }
 
+// Histórico do chat vindo do site: só user/assistant, texto string, até 1000 chars cada,
+// no máximo 6 itens; começa em 'user' e alterna papéis (o que quebrar a alternância é
+// descartado). Termina em 'assistant' porque a pergunta atual entra logo depois como 'user'.
+function sanitizeHistory(history: unknown): { role: 'user' | 'assistant'; content: string }[] {
+  if (!Array.isArray(history)) return []
+  const valid = history
+    .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text.trim())
+    .slice(-6)
+    .map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.text.slice(0, 1000) }))
+  const out: { role: 'user' | 'assistant'; content: string }[] = []
+  for (const m of valid) {
+    const expected = out.length === 0 || out[out.length - 1].role === 'assistant' ? 'user' : 'assistant'
+    if (m.role === expected) out.push(m)
+  }
+  if (out.length > 0 && out[out.length - 1].role === 'user') out.pop()
+  return out
+}
+
+// O prompt já proíbe markdown, mas o modelo às vezes escapa (**negrito**, listas).
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*/g, '')
+    .replace(/__/g, '')
+    .replace(/^[ \t]*[-*] +/gm, '')
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { type, eventData, platform, question, userId, pageUrl } = await req.json()
+    const { type, eventData, platform, question, userId, pageUrl, history } = await req.json()
 
     const eventsJson = await fetchAllEvents()
 
@@ -118,6 +144,7 @@ REGRA DE RETIRADA DE KIT E INFORMAÇÕES DO EVENTO:
 - Para perguntas sobre retirada de kit (onde, quando, locais, datas e horários de retirada), use o campo "retirada_kit" do evento perguntado. Copie endereços, datas e horários exatamente como estão no texto, sem inventar nem completar nada.
 - Se o atleta disser que não mora nas cidades de retirada, informe a opção de retirada no dia da prova que estiver no texto de "retirada_kit" (com o horário exato).
 - Para outras dúvidas sobre o evento (percurso, estacionamento, horários, regras, o que vem no kit), use também os campos "informacoes_organizador" e "itens_do_kit".
+- Se o usuário responder só com o nome de um evento, continue a pergunta anterior sobre aquele evento, usando o histórico.
 
 TOM E ESTILO:
 - Respostas CURTAS e diretas — máximo 2-3 linhas
@@ -164,6 +191,11 @@ WhatsApp: direto, sem hashtags, máx 500 chars
 Facebook: formal, completo
 Hashtags: #022runners #regiãodoslagos #corridaderua #cabofrio #buzios #saopedrodaaldeia`
 
+    const pageSlug = typeof pageUrl === 'string' ? pageUrl.match(/\/(?:evento|inscricao)\/([A-Za-z0-9_-]+)/)?.[1] : undefined
+    const systemPromptFinal = pageSlug
+      ? `${systemPrompt}\n\nO usuário está na página do evento ${pageSlug}. Se ele não citar outro evento, responda sobre este.`
+      : systemPrompt
+
     const userPrompt = type === 'post'
       ? `Crie um post de ${eventData.postType} para o evento "${eventData.title}" em ${eventData.city} no dia ${eventData.date} para ${platform}. Distâncias: ${eventData.distances}. ${eventData.extraInfo || ''}`
       : `Responda essa dúvida sobre eventos esportivos da 022Runners: ${question || eventData?.question || ''}`
@@ -178,14 +210,14 @@ Hashtags: #022runners #regiãodoslagos #corridaderua #cabofrio #buzios #saopedro
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
-        messages: [{ role: 'user', content: userPrompt }],
-        system: systemPrompt
+        messages: [...sanitizeHistory(history), { role: 'user', content: userPrompt }],
+        system: systemPromptFinal
       })
     })
 
     const data = await response.json()
     if (!data.content?.[0]?.text) throw new Error('Resposta inválida da IA: ' + JSON.stringify(data))
-    const text = data.content[0].text
+    const text = type === 'post' ? data.content[0].text : stripMarkdown(data.content[0].text)
 
     if (type !== 'post') {
       const userQuestion = question || eventData?.question || ''

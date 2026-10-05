@@ -17,14 +17,14 @@ interface Message {
   text: string;
 }
 
-async function askAI(question: string, userId: string | null, pageUrl: string): Promise<string> {
+async function askAI(question: string, history: Message[], userId: string | null, pageUrl: string): Promise<string> {
   const res = await fetch(AI_FUNCTION_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${ANON_KEY}`,
     },
-    body: JSON.stringify({ type: 'chat', question, userId, pageUrl }),
+    body: JSON.stringify({ type: 'chat', question, history, userId, pageUrl }),
   });
   if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
   const data = await res.json();
@@ -56,7 +56,7 @@ export function ChatBot() {
       setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
       let i = 0;
       typingRef.current = setInterval(() => {
-        i++;
+        i = Math.min(i + 4, text.length);
         setMessages(prev => {
           const updated = [...prev];
           updated[updated.length - 1] = { role: 'assistant', text: text.slice(0, i) };
@@ -67,23 +67,25 @@ export function ChatBot() {
           typingRef.current = null;
           resolve();
         }
-      }, 30);
+      }, 15);
     });
   }, []);
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
+    // Histórico (sem a mensagem atual) pro LEO entender respostas curtas tipo "Balneário run"
+    const history = messages.slice(-6).map(m => ({ role: m.role, text: m.text }));
     setMessages(prev => [...prev, { role: 'user', text }]);
     setInput('');
     setLoading(true);
     try {
-      const reply = await askAI(text, user?.id ?? null, window.location.pathname);
-      await new Promise(r => setTimeout(r, 800));
+      const reply = await askAI(text, history, user?.id ?? null, window.location.pathname);
+      await new Promise(r => setTimeout(r, 200));
       setLoading(false);
       await typeMessage(reply);
     } catch (err: any) {
       const detail = err?.message ? ` (${err.message})` : '';
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise(r => setTimeout(r, 200));
       setLoading(false);
       await typeMessage(`Não consegui processar sua pergunta${detail}. Fala direto com o Leandro: https://wa.me/5522974044125 😄`);
     }
