@@ -47,6 +47,7 @@ interface EventForm {
   kit_items: string[];
   additional_info: string;
   kit_pickup_instructions: string;
+  ai_description: string;
   sponsors: { name: string; logo_url: string }[];
   distances: DistanceWithLots[];
   link_percurso: string;
@@ -70,6 +71,7 @@ const emptyForm: EventForm = {
   kit_items: [],
   additional_info: '',
   kit_pickup_instructions: DEFAULT_KIT_PICKUP_INSTRUCTIONS,
+  ai_description: '',
   sponsors: [],
   distances: [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
   link_percurso: '',
@@ -723,6 +725,7 @@ export function OrganizerDashboard() {
         kit_items: event.kit_items || [],
         additional_info: event.additional_info || '',
         kit_pickup_instructions: kitPickupText(event.kit_pickup_instructions),
+        ai_description: event.ai_description || '',
         sponsors: event.sponsors || [],
         distances: distances.length > 0 ? distances : [{ name: '5km', lots: [{ price: '', qty: '' }], includes_shirt: true }],
         link_percurso: event.link_percurso || '',
@@ -801,6 +804,7 @@ export function OrganizerDashboard() {
         additional_info: form.additional_info || null,
         // Igual ao padrão (ou vazio) vira null, pra seguir a regra da plataforma se ela mudar
         kit_pickup_instructions: kitPickupText(form.kit_pickup_instructions) === DEFAULT_KIT_PICKUP_INSTRUCTIONS ? null : form.kit_pickup_instructions.trim(),
+        ai_description: form.ai_description.trim() || null,
         sponsors: form.sponsors.length > 0 ? form.sponsors : null,
         link_percurso: form.link_percurso || null,
         quality_score: score,
@@ -2026,6 +2030,13 @@ export function OrganizerDashboard() {
                   rows={2} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   placeholder="Ex.: Sábado 04/10, das 9h às 17h, na loja X (Rua Y, 123). Não haverá entrega de kit no dia da prova." />
                 <p className="text-xs text-gray-400 mt-1">Padrão da plataforma: retirada na véspera. Só altere se este evento for uma exceção. Aparece na página do evento, na confirmação e no e-mail.</p>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Informações para o assistente LEO</label>
+                <textarea value={form.ai_description} onChange={e => setForm(p => ({ ...p, ai_description: e.target.value }))}
+                  rows={4} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" />
+                <p className="text-xs text-gray-400 mt-1">Escreva aqui tudo que o LEO deve saber para responder os atletas deste evento: percurso, estacionamento, horários, regras, dúvidas frequentes. Não aparece no site.</p>
               </div>
 
               {/* Patrocinadores com upload */}

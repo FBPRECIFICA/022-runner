@@ -38,9 +38,14 @@ function isRegistrationOpen(status: string, registrationsClosed: boolean, maxPar
   return true
 }
 
+// Mesma regra de src/lib/kitPickup.ts (duplicada de propósito: edge functions são isoladas).
+// Kit sempre retirado na véspera; kit_pickup_instructions só é preenchido quando o evento foge disso.
+const DEFAULT_KIT_PICKUP_INSTRUCTIONS =
+  'A retirada do kit é feita sempre um dia antes do evento, em local e horário informados pela organização.'
+
 async function fetchAllEvents(): Promise<string> {
   try {
-    const eventsUrl = `${SUPABASE_URL}/rest/v1/events?select=id,title,date,location,city,description,distances,prices,additional_info,regulations,slug,status,max_participants,registrations_closed&order=date.asc&limit=50`
+    const eventsUrl = `${SUPABASE_URL}/rest/v1/events?select=id,title,date,location,city,description,distances,prices,additional_info,regulations,slug,status,max_participants,registrations_closed,kit_pickup_instructions,kit_items,ai_description&order=date.asc&limit=50`
     // `registrations` não tem policy de SELECT pra anon (tem CPF, telefone etc.) —
     // essa RPC security definer expõe só a contagem confirmada por evento, sem
     // dar acesso às linhas. Sem ela, vagas_confirmadas sempre voltaria 0 pra
@@ -69,12 +74,15 @@ async function fetchAllEvents(): Promise<string> {
         const confirmedCount = countByEvent.get(e.id) ?? 0
         const maxParticipants = e.max_participants || 0
         const open = isRegistrationOpen(e.status, !!e.registrations_closed, maxParticipants, confirmedCount)
-        const { registrations_closed, max_participants, ...rest } = e
+        const { registrations_closed, max_participants, kit_pickup_instructions, kit_items, ai_description, ...rest } = e
         return {
           ...rest,
           inscricoes_abertas: open,
           vagas_confirmadas: confirmedCount,
           vagas_totais: maxParticipants || null,
+          retirada_kit: kit_pickup_instructions?.trim() || DEFAULT_KIT_PICKUP_INSTRUCTIONS,
+          itens_do_kit: kit_items,
+          informacoes_organizador: ai_description,
         }
       })
       return JSON.stringify(enriched)
@@ -105,6 +113,11 @@ REGRA DE STATUS DE INSCRIÇÃO — OBRIGATÓRIA, NUNCA INFERIR:
 - Se "inscricoes_abertas" for false: diga claramente que as inscrições estão encerradas pra esse evento. NUNCA sugira que ainda dá pra se inscrever, mesmo que a descrição/regulamento do evento pareça indicar o contrário (esses textos não são atualizados em tempo real, o campo inscricoes_abertas sim).
 - Se "inscricoes_abertas" for true: pode confirmar normalmente que as inscrições estão abertas.
 - Se a pergunta for sobre um evento que você não consegue identificar nos dados, use a resposta padrão de "não tenho essa info" — nunca invente status.
+
+REGRA DE RETIRADA DE KIT E INFORMAÇÕES DO EVENTO:
+- Para perguntas sobre retirada de kit (onde, quando, locais, datas e horários de retirada), use o campo "retirada_kit" do evento perguntado. Copie endereços, datas e horários exatamente como estão no texto, sem inventar nem completar nada.
+- Se o atleta disser que não mora nas cidades de retirada, informe a opção de retirada no dia da prova que estiver no texto de "retirada_kit" (com o horário exato).
+- Para outras dúvidas sobre o evento (percurso, estacionamento, horários, regras, o que vem no kit), use também os campos "informacoes_organizador" e "itens_do_kit".
 
 TOM E ESTILO:
 - Respostas CURTAS e diretas — máximo 2-3 linhas
