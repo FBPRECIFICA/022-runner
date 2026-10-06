@@ -9,6 +9,10 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
+// Mesma regra de src/lib/kitPickup.ts (duplicada de propósito: edge functions são isoladas).
+const DEFAULT_KIT_PICKUP_INSTRUCTIONS =
+  'A retirada do kit é feita sempre um dia antes do evento, em local e horário informados pela organização.'
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -102,7 +106,7 @@ serve(async (req) => {
       // Busca dados para enviar email de confirmação
       const { data: reg } = await supabase
         .from('registrations')
-        .select('*, events(title, city, date)')
+        .select('*, events(title, city, date, kit_pickup_instructions)')
         .eq('id', registrationId)
         .single()
 
@@ -135,6 +139,7 @@ serve(async (req) => {
               platformFee: Number(reg.platform_fee ?? 0).toFixed(2).replace('.', ','),
               discountAmount: Number(reg.discount_amount ?? 0).toFixed(2).replace('.', ','),
               couponCode: reg.coupon_code ?? '',
+              kitPickupInstructions: String(eventData?.kit_pickup_instructions ?? '').trim() || DEFAULT_KIT_PICKUP_INSTRUCTIONS,
             },
           }),
         }).catch(e => console.error('[asaas-webhook] Erro ao enviar email:', String(e)))

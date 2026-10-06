@@ -258,6 +258,39 @@ export function OrganizerDashboard() {
     toast.success(`Inscrição de ${r.name} cancelada.`);
   };
 
+  // Mesmo e-mail que o asaas-webhook manda após o pagamento (ex.: atleta digitou o e-mail
+  // errado, organizador corrigiu e precisa reenviar).
+  const resendConfirmation = async (r: any, event: any) => {
+    if (!r.email) { toast.error('Essa inscrição não tem e-mail cadastrado.'); return; }
+    if (!window.confirm(`Reenviar o e-mail de confirmação da inscrição nº ${r.registration_number || '—'} (${r.name}) para ${r.email}?`)) return;
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: {
+        templateType: 'atleta_confirmacao',
+        recipientEmail: r.email,
+        data: {
+          athleteName: r.name,
+          eventTitle: event.title ?? '',
+          eventDate: event.date ? new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+          eventCity: event.city ?? '',
+          distanceName: r.distance_name,
+          registrationNumber: r.registration_number,
+          amount: Number(r.amount).toFixed(2).replace('.', ','),
+          baseAmount: Number(r.base_amount ?? r.amount).toFixed(2).replace('.', ','),
+          platformFee: Number(r.platform_fee ?? 0).toFixed(2).replace('.', ','),
+          discountAmount: Number(r.discount_amount ?? 0).toFixed(2).replace('.', ','),
+          couponCode: r.coupon_code ?? '',
+          kitPickupInstructions: kitPickupText(event.kit_pickup_instructions),
+        },
+      },
+    });
+    // send-email devolve 200 mesmo quando o Resend recusa; só considera enviado com o id do Resend.
+    if (error || !data?.id) {
+      toast.error('Erro ao reenviar: ' + (error?.message || data?.message || data?.error || 'resposta inesperada'));
+      return;
+    }
+    toast.success(`Enviado para ${r.email}`);
+  };
+
   const [transferReg, setTransferReg] = useState<any | null>(null);
   const [transferForm, setTransferForm] = useState({ name: '', cpf: '', email: '', phone: '', birth_date: '', gender: '', shirt_size: '', note: '' });
   const openTransfer = (r: any) => {
@@ -1236,6 +1269,9 @@ export function OrganizerDashboard() {
                                   </span>
                                 </td>
                                 <td className="px-4 py-2 whitespace-nowrap">
+                                  {(r.status === 'paid' || r.status === 'confirmed') && (
+                                    <button onClick={() => resendConfirmation(r, event)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 mr-2">Reenviar confirmação</button>
+                                  )}
                                   <button onClick={() => openTransfer(r)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 mr-2">Transferir</button>
                                   <button onClick={() => cancelRegistration(r)} className="text-xs px-2 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Cancelar</button>
                                 </td>
