@@ -16,12 +16,22 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { EXPORT_STATUS_OPTIONS, type ExportStatusFilter, matchesStatusFilter, downloadRegistrationsExcel, loadExportColumns, saveExportColumns } from '../lib/registrationExport';
 import { ExportColumnPicker } from '../components/ExportColumnPicker';
+import { validateEmail } from '../lib/emailValidation';
+import { formatPhone } from '../utils/validators';
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
 const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Bag', 'Squeeze (Garrafinha de água)', 'Outros'];
 // Mesma lista fixa usada em RegistrationPage.tsx. Estoque é um pool único por
 // evento (não por distância/kit) — decisão do Senhor Fábio, 04/09/2026.
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
+// Mesma lista fechada de organizer_edit_registration (migração 20261012234559).
+const EDIT_FIELDS = [
+  ['name', 'Nome completo'], ['phone', 'Telefone'], ['email', 'E-mail'], ['birth_date', 'Data de nascimento'],
+  ['gender', 'Sexo'], ['shirt_size', 'Tamanho da camisa'], ['city', 'Cidade'], ['team_name', 'Equipe'],
+  ['emergency_contact', 'Contato de emergência'], ['blood_type', 'Tipo sanguíneo'], ['medical_condition', 'Condição médica'],
+] as const;
+const EDIT_LABELS: Record<string, string> = Object.fromEntries(EDIT_FIELDS);
+const ACTION_LABELS: Record<string, string> = { cancel: 'Cancelamento', transfer: 'Transferência', edit: 'Edição de dados' };
 
 interface Lot { price: string; qty: string; }
 interface DistanceWithLots { name: string; lots: Lot[]; includes_shirt: boolean; }
@@ -315,6 +325,56 @@ export function OrganizerDashboard() {
     });
     toast.success(`Inscrição nº ${transferReg.registration_number || '—'} transferida para ${f.name.trim()}.`);
     setTransferReg(null);
+  };
+
+  // Editar dados do inscrito (organizer_edit_registration): só a lista fechada abaixo, só o que mudou.
+  const [editReg, setEditReg] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [editNote, setEditNote] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editHistory, setEditHistory] = useState<any[]>([]);
+  const editValue = (r: any, key: string) => {
+    const v = r[key] == null ? '' : String(r[key]);
+    if (key === 'phone') return formatPhone(v);
+    if (key === 'birth_date') return v.slice(0, 10);
+    return v;
+  };
+  const openEditReg = async (r: any) => {
+    setEditReg(r);
+    setEditForm(Object.fromEntries(EDIT_FIELDS.map(([k]) => [k, editValue(r, k)])));
+    setEditNote('');
+    setEditHistory([]);
+    const { data } = await supabase.from('registration_manual_actions')
+      .select('action, actor_id, note, details, created_at').eq('registration_id', r.id).order('created_at', { ascending: false });
+    setEditHistory(data || []);
+  };
+  const saveEdit = async () => {
+    const changes: Record<string, string> = {};
+    for (const [k] of EDIT_FIELDS) {
+      const now = (editForm[k] ?? '').trim();
+      const before = editValue(editReg, k).trim();
+      if (k === 'phone' ? now.replace(/\D/g, '') !== before.replace(/\D/g, '') : now !== before) changes[k] = now;
+    }
+    if (changes.email !== undefined) {
+      const check = validateEmail(changes.email);
+      if (!check.ok) { toast.error(check.error!); return; }
+      changes.email = check.normalized;
+    }
+    if (Object.keys(changes).length === 0) { toast('Nada foi alterado.'); return; }
+    setEditSaving(true);
+    const { data, error } = await supabase.rpc('organizer_edit_registration', { p_id: editReg.id, p_changes: changes, p_note: editNote || null });
+    setEditSaving(false);
+    if (error) { toast.error('Erro ao salvar: ' + error.message); return; }
+    if (!data?.changed) { toast('Nada foi alterado.'); return; }
+    const patch = { ...data.after, ...(data.after.name ? { full_name: data.after.name } : {}) };
+    patchRegistration(editReg.event_id, editReg.id, patch);
+    toast.success(`Dados de ${patch.name || editReg.name} atualizados.`);
+    const updated = { ...editReg, ...patch };
+    setEditReg(null);
+    // E-mail novo em inscrição já confirmada: oferece reenviar a confirmação (resendConfirmation pergunta antes). Asaas não é tocado.
+    if (data.after.email && (updated.status === 'paid' || updated.status === 'confirmed')) {
+      await resendConfirmation(updated, events.find(e => e.id === updated.event_id) || {});
+    }
   };
 
   const toggleInscritos = async (eventId: string) => {
@@ -1272,6 +1332,7 @@ export function OrganizerDashboard() {
                                   {(r.status === 'paid' || r.status === 'confirmed') && (
                                     <button onClick={() => resendConfirmation(r, event)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 mr-2">Reenviar confirmação</button>
                                   )}
+                                  <button onClick={() => openEditReg(r)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 mr-2">Editar dados</button>
                                   <button onClick={() => openTransfer(r)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 mr-2">Transferir</button>
                                   <button onClick={() => cancelRegistration(r)} className="text-xs px-2 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Cancelar</button>
                                 </td>
@@ -1343,6 +1404,79 @@ export function OrganizerDashboard() {
                 </label>
                 <button type="submit" className="w-full py-2.5 rounded-lg font-bold text-black" style={{ background: '#C9A84C' }}>Salvar novo titular</button>
               </form>
+            </div>
+          </div>
+        )}
+
+        {editReg && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setEditReg(null)}>
+            <div className="w-full max-w-md rounded-2xl bg-white max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b">
+                <h3 className="text-lg font-bold text-gray-900">Editar dados do inscrito</h3>
+                <button onClick={() => setEditReg(null)} className="p-1 rounded-lg hover:bg-gray-100"><X size={20} /></button>
+              </div>
+              <form className="p-5 space-y-3" onSubmit={e => { e.preventDefault(); saveEdit(); }}>
+                <div className="text-sm text-gray-500 rounded-lg bg-gray-50 p-3 space-y-0.5">
+                  <p>Nº <strong>{editReg.registration_number || '—'}</strong> · CPF <strong>{editReg.cpf || '—'}</strong></p>
+                  <p>{editReg.distance_name || '—'}{editReg.registration_type_name ? ` · ${editReg.registration_type_name}` : ''} · R$ {Number(editReg.amount || 0).toFixed(2).replace('.', ',')}</p>
+                  <p className="text-xs">Para trocar o titular, use Transferir.</p>
+                </div>
+                {EDIT_FIELDS.map(([key, label]) => {
+                  const set = (v: string) => setEditForm(p => ({ ...p, [key]: v }));
+                  if (key === 'shirt_size' && !editReg.shirt_size) return null;
+                  return (
+                    <label key={key} className="block text-sm">
+                      <span className="text-gray-600">{label}</span>
+                      {key === 'gender' ? (
+                        <select value={editForm.gender} onChange={e => set(e.target.value)} className="mt-1 w-full border rounded-lg px-3 py-2">
+                          {!editForm.gender && <option value="">—</option>}
+                          {Object.entries(GENDER_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                      ) : key === 'shirt_size' ? (
+                        <select value={editForm.shirt_size} onChange={e => set(e.target.value)} className="mt-1 w-full border rounded-lg px-3 py-2">
+                          {SHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      ) : (
+                        <input
+                          type={key === 'birth_date' ? 'date' : key === 'email' ? 'email' : key === 'phone' ? 'tel' : 'text'}
+                          required={['name', 'phone', 'email'].includes(key)}
+                          max={key === 'birth_date' ? new Date().toISOString().slice(0, 10) : undefined}
+                          value={editForm[key] ?? ''}
+                          onChange={e => set(key === 'phone' ? formatPhone(e.target.value) : e.target.value)}
+                          className="mt-1 w-full border rounded-lg px-3 py-2" />
+                      )}
+                    </label>
+                  );
+                })}
+                <label className="block text-sm">
+                  <span className="text-gray-600">Observação (opcional, fica registrada)</span>
+                  <input type="text" value={editNote} onChange={e => setEditNote(e.target.value)}
+                    placeholder="Ex.: atleta pediu correção por WhatsApp" className="mt-1 w-full border rounded-lg px-3 py-2" />
+                </label>
+                <button type="submit" disabled={editSaving} className="w-full py-2.5 rounded-lg font-bold text-black disabled:opacity-60" style={{ background: '#C9A84C' }}>
+                  {editSaving ? 'Salvando...' : 'Salvar alterações'}
+                </button>
+              </form>
+              {editHistory.length > 0 && (
+                <div className="px-5 pb-5">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Histórico</h4>
+                  <ul className="space-y-2 text-xs text-gray-600">
+                    {editHistory.map((h, i) => (
+                      <li key={i} className="border rounded-lg p-2">
+                        <p className="font-medium text-gray-800">
+                          {ACTION_LABELS[h.action] || h.action} · {new Date(h.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · por {h.actor_id === user?.id ? 'você' : 'admin 022RUNNERS'}
+                        </p>
+                        {h.action === 'edit' && Object.keys(h.details?.after || {}).map(k => (
+                          <p key={k}>{EDIT_LABELS[k] || k}: {String(h.details.before?.[k] ?? '—')} → {String(h.details.after[k] ?? '—')}</p>
+                        ))}
+                        {h.action === 'transfer' && <p>{h.details?.from?.name || '—'} → {h.details?.to?.name || '—'}</p>}
+                        {h.action === 'cancel' && h.details?.previous_status && <p>Status anterior: {h.details.previous_status}</p>}
+                        {h.note && <p className="italic">"{h.note}"</p>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         )}
