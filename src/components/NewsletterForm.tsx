@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Mail, CheckCircle } from 'lucide-react';
+import { validateEmail } from '../lib/emailValidation';
+import { EmailHint } from './EmailHint';
 
 export function NewsletterForm() {
   const [name, setName] = useState('');
@@ -8,13 +10,15 @@ export function NewsletterForm() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.ok) { setEmailTouched(true); return; }
     setLoading(true);
     setError('');
-    const { error: err } = await supabase.from('newsletter').insert({ name: name.trim(), email: email.trim() });
+    const { error: err } = await supabase.from('newsletter').insert({ name: name.trim(), email: emailCheck.normalized });
     if (err?.code === '23505') {
       setError('Este e-mail já está cadastrado.');
     } else if (err) {
@@ -43,7 +47,7 @@ export function NewsletterForm() {
             <input value={name} onChange={e => setName(e.target.value)}
               className="flex-1 px-4 py-3 rounded-xl text-sm bg-white text-gray-900 focus:outline-none"
               placeholder="Seu nome" />
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} onBlur={() => setEmailTouched(true)}
               className="flex-1 px-4 py-3 rounded-xl text-sm bg-white text-gray-900 focus:outline-none"
               placeholder="Seu e-mail" required />
             <button type="submit" disabled={loading}
@@ -53,6 +57,7 @@ export function NewsletterForm() {
             </button>
           </form>
         )}
+        {!done && <EmailHint value={email} show={emailTouched} onUse={setEmail} className="text-red-400" />}
         {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
       </div>
     </section>

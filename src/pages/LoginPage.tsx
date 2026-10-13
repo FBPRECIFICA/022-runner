@@ -70,7 +70,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       loginProfileRef.current = selectedProfile;
-      const result = await login(email, password);
+      const result = await login(email.trim().toLowerCase(), password);
       if (!result.success) {
         loginProfileRef.current = null;
         const isUnconfirmed = result.errorCode === 'email_not_confirmed' ||
@@ -180,7 +180,7 @@ export function LoginPage() {
                         onClick={async () => {
                           if (!email) return;
                           await import('../lib/supabase').then(({ supabase: sb }) =>
-                            sb.auth.resend({ type: 'signup', email })
+                            sb.auth.resend({ type: 'signup', email: email.trim().toLowerCase() })
                           );
                           setError('__resent__');
                         }}

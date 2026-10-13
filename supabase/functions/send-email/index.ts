@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isEmailFormatValid, normalizeEmail } from '../_shared/email.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const FROM_EMAIL = '022RUNNERS <noreply@022runners.com.br>'
@@ -105,6 +106,17 @@ serve(async (req) => {
       }
     }
 
+    // Antes um destinatário inválido (ex: hotmail.c) voltava 200 com o erro do
+    // Resend escondido no corpo — ninguém ficava sabendo que o e-mail não saiu.
+    if (!isEmailFormatValid(finalRecipientEmail)) {
+      console.error('[send-email] Destinatário inválido:', finalRecipientEmail, templateType)
+      return new Response(JSON.stringify({ error: 'invalid_recipient', message: `E-mail do destinatário inválido: ${finalRecipientEmail}` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    finalRecipientEmail = normalizeEmail(finalRecipientEmail)
+
     const { subject, html } = buildHtml(templateType, data as Record<string, unknown>)
 
     const res = await fetch('https://api.resend.com/emails', {
@@ -122,6 +134,13 @@ serve(async (req) => {
     })
 
     const result = await res.json()
+    if (!res.ok) {
+      console.error('[send-email] Resend recusou:', res.status, JSON.stringify(result), finalRecipientEmail)
+      return new Response(JSON.stringify({ error: 'resend_error', message: result?.message ?? 'Falha ao enviar e-mail', details: result }), {
+        status: res.status >= 400 && res.status < 500 ? res.status : 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

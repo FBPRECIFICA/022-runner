@@ -16,6 +16,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const INVALID_EMAIL_MESSAGE = 'O e-mail informado parece estar incorreto. Corrija e tente de novo.'
+
+// Erro do Asaas ({ errors: [{ code, description }] }) vira { error, code, message }
+// legível pro atleta. Antes saía só "Falha ao criar cliente" e o front mostrava
+// "Edge Function returned a non-2xx status code" — a Patricia (09/10/2026,
+// prcorado@hotmail.c) tentou 11 vezes em 45 min sem saber que era o e-mail.
+function asaasError(stage: string, body: { errors?: { code?: string; description?: string }[] }) {
+  const first = body?.errors?.[0]
+  const code = first?.code ?? 'asaas_error'
+  const message = code === 'invalid_email'
+    ? INVALID_EMAIL_MESSAGE
+    : (first?.description || `${stage}. Tente novamente em instantes.`)
+  return new Response(JSON.stringify({ error: stage, code, message, details: body }), {
+    status: 400,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -35,10 +53,7 @@ serve(async (req) => {
 
     if (!customer.id) {
       console.error('[create-payment] Falha ao criar cliente:', JSON.stringify(customer))
-      return new Response(JSON.stringify({ error: 'Falha ao criar cliente', details: customer }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return asaasError('Falha ao criar cliente', customer)
     }
 
     const paymentBody = {
@@ -58,10 +73,7 @@ serve(async (req) => {
 
     if (!payment.id) {
       console.error('[create-payment] Falha ao criar pagamento:', JSON.stringify(payment))
-      return new Response(JSON.stringify({ error: 'Falha ao criar pagamento', details: payment }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return asaasError('Falha ao criar pagamento', payment)
     }
 
     // Salva asaas_payment_id e forma de pagamento na tabela registrations para o webhook encontrar
@@ -106,7 +118,7 @@ serve(async (req) => {
     })
   } catch (e) {
     console.error('[create-payment] Erro:', String(e))
-    return new Response(JSON.stringify({ error: String(e) }), {
+    return new Response(JSON.stringify({ error: String(e), code: 'internal_error', message: 'Erro ao gerar o pagamento. Tente novamente em instantes.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

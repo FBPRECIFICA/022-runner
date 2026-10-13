@@ -5,6 +5,8 @@ import { CheckCircle, Clock, Copy, CreditCard, FileText, QrCode } from 'lucide-r
 import { SecurityBadges } from '../components/SecurityBadges';
 import { SecuritySeal } from '../components/SecuritySeal';
 import { kitPickupText } from '../lib/kitPickup';
+import { validateEmail } from '../lib/emailValidation';
+import { EmailHint } from '../components/EmailHint';
 
 type PaymentMethod = 'PIX' | 'CREDIT_CARD' | 'BOLETO';
 
@@ -53,6 +55,10 @@ export function PaymentPage() {
   const [secondsLeft, setSecondsLeft] = useState(30 * 60);
   const [polling, setPolling] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  // Preenchido quando o e-mail da inscrição é recusado (Asaas invalid_email ou
+  // checagem local) — mostra o campo de correção ali mesmo, sem refazer a inscrição.
+  const [emailFix, setEmailFix] = useState<string | null>(null);
+  const [fixingEmail, setFixingEmail] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -162,8 +168,16 @@ export function PaymentPage() {
     };
   }, [paymentResult, method, expired, registrationId, navigate]);
 
-  const handleCreatePayment = async () => {
+  const handleCreatePayment = async (emailOverride?: string) => {
     if (!reg || !event) return;
+    const email = emailOverride ?? String(reg.email ?? '');
+    // Inscrições antigas podem ter e-mail digitado errado (ex: gmail.con) — pede
+    // a correção antes de bater no Asaas, em vez de esperar o invalid_email.
+    if (!validateEmail(email).ok) {
+      setPayError('O e-mail informado parece estar incorreto. Corrija e tente de novo.');
+      setEmailFix(email);
+      return;
+    }
     setCreating(true);
     setPayError(null);
     try {
@@ -174,7 +188,7 @@ export function PaymentPage() {
           billingType: method,
           customerData: {
             name: reg.name,
-            email: reg.email,
+            email,
             cpfCnpj: (reg.cpf as string) || '00000000000',
             phone: reg.phone,
           },
@@ -185,7 +199,18 @@ export function PaymentPage() {
           },
         },
       });
-      if (error) throw new Error(String(error.message ?? error));
+      if (error) {
+        // Corpo da resposta não-2xx ({ error, code, message }) vem em error.context —
+        // sem ler isso o atleta só via "Edge Function returned a non-2xx status code".
+        const body = await (error as any).context?.json?.().catch(() => null);
+        if (body?.code === 'invalid_email') {
+          setPayError(body.message);
+          setEmailFix(email);
+          return;
+        }
+        throw new Error(body?.message || body?.error || String(error.message ?? error));
+      }
+      setEmailFix(null);
       setPaymentResult(data as PaymentResult);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -193,6 +218,28 @@ export function PaymentPage() {
       setPayError(msg);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleFixEmailAndPay = async () => {
+    if (emailFix === null || !registrationId) return;
+    const check = validateEmail(emailFix);
+    if (!check.ok) { setPayError(check.error!); return; }
+    setFixingEmail(true);
+    setPayError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('edit-pending-registration', {
+        body: { registrationId, email: check.normalized },
+      });
+      const body = error ? await (error as any).context?.json?.().catch(() => null) : data;
+      if (!body?.ok) throw new Error(body?.message || 'Não foi possível corrigir o e-mail.');
+      setReg(prev => prev ? { ...prev, email: check.normalized } : prev);
+      setEmailFix(check.normalized);
+      await handleCreatePayment(check.normalized);
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : 'Erro ao corrigir o e-mail.');
+    } finally {
+      setFixingEmail(false);
     }
   };
 
@@ -510,19 +557,39 @@ export function PaymentPage() {
               })}
             </div>
             {payError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
-                Erro: {payError}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                {payError}
               </div>
             )}
-            <button
-              onClick={handleCreatePayment}
+            {emailFix !== null && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Seu e-mail</label>
+                <input
+                  type="email"
+                  value={emailFix}
+                  onChange={e => setEmailFix(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  placeholder="seu@email.com"
+                />
+                <EmailHint value={emailFix} show onUse={setEmailFix} />
+                <button
+                  onClick={handleFixEmailAndPay}
+                  disabled={fixingEmail || creating}
+                  className="w-full bg-[#C9A84C] text-white font-bold py-3 rounded-xl hover:bg-[#B8962E] disabled:opacity-50"
+                >
+                  {fixingEmail || creating ? 'Corrigindo...' : 'Corrigir e pagar'}
+                </button>
+              </div>
+            )}
+            {emailFix === null && <button
+              onClick={() => handleCreatePayment()}
               disabled={creating}
               className="w-full bg-[#C9A84C] text-white font-bold py-4 rounded-xl hover:bg-[#B8962E] disabled:opacity-50"
             >
               {creating
                 ? 'Gerando pagamento...'
                 : `Pagar com ${method === 'PIX' ? 'PIX' : method === 'CREDIT_CARD' ? 'Cartão de Crédito' : 'Boleto'}`}
-            </button>
+            </button>}
           </div>
         )}
 

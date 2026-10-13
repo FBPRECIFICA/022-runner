@@ -2,6 +2,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, ArrowLeft, User, Mail, Lock, Building2, Trophy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { validateEmail } from '../lib/emailValidation';
+import { EmailHint } from '../components/EmailHint';
 
 type UserType = 'athlete' | 'organizer';
 
@@ -17,6 +19,7 @@ export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
 
@@ -25,19 +28,20 @@ export function RegisterPage() {
     setError('');
 
     if (!name.trim()) { setError('Informe seu nome completo.'); return; }
-    if (!email.trim()) { setError('Informe seu e-mail.'); return; }
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.ok) { setEmailTouched(true); setError(emailCheck.error!); return; }
     if (password.length < 6) { setError('A senha deve ter no mínimo 6 caracteres.'); return; }
     if (password !== confirmPassword) { setError('As senhas não coincidem.'); return; }
     if (!agreed) { setError('Aceite os termos de uso para continuar.'); return; }
 
     setIsLoading(true);
     try {
-      const result = await register(name.trim(), email.trim(), password, userType);
+      const result = await register(name.trim(), emailCheck.normalized, password, userType);
       if (!result.success) {
         setError(result.message || 'Erro ao criar conta. Verifique se o e-mail já está cadastrado.');
         return;
       }
-      setRegisteredEmail(email.trim());
+      setRegisteredEmail(emailCheck.normalized);
     } catch {
       setError('Ocorreu um erro inesperado. Tente novamente.');
     } finally {
@@ -162,10 +166,12 @@ export function RegisterPage() {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
+                  onBlur={() => setEmailTouched(true)}
                   placeholder="seu@email.com"
                   className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A84C] text-sm"
                 />
               </div>
+              <EmailHint value={email} show={emailTouched} onUse={setEmail} />
             </div>
 
             <div>

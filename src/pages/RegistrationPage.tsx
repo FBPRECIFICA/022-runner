@@ -10,6 +10,8 @@ import { AccountGate } from '../components/AccountGate';
 import { SecurityBadges } from '../components/SecurityBadges';
 import { isRegistrationOpen, isSoldOut } from '../utils/registrationStatus';
 import { kitPickupText } from '../lib/kitPickup';
+import { validateEmail } from '../lib/emailValidation';
+import { EmailHint } from '../components/EmailHint';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não sei'];
@@ -72,6 +74,8 @@ export function RegistrationPage() {
   const [step, setStep] = useState<Step>('form');
   const [error, setError] = useState('');
   const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [emailConfirmTouched, setEmailConfirmTouched] = useState(false);
   const [pendingDup, setPendingDup] = useState<{ id: string; status: string; asaas_payment_id: string | null } | null>(null);
 
   const [form, setForm] = useState(() => {
@@ -81,7 +85,7 @@ export function RegistrationPage() {
 
   function defaultForm(u: any) {
     return {
-      name: u?.name || '', cpf: '', birthdate: '', phone: '', email: u?.email || '',
+      name: u?.name || '', cpf: '', birthdate: '', phone: '', email: u?.email || '', email_confirm: u?.email || '',
       city: '', gender: '', shirt_size: '', distance_index: 0, kit_index: 0,
       team_name: '', emergency_contact: '', blood_type: '', medical_condition: '',
     };
@@ -133,6 +137,8 @@ export function RegistrationPage() {
           ...prev,
           name: prev.name || data.name || '',
           email: prev.email || data.email || '',
+          // E-mail vindo da conta já chega confirmado; se a pessoa trocar, precisa redigitar.
+          email_confirm: prev.email_confirm || (prev.email ? '' : data.email || ''),
           phone: prev.phone || (data.phone ? data.phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3') : ''),
           cpf: prev.cpf || (data.cpf ? data.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : ''),
           city: prev.city || data.city || '',
@@ -202,7 +208,9 @@ export function RegistrationPage() {
     if (!validateCPF(form.cpf)) return 'CPF inválido. Verifique os dígitos.';
     if (!form.birthdate) return 'Informe sua data de nascimento.';
     if (form.phone.replace(/\D/g, '').length < 10) return 'Telefone inválido.';
-    if (!form.email.trim()) return 'Informe seu e-mail.';
+    const em = validateEmail(form.email);
+    if (!em.ok) return em.error!;
+    if (validateEmail(form.email_confirm ?? '').normalized !== em.normalized) return 'Os e-mails não conferem. Digite o mesmo e-mail nos dois campos.';
     if (!form.city.trim()) return 'Informe sua cidade.';
     if (!form.gender) return 'Selecione o sexo.';
     if (shirtRequired && !form.shirt_size) return 'Selecione o tamanho da camiseta.';
@@ -210,8 +218,12 @@ export function RegistrationPage() {
   };
 
   const handleNext = () => {
+    setEmailTouched(true);
+    setEmailConfirmTouched(true);
     const err = validate();
     if (err) { setError(err); return; }
+    const email = validateEmail(form.email).normalized;
+    setForm((p: any) => ({ ...p, email, email_confirm: email }));
     setError('');
     setStep('termo');
   };
@@ -304,6 +316,17 @@ export function RegistrationPage() {
 
   const finalizeRegistration = async () => {
     if (!user) return;
+    // Revalida no momento de gravar: o passo 'conta' pode ser restaurado do
+    // localStorage (volta do Google OAuth) com um rascunho antigo, sem passar
+    // de novo pelo handleNext.
+    const formErr = validate();
+    if (formErr) {
+      setError(formErr);
+      localStorage.removeItem(LS_STEP_KEY);
+      setStep('form');
+      return;
+    }
+    const email = validateEmail(form.email).normalized;
     setSubmitting(true);
     setError('');
     try {
@@ -357,7 +380,7 @@ export function RegistrationPage() {
         cpf: cleanCpf,
         birth_date: birthdateToISO(form.birthdate) || null,
         phone: form.phone.replace(/\D/g, ''),
-        email: form.email,
+        email,
         city: form.city,
         gender: form.gender,
         shirt_size: shirtRequired ? form.shirt_size : null,
@@ -399,7 +422,7 @@ export function RegistrationPage() {
           distancia: chosenDistance?.name || '',
           cidade: form.city,
           telefone: form.phone.replace(/\D/g, ''),
-          email: form.email,
+          email,
           equipe: form.team_name || null,
           ip_hint: 'browser',
           termo_versao: 'v1.0',
@@ -428,7 +451,7 @@ export function RegistrationPage() {
               data: {
                 eventTitle: event.title,
                 athleteName: form.name,
-                athleteEmail: form.email,
+                athleteEmail: email,
                 distanceName: chosenDistance?.name || '',
                 amount: finalPrice.toFixed(2).replace('.', ','),
                 paymentStatus: isFree ? 'confirmed' : 'pending',
@@ -448,7 +471,7 @@ export function RegistrationPage() {
           await supabase.functions.invoke('send-email', {
             body: {
               templateType: 'atleta_confirmacao',
-              recipientEmail: form.email,
+              recipientEmail: email,
               data: {
                 athleteName: form.name,
                 eventTitle: event.title ?? '',
@@ -564,8 +587,20 @@ export function RegistrationPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <Field label="Telefone *"><input className={inp} value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))} placeholder="(22) 99999-9999" /></Field>
-              <Field label="E-mail *"><input type="email" className={inp} value={form.email} onChange={e => set('email', e.target.value)} placeholder="seu@email.com" /></Field>
+              <Field label="E-mail *">
+                <input type="email" className={inp} value={form.email} onChange={e => set('email', e.target.value)} onBlur={() => setEmailTouched(true)} placeholder="seu@email.com" />
+                <EmailHint value={form.email} show={emailTouched} onUse={s => set('email', s)} />
+              </Field>
             </div>
+
+            <Field label="Confirme seu e-mail *">
+              <input type="email" className={inp} value={form.email_confirm ?? ''} autoComplete="off"
+                onChange={e => set('email_confirm', e.target.value)} onBlur={() => setEmailConfirmTouched(true)}
+                onPaste={e => e.preventDefault()} onDrop={e => e.preventDefault()} placeholder="Digite o e-mail de novo" />
+              {emailConfirmTouched && (form.email_confirm ?? '').trim() !== '' && validateEmail(form.email_confirm).normalized !== validateEmail(form.email).normalized && (
+                <p className="text-xs mt-1 text-red-600">Os e-mails não conferem.</p>
+              )}
+            </Field>
 
             <div className="grid grid-cols-2 gap-4">
               <Field label="Cidade *"><input className={inp} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Sua cidade" /></Field>

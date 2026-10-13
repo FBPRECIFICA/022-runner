@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { voidAsaasPayment } from '../_shared/asaas.ts'
+import { isEmailFormatValid, normalizeEmail } from '../_shared/email.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -35,12 +36,34 @@ serve(async (req) => {
   }
 
   try {
-    const { registrationId, registrationTypeId, shirtSize } = await req.json()
+    const { registrationId, registrationTypeId, shirtSize, email } = await req.json()
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+    // Corrigir só o e-mail de uma inscrição pendente, direto na tela de
+    // pagamento, quando o Asaas recusa o cliente com invalid_email — sem isso o
+    // atleta precisava refazer a inscrição do zero (caso Patricia, 09/10/2026).
+    // Não mexe em cobrança: invalid_email significa que o Asaas nem criou o cliente.
+    if (registrationId && email !== undefined && !registrationTypeId) {
+      if (!isEmailFormatValid(email)) return fail('E-mail inválido. Confira e tente de novo.')
+      const { data: updated, error: updateError } = await supabase
+        .from('registrations')
+        .update({ email: normalizeEmail(email) })
+        .eq('id', registrationId)
+        .eq('status', 'pending')
+        .select('id')
+      if (updateError) {
+        console.error('[edit-pending-registration] Falha ao corrigir e-mail:', updateError.message)
+        return fail('Não foi possível corrigir o e-mail. Tente novamente.', 500)
+      }
+      if (!updated || updated.length === 0) return fail('Essa inscrição não está mais pendente.')
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     if (!registrationId || !registrationTypeId) {
       return fail('registrationId e registrationTypeId são obrigatórios.')
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
     const { data: reg, error: regError } = await supabase
       .from('registrations')

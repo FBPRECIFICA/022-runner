@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Camera, Save, LogOut, Trash2 } from 'lucide-react';
+import { validateEmail } from '../lib/emailValidation';
+import { EmailHint } from '../components/EmailHint';
 
 export function ProfilePage() {
   const { user, logout, isOrganizer } = useAuth();
@@ -13,6 +15,7 @@ export function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const [displayEmailTouched, setDisplayEmailTouched] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -42,13 +45,16 @@ export function ProfilePage() {
 
   const handleSave = async () => {
     if (!user) return;
+    // display_email é opcional: em branco = usa o e-mail de login.
+    const displayEmail = form.display_email.trim() ? validateEmail(form.display_email) : null;
+    if (displayEmail && !displayEmail.ok) { setDisplayEmailTouched(true); toast.error(displayEmail.error!); return; }
     setSaving(true);
     // upsert (não update): usuários logados via Google OAuth ainda não têm linha em `users`
     // na primeira vez — um update() nessa linha inexistente não altera nada e não retorna erro.
     const { error } = await supabase.from('users').upsert({
       id: user.id, email: user.email, role: user.role,
       name: form.name, phone: form.phone, city: form.city, bio: form.bio, birthdate: form.birthdate || null, cpf: form.cpf || null,
-      display_email: form.display_email || null,
+      display_email: displayEmail?.normalized || null,
     }, { onConflict: 'id' });
     if (error) toast.error('Erro ao salvar.');
     else toast.success('Perfil atualizado!');
@@ -124,8 +130,11 @@ export function ProfilePage() {
                   <label className="block text-xs text-gray-500 font-medium mb-1">E-mail de exibição pública (opcional)</label>
                   <input type="email" value={form.display_email}
                     onChange={e => setForm(p => ({ ...p, display_email: e.target.value }))}
+                    onBlur={() => setDisplayEmailTouched(true)}
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
                     style={{ borderColor: '#d1d5db' }} placeholder={`Em branco = usa ${user?.email}`} />
+                  <EmailHint value={form.display_email} show={displayEmailTouched && !!form.display_email.trim()}
+                    onUse={s => setForm(p => ({ ...p, display_email: s }))} />
                   <p className="text-xs text-gray-400 mt-1">Mostrado pros inscritos na página do evento, no lugar do seu e-mail de login. Não afeta login nem recuperação de senha.</p>
                 </div>
               )}

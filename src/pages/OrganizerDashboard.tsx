@@ -309,8 +309,12 @@ export function OrganizerDashboard() {
   };
   const saveTransfer = async () => {
     const f = transferForm;
+    // Banco exige e-mail e telefone (trigger registrations_require_email_phone, 09/10/2026).
+    const emailCheck = validateEmail(f.email);
+    if (!emailCheck.ok) { toast.error(emailCheck.error!); return; }
+    if (f.phone.replace(/\D/g, '').length < 10) { toast.error('Telefone inválido. Informe com DDD.'); return; }
     const { error } = await supabase.rpc('organizer_transfer_registration', {
-      p_id: transferReg.id, p_name: f.name, p_cpf: f.cpf, p_email: f.email, p_phone: f.phone,
+      p_id: transferReg.id, p_name: f.name, p_cpf: f.cpf, p_email: emailCheck.normalized, p_phone: f.phone,
       p_birth_date: f.birth_date || null, p_gender: f.gender, p_shirt_size: f.shirt_size, p_note: f.note,
     });
     if (error) {
@@ -319,7 +323,7 @@ export function OrganizerDashboard() {
     }
     const cpf = f.cpf.replace(/\D/g, '');
     patchRegistration(transferReg.event_id, transferReg.id, {
-      name: f.name.trim(), full_name: f.name.trim(), cpf, document: cpf, email: f.email.trim() || null,
+      name: f.name.trim(), full_name: f.name.trim(), cpf, document: cpf, email: emailCheck.normalized,
       phone: f.phone.replace(/\D/g, '') || null, birth_date: f.birth_date || null, gender: f.gender || null,
       shirt_size: transferReg.shirt_size ? f.shirt_size || null : null,
     });
@@ -1371,8 +1375,8 @@ export function OrganizerDashboard() {
                 {([
                   ['name', 'Nome completo do novo titular', 'text', true],
                   ['cpf', 'CPF', 'text', true],
-                  ['email', 'E-mail', 'email', false],
-                  ['phone', 'Telefone', 'tel', false],
+                  ['email', 'E-mail', 'email', true],
+                  ['phone', 'Telefone', 'tel', true],
                   ['birth_date', 'Data de nascimento', 'date', false],
                 ] as const).map(([key, label, type, required]) => (
                   <label key={key} className="block text-sm">

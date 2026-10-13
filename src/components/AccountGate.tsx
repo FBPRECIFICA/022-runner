@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Loader2, User, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { validateEmail } from '../lib/emailValidation';
+import { EmailHint } from './EmailHint';
 
 interface Props {
   defaultName: string;
@@ -21,6 +23,7 @@ export function AccountGate({ defaultName, defaultEmail, onBack }: Props) {
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -40,13 +43,18 @@ export function AccountGate({ defaultName, defaultEmail, onBack }: Props) {
     e.preventDefault();
     setError('');
     if (!email.trim()) { setError('Informe seu e-mail.'); return; }
+    // Entrar: só normaliza — já existem contas com e-mail digitado errado
+    // (ex: gmail.con) e bloquear aqui trancaria essas pessoas pra fora.
+    const emailCheck = validateEmail(email);
+    if (mode === 'criar' && !emailCheck.ok) { setEmailTouched(true); setError(emailCheck.error!); return; }
+    const cleanEmail = emailCheck.normalized;
     if (password.length < 6) { setError('A senha deve ter no mínimo 6 caracteres.'); return; }
     if (mode === 'criar' && !name.trim()) { setError('Informe seu nome completo.'); return; }
 
     setLoading(true);
     try {
       if (mode === 'entrar') {
-        const result = await login(email.trim(), password);
+        const result = await login(cleanEmail, password);
         if (!result.success) {
           const isUnconfirmed = result.errorCode === 'email_not_confirmed' ||
             result.message?.toLowerCase().includes('not confirmed');
@@ -57,7 +65,7 @@ export function AccountGate({ defaultName, defaultEmail, onBack }: Props) {
         }
         // Sucesso: mantém o spinner — a RegistrationPage avança assim que o contexto de auth atualizar.
       } else {
-        const result = await register(name.trim(), email.trim(), password, 'athlete');
+        const result = await register(name.trim(), cleanEmail, password, 'athlete');
         if (!result.success) {
           setError(result.message?.toLowerCase().includes('already registered') || result.message?.toLowerCase().includes('já')
             ? 'Este e-mail já está cadastrado. Tente entrar em vez de criar conta.'
@@ -122,8 +130,9 @@ export function AccountGate({ defaultName, defaultEmail, onBack }: Props) {
           <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="email" className={inp} value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" />
+            <input type="email" className={inp} value={email} onChange={e => setEmail(e.target.value)} onBlur={() => setEmailTouched(true)} placeholder="seu@email.com" />
           </div>
+          <EmailHint value={email} show={mode === 'criar' && emailTouched} onUse={setEmail} />
         </div>
 
         <div>
