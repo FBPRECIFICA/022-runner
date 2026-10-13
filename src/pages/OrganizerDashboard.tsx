@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import { EXPORT_STATUS_OPTIONS, type ExportStatusFilter, matchesStatusFilter, downloadRegistrationsExcel, loadExportColumns, saveExportColumns } from '../lib/registrationExport';
 import { ExportColumnPicker } from '../components/ExportColumnPicker';
 import { validateEmail } from '../lib/emailValidation';
+import { validateBirthdateISO } from '../lib/birthdateValidation';
 import { formatPhone } from '../utils/validators';
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
@@ -313,9 +314,11 @@ export function OrganizerDashboard() {
     const emailCheck = validateEmail(f.email);
     if (!emailCheck.ok) { toast.error(emailCheck.error!); return; }
     if (f.phone.replace(/\D/g, '').length < 10) { toast.error('Telefone inválido. Informe com DDD.'); return; }
+    const birthCheck = validateBirthdateISO(f.birth_date);
+    if (!birthCheck.ok) { toast.error(birthCheck.error!); return; }
     const { error } = await supabase.rpc('organizer_transfer_registration', {
       p_id: transferReg.id, p_name: f.name, p_cpf: f.cpf, p_email: emailCheck.normalized, p_phone: f.phone,
-      p_birth_date: f.birth_date || null, p_gender: f.gender, p_shirt_size: f.shirt_size, p_note: f.note,
+      p_birth_date: birthCheck.iso, p_gender: f.gender, p_shirt_size: f.shirt_size, p_note: f.note,
     });
     if (error) {
       toast.error(error.code === '23505' ? 'Esse CPF já está inscrito nesse evento.' : 'Erro ao transferir: ' + error.message);
@@ -324,7 +327,7 @@ export function OrganizerDashboard() {
     const cpf = f.cpf.replace(/\D/g, '');
     patchRegistration(transferReg.event_id, transferReg.id, {
       name: f.name.trim(), full_name: f.name.trim(), cpf, document: cpf, email: emailCheck.normalized,
-      phone: f.phone.replace(/\D/g, '') || null, birth_date: f.birth_date || null, gender: f.gender || null,
+      phone: f.phone.replace(/\D/g, '') || null, birth_date: birthCheck.iso, gender: f.gender || null,
       shirt_size: transferReg.shirt_size ? f.shirt_size || null : null,
     });
     toast.success(`Inscrição nº ${transferReg.registration_number || '—'} transferida para ${f.name.trim()}.`);
@@ -363,6 +366,10 @@ export function OrganizerDashboard() {
       const check = validateEmail(changes.email);
       if (!check.ok) { toast.error(check.error!); return; }
       changes.email = check.normalized;
+    }
+    if (changes.birth_date !== undefined) {
+      const check = validateBirthdateISO(changes.birth_date);
+      if (!check.ok) { toast.error(check.error!); return; }
     }
     if (Object.keys(changes).length === 0) { toast('Nada foi alterado.'); return; }
     setEditSaving(true);
@@ -1377,7 +1384,7 @@ export function OrganizerDashboard() {
                   ['cpf', 'CPF', 'text', true],
                   ['email', 'E-mail', 'email', true],
                   ['phone', 'Telefone', 'tel', true],
-                  ['birth_date', 'Data de nascimento', 'date', false],
+                  ['birth_date', 'Data de nascimento', 'date', true],
                 ] as const).map(([key, label, type, required]) => (
                   <label key={key} className="block text-sm">
                     <span className="text-gray-600">{label}</span>

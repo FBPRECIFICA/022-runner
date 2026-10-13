@@ -12,6 +12,7 @@ import { isRegistrationOpen, isSoldOut } from '../utils/registrationStatus';
 import { kitPickupText } from '../lib/kitPickup';
 import { validateEmail } from '../lib/emailValidation';
 import { EmailHint } from '../components/EmailHint';
+import { validateBirthdate, validateBirthdateISO } from '../lib/birthdateValidation';
 
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não sei'];
@@ -38,13 +39,8 @@ function formatBirthdate(v: string): string {
   if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
   return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
 }
-function birthdateToISO(v: string): string | null {
-  const p = v.split('/');
-  if (p.length !== 3 || p[2].length !== 4) return null;
-  return `${p[2]}-${p[1]}-${p[0]}`;
-}
 // Lei 10.741/2003 (Estatuto do Idoso), Art. 23: idade conta na data do EVENTO, não da inscrição.
-// Ambas as datas forçadas pra meia-noite local (mesmo padrão de birthdateToISO) — sem isso,
+// Ambas as datas forçadas pra meia-noite local — sem isso,
 // uma string só-de-data (sem horário) é lida como UTC pelo motor JS, e getFullYear/Month/Date
 // (que leem em horário local) podem devolver o dia ANTERIOR em fusos atrás de UTC (ex: Brasil),
 // deslocando a fronteira dos 60 anos em quem faz aniversário no dia exato do evento.
@@ -76,6 +72,7 @@ export function RegistrationPage() {
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
   const [emailConfirmTouched, setEmailConfirmTouched] = useState(false);
+  const [birthTouched, setBirthTouched] = useState(false);
   const [pendingDup, setPendingDup] = useState<{ id: string; status: string; asaas_payment_id: string | null } | null>(null);
 
   const [form, setForm] = useState(() => {
@@ -130,7 +127,7 @@ export function RegistrationPage() {
     if (!user?.id) return;
     const draft = localStorage.getItem(LS_KEY);
     if (draft) return; // não sobrescreve rascunho já existente
-    supabase.from('users').select('name, email, phone, cpf, city').eq('id', user.id).single()
+    supabase.from('users').select('name, email, phone, cpf, city, birthdate').eq('id', user.id).single()
       .then(({ data }) => {
         if (!data) return;
         setForm((prev: any) => ({
@@ -142,6 +139,8 @@ export function RegistrationPage() {
           phone: prev.phone || (data.phone ? data.phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3') : ''),
           cpf: prev.cpf || (data.cpf ? data.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : ''),
           city: prev.city || data.city || '',
+          // users.birthdate vem do <input type="date"> do perfil (AAAA-MM-DD); só usa se for válida.
+          birthdate: prev.birthdate || (validateBirthdateISO(data.birthdate).ok ? data.birthdate.split('-').reverse().join('/') : ''),
         }));
       });
   }, [user?.id]);
@@ -183,7 +182,8 @@ export function RegistrationPage() {
   const kits: any[] = chosenDistance?.registration_types || [];
   const chosenKit = kits[form.kit_index] || kits[0];
   const shirtRequired = chosenKit ? chosenKit.includes_shirt !== false : true;
-  const birthISO = birthdateToISO(form.birthdate);
+  const birthCheck = validateBirthdate(form.birthdate);
+  const birthISO = birthCheck.iso;
   const isElderly = !!(birthISO && event?.date && ageAtEvent(birthISO, event.date) >= 60);
   // shirtAvailability null = sem estoque configurado pro evento, mostra todos.
   // Um tamanho ausente do mapa (organizador não configurou ESSE tamanho
@@ -206,7 +206,7 @@ export function RegistrationPage() {
   const validate = () => {
     if (!form.name.trim()) return 'Informe seu nome completo.';
     if (!validateCPF(form.cpf)) return 'CPF inválido. Verifique os dígitos.';
-    if (!form.birthdate) return 'Informe sua data de nascimento.';
+    if (!birthCheck.ok) return birthCheck.error!;
     if (form.phone.replace(/\D/g, '').length < 10) return 'Telefone inválido.';
     const em = validateEmail(form.email);
     if (!em.ok) return em.error!;
@@ -220,6 +220,7 @@ export function RegistrationPage() {
   const handleNext = () => {
     setEmailTouched(true);
     setEmailConfirmTouched(true);
+    setBirthTouched(true);
     const err = validate();
     if (err) { setError(err); return; }
     const email = validateEmail(form.email).normalized;
@@ -322,6 +323,7 @@ export function RegistrationPage() {
     const formErr = validate();
     if (formErr) {
       setError(formErr);
+      setBirthTouched(true);
       localStorage.removeItem(LS_STEP_KEY);
       setStep('form');
       return;
@@ -378,7 +380,7 @@ export function RegistrationPage() {
         user_id: user.id,
         name: form.name,
         cpf: cleanCpf,
-        birth_date: birthdateToISO(form.birthdate) || null,
+        birth_date: birthISO,
         phone: form.phone.replace(/\D/g, ''),
         email,
         city: form.city,
@@ -417,7 +419,7 @@ export function RegistrationPage() {
           event_id: event.id,
           nome: form.name,
           cpf: form.cpf.replace(/\D/g, ''),
-          data_nascimento: birthdateToISO(form.birthdate) || null,
+          data_nascimento: birthISO,
           sexo: form.gender,
           distancia: chosenDistance?.name || '',
           cidade: form.city,
@@ -575,7 +577,9 @@ export function RegistrationPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <Field label="CPF *"><input className={inp} value={form.cpf} onChange={e => set('cpf', formatCPF(e.target.value))} placeholder="000.000.000-00" /></Field>
-              <Field label="Data de Nascimento *"><input type="text" className={inp} value={form.birthdate} onChange={e => set('birthdate', formatBirthdate(e.target.value))} placeholder="DD/MM/AAAA" maxLength={10} /></Field>
+              <Field label="Data de Nascimento *"><input type="text" inputMode="numeric" className={`${inp}${birthTouched && !birthCheck.ok ? ' border-red-400' : ''}`} value={form.birthdate} onChange={e => set('birthdate', formatBirthdate(e.target.value))} onBlur={() => setBirthTouched(true)} placeholder="DD/MM/AAAA" maxLength={10} />
+                {birthTouched && !birthCheck.ok && <p className="text-xs text-red-600 mt-1">{birthCheck.error}</p>}
+              </Field>
             </div>
 
             {isElderly && (

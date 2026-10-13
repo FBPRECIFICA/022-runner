@@ -7,6 +7,7 @@ import { SecuritySeal } from '../components/SecuritySeal';
 import { kitPickupText } from '../lib/kitPickup';
 import { validateEmail } from '../lib/emailValidation';
 import { EmailHint } from '../components/EmailHint';
+import { validateBirthdate, validateBirthdateISO } from '../lib/birthdateValidation';
 
 type PaymentMethod = 'PIX' | 'CREDIT_CARD' | 'BOLETO';
 
@@ -59,6 +60,10 @@ export function PaymentPage() {
   // checagem local) — mostra o campo de correção ali mesmo, sem refazer a inscrição.
   const [emailFix, setEmailFix] = useState<string | null>(null);
   const [fixingEmail, setFixingEmail] = useState(false);
+  // Preenchido quando a inscrição está sem data de nascimento válida (create-payment
+  // recusa com invalid_birthdate antes de criar a cobrança). Formato DD/MM/AAAA.
+  const [birthFix, setBirthFix] = useState<string | null>(null);
+  const [fixingBirth, setFixingBirth] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -168,7 +173,7 @@ export function PaymentPage() {
     };
   }, [paymentResult, method, expired, registrationId, navigate]);
 
-  const handleCreatePayment = async (emailOverride?: string) => {
+  const handleCreatePayment = async (emailOverride?: string, birthOverride?: string) => {
     if (!reg || !event) return;
     const email = emailOverride ?? String(reg.email ?? '');
     // Inscrições antigas podem ter e-mail digitado errado (ex: gmail.con) — pede
@@ -176,6 +181,12 @@ export function PaymentPage() {
     if (!validateEmail(email).ok) {
       setPayError('O e-mail informado parece estar incorreto. Corrija e tente de novo.');
       setEmailFix(email);
+      return;
+    }
+    if (!validateBirthdateISO(birthOverride ?? String(reg.birth_date ?? '').slice(0, 10)).ok) {
+      setPayError('Informe sua data de nascimento para gerar o pagamento.');
+      setEmailFix(null);
+      setBirthFix('');
       return;
     }
     setCreating(true);
@@ -206,6 +217,12 @@ export function PaymentPage() {
         if (body?.code === 'invalid_email') {
           setPayError(body.message);
           setEmailFix(email);
+          return;
+        }
+        if (body?.code === 'invalid_birthdate') {
+          setPayError(body.message);
+          setEmailFix(null);
+          setBirthFix('');
           return;
         }
         throw new Error(body?.message || body?.error || String(error.message ?? error));
@@ -240,6 +257,28 @@ export function PaymentPage() {
       setPayError(err instanceof Error ? err.message : 'Erro ao corrigir o e-mail.');
     } finally {
       setFixingEmail(false);
+    }
+  };
+
+  const handleFixBirthAndPay = async () => {
+    if (birthFix === null || !registrationId) return;
+    const check = validateBirthdate(birthFix);
+    if (!check.ok) { setPayError(check.error!); return; }
+    setFixingBirth(true);
+    setPayError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('edit-pending-registration', {
+        body: { registrationId, birthDate: check.iso },
+      });
+      const body = error ? await (error as any).context?.json?.().catch(() => null) : data;
+      if (!body?.ok) throw new Error(body?.message || 'Não foi possível salvar a data de nascimento.');
+      setReg(prev => prev ? { ...prev, birth_date: check.iso } : prev);
+      setBirthFix(null);
+      await handleCreatePayment(undefined, check.iso);
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : 'Erro ao salvar a data de nascimento.');
+    } finally {
+      setFixingBirth(false);
     }
   };
 
@@ -581,7 +620,34 @@ export function PaymentPage() {
                 </button>
               </div>
             )}
-            {emailFix === null && <button
+            {birthFix !== null && emailFix === null && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Data de nascimento</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={birthFix}
+                  onChange={e => {
+                    const d = e.target.value.replace(/\D/g, '').slice(0, 8);
+                    setBirthFix(d.length <= 2 ? d : d.length <= 4 ? `${d.slice(0, 2)}/${d.slice(2)}` : `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`);
+                  }}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  placeholder="DD/MM/AAAA"
+                />
+                {birthFix.length === 10 && !validateBirthdate(birthFix).ok && (
+                  <p className="text-xs text-red-600">{validateBirthdate(birthFix).error}</p>
+                )}
+                <button
+                  onClick={handleFixBirthAndPay}
+                  disabled={fixingBirth || creating}
+                  className="w-full bg-[#C9A84C] text-white font-bold py-3 rounded-xl hover:bg-[#B8962E] disabled:opacity-50"
+                >
+                  {fixingBirth || creating ? 'Salvando...' : 'Salvar e pagar'}
+                </button>
+              </div>
+            )}
+            {emailFix === null && birthFix === null && <button
               onClick={() => handleCreatePayment()}
               disabled={creating}
               className="w-full bg-[#C9A84C] text-white font-bold py-4 rounded-xl hover:bg-[#B8962E] disabled:opacity-50"

@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { voidAsaasPayment } from '../_shared/asaas.ts'
 import { isEmailFormatValid, normalizeEmail } from '../_shared/email.ts'
+import { isBirthdateValid } from '../_shared/birthdate.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -36,24 +37,34 @@ serve(async (req) => {
   }
 
   try {
-    const { registrationId, registrationTypeId, shirtSize, email } = await req.json()
+    const { registrationId, registrationTypeId, shirtSize, email, birthDate } = await req.json()
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
     // Corrigir só o e-mail de uma inscrição pendente, direto na tela de
     // pagamento, quando o Asaas recusa o cliente com invalid_email — sem isso o
     // atleta precisava refazer a inscrição do zero (caso Patricia, 09/10/2026).
     // Não mexe em cobrança: invalid_email significa que o Asaas nem criou o cliente.
-    if (registrationId && email !== undefined && !registrationTypeId) {
-      if (!isEmailFormatValid(email)) return fail('E-mail inválido. Confira e tente de novo.')
+    // Mesmo caminho pra data de nascimento (create-payment recusa com
+    // invalid_birthdate antes de tocar no Asaas). Aceita um ou os dois campos.
+    if (registrationId && (email !== undefined || birthDate !== undefined) && !registrationTypeId) {
+      const changes: Record<string, string> = {}
+      if (email !== undefined) {
+        if (!isEmailFormatValid(email)) return fail('E-mail inválido. Confira e tente de novo.')
+        changes.email = normalizeEmail(email)
+      }
+      if (birthDate !== undefined) {
+        if (!isBirthdateValid(birthDate)) return fail('Data de nascimento inválida. Confira e tente de novo.')
+        changes.birth_date = String(birthDate).trim()
+      }
       const { data: updated, error: updateError } = await supabase
         .from('registrations')
-        .update({ email: normalizeEmail(email) })
+        .update(changes)
         .eq('id', registrationId)
         .eq('status', 'pending')
         .select('id')
       if (updateError) {
-        console.error('[edit-pending-registration] Falha ao corrigir e-mail:', updateError.message)
-        return fail('Não foi possível corrigir o e-mail. Tente novamente.', 500)
+        console.error('[edit-pending-registration] Falha ao corrigir dados:', updateError.message)
+        return fail('Não foi possível corrigir os dados. Tente novamente.', 500)
       }
       if (!updated || updated.length === 0) return fail('Essa inscrição não está mais pendente.')
       return new Response(JSON.stringify({ ok: true }), {

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { INVALID_BIRTHDATE_MESSAGE, isBirthdateValid } from '../_shared/birthdate.ts'
 
 const ASAAS_API_KEY = Deno.env.get('ASAAS_API_KEY') ?? ''
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3'
@@ -41,6 +42,20 @@ serve(async (req) => {
 
   try {
     const { registrationId, billingType, customerData, paymentData } = await req.json()
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+    // Inscrição sem data de nascimento válida não gera cobrança (Balneário Run: 8
+    // pagas sem data). Checa ANTES do Asaas; a PaymentPage pede a data e reenvia.
+    const { data: reg } = registrationId
+      ? await supabase.from('registrations').select('birth_date').eq('id', registrationId).maybeSingle()
+      : { data: null }
+    if (!reg || !isBirthdateValid(reg.birth_date)) {
+      console.warn('[create-payment] Recusado por birth_date inválido:', registrationId, reg?.birth_date)
+      return new Response(JSON.stringify({ error: 'invalid_birthdate', code: 'invalid_birthdate', message: INVALID_BIRTHDATE_MESSAGE }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     console.log('[create-payment] Criando cliente:', JSON.stringify(customerData))
     const customerRes = await fetch(`${ASAAS_BASE_URL}/customers`, {
@@ -78,7 +93,6 @@ serve(async (req) => {
 
     // Salva asaas_payment_id e forma de pagamento na tabela registrations para o webhook encontrar
     if (registrationId && payment.id) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
       const { error: updateErr } = await supabase
         .from('registrations')
         .update({ asaas_payment_id: payment.id, payment_method: billingType })
