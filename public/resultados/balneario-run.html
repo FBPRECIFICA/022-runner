@@ -157,6 +157,16 @@
   }
   .table-scroll{max-height:640px; overflow-y:auto; border-radius:10px;}
   .res-name{color:#fff; font-weight:600;}
+  .pod-card.quarto,.pod-card.quinto{order:0;}
+  .pod-card.quarto{border-color:rgba(120,68,28,.5);}
+  .pod-card.quinto{border-color:rgba(85,46,18,.5);}
+  .quarto .medal{background:linear-gradient(145deg,#a8672f,#5e3513);}
+  .quinto .medal{background:linear-gradient(145deg,#80481f,#3d200a);}
+  .quarto .em{filter:brightness(.7) saturate(.85);}
+  .quinto .em{filter:brightness(.5) saturate(.7);}
+  .pod-card.quarto{background:linear-gradient(180deg,rgba(120,68,28,.16),#141820 60%);}
+  .pod-card.quinto{background:linear-gradient(180deg,rgba(85,46,18,.2),#12151c 60%);}
+  .podium-row.row2{margin-top:6px;margin-bottom:26px;}
 </style>
 </head>
 <body>
@@ -192,13 +202,20 @@
       <div class="pnum">Nº 32</div>
     </div>
   </div>
-  <div class="cat-grid">
-    <div class="cat-card">
-      <div class="cat-head"><h3>4º e 5º lugares · Geral</h3><span class="fx">F</span></div>
-      <ul class="cat-list">
-        <li><span class="rank">4</span><span class="cname">Isa Costa da Silva</span><span class="ctime">21:46</span></li>
-        <li><span class="rank">5</span><span class="cname">Kariny Guimarães</span><span class="ctime">22:23</span></li>
-      </ul>
+  <div class="podium-row row2">
+    <div class="pod-card quarto">
+      <div class="medal"><span class="em">🏅</span></div>
+      <div class="pos-label">4º Lugar</div>
+      <div class="pname">Isa Costa da Silva</div>
+      <div class="ptime">21:46</div>
+      <div class="pnum">Nº 145</div>
+    </div>
+    <div class="pod-card quinto">
+      <div class="medal"><span class="em">🏅</span></div>
+      <div class="pos-label">5º Lugar</div>
+      <div class="pname">Kariny Guimarães</div>
+      <div class="ptime">22:23</div>
+      <div class="pnum">Nº 185</div>
     </div>
   </div>
 
@@ -226,13 +243,20 @@
       <div class="pnum">Nº 132</div>
     </div>
   </div>
-  <div class="cat-grid">
-    <div class="cat-card">
-      <div class="cat-head"><h3>4º e 5º lugares · Geral</h3><span class="fx">M</span></div>
-      <ul class="cat-list">
-        <li><span class="rank">4</span><span class="cname">Gleidson Luciano</span><span class="ctime">17:08</span></li>
-        <li><span class="rank">5</span><span class="cname">Guilerme Lage dos Santos</span><span class="ctime">17:14</span></li>
-      </ul>
+  <div class="podium-row row2">
+    <div class="pod-card quarto">
+      <div class="medal"><span class="em">🏅</span></div>
+      <div class="pos-label">4º Lugar</div>
+      <div class="pname">Gleidson Luciano</div>
+      <div class="ptime">17:08</div>
+      <div class="pnum">Nº 436</div>
+    </div>
+    <div class="pod-card quinto">
+      <div class="medal"><span class="em">🏅</span></div>
+      <div class="pos-label">5º Lugar</div>
+      <div class="pname">Guilerme Lage dos Santos</div>
+      <div class="ptime">17:14</div>
+      <div class="pnum">Nº 133</div>
     </div>
   </div>
 
