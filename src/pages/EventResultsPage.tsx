@@ -8,6 +8,7 @@ const RESULTS_BY_SLUG: Record<string, { file: string; title: string }> = {
     file: '/resultados/1-corrida-arena-mmp.html',
     title: '1ª Corrida do Aniversário da Arena MMP',
   },
+  'balneario-run': { file: '/resultados/balneario-run.html', title: 'Balneário Run' },
 };
 
 export function EventResultsPage() {

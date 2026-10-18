@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pódio</title>
+<style>
+  :root{
+    --gold:#d4af37; --gold-light:#f1d98a;
+    --silver:#c7ccd6; --bronze:#cd7f32;
+    --bg:#0a0d13; --card:#12161f; --card2:#161b24; --line:#232a36;
+    --text:#e6e6e6; --muted:#8891a0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:radial-gradient(circle at 50% -10%, #1b2130 0%, #0a0d13 55%);
+    font-family:'Helvetica Neue',Arial,sans-serif; color:var(--text); padding:28px 16px 60px;
+  }
+  .wrap{max-width:1000px;margin:0 auto;}
+  .top{text-align:center;margin-bottom:34px;}
+  .brand{font-size:15px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;font-weight:700;}
+  .brand span{color:#fff;}
+  .event{font-size:30px;font-weight:800;color:#fff;margin:10px 0 4px;letter-spacing:.5px;}
+  .event .accent{color:var(--gold);}
+  .sub{font-size:12.5px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+
+  .section-title{
+    display:flex;align-items:center;gap:12px;margin:46px 0 20px;
+  }
+  .section-title h2{
+    font-size:16px;letter-spacing:2px;text-transform:uppercase;color:#fff;margin:0;white-space:nowrap;
+    font-weight:700;
+  }
+  .section-title .line{flex:1;height:1px;background:linear-gradient(90deg,var(--gold),transparent);}
+  .section-title .tag{
+    font-size:10px;letter-spacing:1.5px;color:#0a0d13;background:var(--gold);
+    padding:3px 10px;border-radius:20px;font-weight:800;text-transform:uppercase;
+  }
+
+  .podium-row{
+    display:flex;align-items:flex-end;justify-content:center;gap:14px;margin-bottom:10px;
+  }
+  .pod-card{
+    background:var(--card2); border:1px solid var(--line); border-radius:14px;
+    padding:18px 14px 20px; text-align:center; width:210px; position:relative;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  .pod-card.ouro{ order:2; border-color:rgba(212,175,55,.55); padding-top:26px;
+    background:linear-gradient(180deg,rgba(212,175,55,.14),#161b24 55%); transform:translateY(-14px);}
+  .pod-card.prata{ order:1; border-color:rgba(199,204,214,.4);}
+  .pod-card.bronze{ order:3; border-color:rgba(205,127,50,.4);}
+  .medal{
+    width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    margin:0 auto 10px; font-size:22px; font-weight:900; color:#0a0d13;
+  }
+  .ouro .medal{background:linear-gradient(145deg,#f1d98a,#b8892a); width:64px;height:64px;font-size:26px;
+    box-shadow:0 0 24px rgba(212,175,55,.55);}
+  .prata .medal{background:linear-gradient(145deg,#eef1f5,#9aa2af);}
+  .bronze .medal{background:linear-gradient(145deg,#e3a565,#9c5a24);}
+  .pos-label{font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .ouro .pos-label{color:var(--gold-light);}
+  .pname{font-size:14px;font-weight:700;color:#fff;line-height:1.3;min-height:36px;
+    display:flex;align-items:center;justify-content:center;}
+  .ouro .pname{font-size:16px;}
+  .ptime{font-size:12px;color:var(--gold);font-weight:700;margin-top:6px;}
+  .pnum{font-size:10.5px;color:var(--muted);margin-top:2px;}
+
+  .cat-grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px;
+  }
+  .cat-card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px;
+  }
+  .cat-head{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;
+    padding-bottom:10px; border-bottom:1px solid var(--line);
+  }
+  .cat-head h3{margin:0;font-size:13px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;}
+  .cat-head .fx{font-size:10px;color:var(--muted);}
+  .cat-list{list-style:none;margin:0;padding:0;}
+  .cat-list li{
+    display:flex; align-items:center; gap:10px; padding:7px 0; font-size:12.5px;
+    border-bottom:1px dashed rgba(255,255,255,.05);
+  }
+  .cat-list li:last-child{border-bottom:none;}
+  .rank{
+    width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    font-size:10.5px;font-weight:800;color:#0a0d13;
+  }
+  .rank.r1{background:linear-gradient(145deg,#f1d98a,#b8892a);}
+  .rank.r2{background:linear-gradient(145deg,#eef1f5,#9aa2af);}
+  .rank.r3{background:linear-gradient(145deg,#e3a565,#9c5a24);}
+  .cname{flex:1;color:#e6e6e6;font-weight:600;}
+  .ctime{color:var(--muted);font-size:11px;white-space:nowrap;}
+
+  .footer{margin-top:50px;text-align:center;font-size:10.5px;color:#4a5262;letter-spacing:1px;}
+  .footer .b{color:var(--gold);font-weight:700;}
+
+  /* Resultado completo */
+  .full-toggle-wrap{text-align:center;margin:46px 0 10px;display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}
+  .full-toggle{
+    background:linear-gradient(145deg,var(--gold-light),var(--gold));
+    color:#12161f; border:none; border-radius:30px; padding:13px 30px;
+    font-size:13px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
+    cursor:pointer; box-shadow:0 8px 24px rgba(212,175,55,.3);
+  }
+  .full-toggle:hover{filter:brightness(1.05);}
+  .full-toggle .arrow{display:inline-block;margin-left:8px;transition:transform .25s;}
+  .full-toggle.open .arrow{transform:rotate(180deg);}
+
+  .official-link{
+    display:inline-flex; align-items:center; gap:8px;
+    background:transparent; color:var(--gold); border:1.5px solid var(--gold);
+    border-radius:30px; padding:11px 26px; font-size:12.5px; font-weight:800;
+    letter-spacing:1px; text-transform:uppercase; text-decoration:none;
+  }
+  .official-link:hover{background:rgba(212,175,55,.1);}
+  .official-link svg{width:13px;height:13px;}
+
+  .full-results{
+    max-height:0; overflow:hidden; transition:max-height .35s ease;
+  }
+  .full-results.open{max-height:100000px;}
+  .full-results-inner{padding-top:20px;}
+
+  .tabs{display:flex;justify-content:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .tab-btn{
+    background:var(--card2); border:1px solid var(--line); color:var(--muted);
+    padding:9px 20px; border-radius:20px; font-size:12px; font-weight:700;
+    letter-spacing:.5px; text-transform:uppercase; cursor:pointer;
+  }
+  .tab-btn.active{background:var(--gold); color:#12161f; border-color:var(--gold);}
+
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .res-search{
+    width:100%; max-width:340px; display:block; margin:0 auto 16px;
+    background:var(--card2); border:1px solid var(--line); border-radius:20px;
+    padding:9px 16px; color:#fff; font-size:12.5px; outline:none;
+  }
+  .res-search::placeholder{color:var(--muted);}
+
+  table.full-table{width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  table.full-table thead th{
+    text-align:left; font-size:9.5px; letter-spacing:1px; text-transform:uppercase;
+    color:#0a0d13; background:var(--gold); padding:9px 10px; position:sticky; top:0;
+  }
+  table.full-table thead th.c{text-align:center;}
+  table.full-table tbody td{
+    padding:8px 10px; border-bottom:1px solid var(--line); font-size:12px; color:#d6dae2;
+  }
+  table.full-table tbody td.c{text-align:center; color:var(--muted);}
+  table.full-table tbody tr:nth-child(even){background:#161b24;}
+  table.full-table tbody tr.pos-1 td:first-child, table.full-table tbody tr.pos-2 td:first-child, table.full-table tbody tr.pos-3 td:first-child{
+    font-weight:800; color:var(--gold);
+  }
+  .table-scroll{max-height:640px; overflow-y:auto; border-radius:10px;}
+  .res-name{color:#fff; font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">022<span>RUNNERS</span></div>
+    <div class="event">Balneário <span class="accent">Run</span></div>
+    <div class="sub">Resultado Extra Oficial · 5KM</div>
+  </div>
+
+  <div class="section-title"><h2>Pódio Geral · Feminino</h2><div class="line"></div><span class="tag">5KM</span></div>
+  <div class="podium-row">
+    <div class="pod-card prata">
+      <div class="medal">🥈</div>
+      <div class="pos-label">2º Lugar</div>
+      <div class="pname">Leidiane Araújo dos Santos Estarnek</div>
+      <div class="ptime">21:33</div>
+      <div class="pnum">Nº 198</div>
+    </div>
+    <div class="pod-card ouro">
+      <div class="medal">🥇</div>
+      <div class="pos-label">Campeã</div>
+      <div class="pname">Ana Beatriz Dantas Pinheiro</div>
+      <div class="ptime">20:26</div>
+      <div class="pnum">Nº 25</div>
+    </div>
+    <div class="pod-card bronze">
+      <div class="medal">🥉</div>
+      <div class="pos-label">3º Lugar</div>
+      <div class="pname">Anailma Gabriel Morgado</div>
+      <div class="ptime">21:34</div>
+      <div class="pnum">Nº 32</div>
+    </div>
+  </div>
+
+  <div class="section-title"><h2>Pódio Geral · Masculino</h2><div class="line"></div><span class="tag">5KM</span></div>
+  <div class="podium-row">
+    <div class="pod-card prata">
+      <div class="medal">🥈</div>
+      <div class="pos-label">2º Lugar</div>
+      <div class="pname">Joao Pedro Lima</div>
+      <div class="ptime">16:47</div>
+      <div class="pnum">Nº 162</div>
+    </div>
+    <div class="pod-card ouro">
+      <div class="medal">🥇</div>
+      <div class="pos-label">Campeão</div>
+      <div class="pname">Leandro de Moura Rangel</div>
+      <div class="ptime">16:20</div>
+      <div class="pnum">Nº 192</div>
+    </div>
+    <div class="pod-card bronze">
+      <div class="medal">🥉</div>
+      <div class="pos-label">3º Lugar</div>
+      <div class="pname">Gleison de Souza</div>
+      <div class="ptime">16:56</div>
+      <div class="pnum">Nº 132</div>
+    </div>
+  </div>
+
+  <div class="section-title"><h2>Melhores por Categoria · Feminino</h2><div class="line"></div></div>
+  <div class="cat-grid">
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>0 a 19 anos</h3><span class="fx">F0019</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Isabelle de Souza Silva</span><span class="ctime">27:27</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Taienny Costa de Macedo</span><span class="ctime">27:46</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Frantyesca Sophya dos Santos Guerson</span><span class="ctime">34:56</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>20 a 24 anos</h3><span class="fx">F2024</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Stephany Vieira</span><span class="ctime">28:23</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Ana Luiza Coutinho Peçanha</span><span class="ctime">29:21</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Eshiley Ferreira de Sales</span><span class="ctime">30:28</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>25 a 29 anos</h3><span class="fx">F2529</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Luciane Mendes</span><span class="ctime">23:14</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Ana Vitoria Alves Gonçalves</span><span class="ctime">23:29</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Maressa Piedade</span><span class="ctime">23:56</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>30 a 34 anos</h3><span class="fx">F3034</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Jacqueline Pim</span><span class="ctime">23:15</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Camila Alves Gastanes</span><span class="ctime">23:21</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Lidiane Alvarenga Guimarães</span><span class="ctime">23:43</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>35 a 39 anos</h3><span class="fx">F3539</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Suelem de Almeida Pinho</span><span class="ctime">23:36</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Patricia Lima</span><span class="ctime">24:19</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Aline Sant Ana Azeredo Blaudt</span><span class="ctime">24:45</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>40 a 44 anos</h3><span class="fx">F4044</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Magnolia de Abreu Mauricio</span><span class="ctime">23:58</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Janaina da Silva Dias</span><span class="ctime">24:17</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Cinthia da Silva Correa</span><span class="ctime">24:38</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>45 a 49 anos</h3><span class="fx">F4549</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Maria do Socorro Costa</span><span class="ctime">25:58</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Jaqueline de Almeida Rodrigues Mendes</span><span class="ctime">26:08</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Nara Freire</span><span class="ctime">26:22</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>50 a 54 anos</h3><span class="fx">F5054</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Maristela Saviczki</span><span class="ctime">23:05</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Katia Nunes Moreira dos Santos</span><span class="ctime">24:39</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Ivane de Assis de Souza Pereira</span><span class="ctime">27:49</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>55 a 59 anos</h3><span class="fx">F5559</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Jorgilete dos Santos de Jesus</span><span class="ctime">27:37</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Josefa da Conceição Santos da Silva</span><span class="ctime">27:53</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Zeni Soares de Mello</span><span class="ctime">28:53</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>60 a 64 anos</h3><span class="fx">F6064</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Cleide Aragão</span><span class="ctime">31:59</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Neusa Maria de Aquino Gama da Costa Silva</span><span class="ctime">38:44</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>65 a 69 anos</h3><span class="fx">F6569</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Regina Maria Portugal</span><span class="ctime">28:55</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Maria de Lourdes Alves de Araujo</span><span class="ctime">35:40</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Ivone Socorro de Souza Nunes</span><span class="ctime">37:28</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>70+ anos</h3><span class="fx">F7099</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Maria Luiza Mello</span><span class="ctime">48:49</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section-title"><h2>Melhores por Categoria · Masculino</h2><div class="line"></div></div>
+  <div class="cat-grid">
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>0 a 19 anos</h3><span class="fx">M0019</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Vinicios Martins Correia</span><span class="ctime">18:43</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Diego Pereira</span><span class="ctime">19:58</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Pedro Henrique Ponciano Leite dos Santos</span><span class="ctime">19:59</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>20 a 24 anos</h3><span class="fx">M2024</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Erik Costa</span><span class="ctime">17:13</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Roger Castro Pessoa</span><span class="ctime">18:18</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Juberto Junior Conceição da Fonseca</span><span class="ctime">18:26</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>25 a 29 anos</h3><span class="fx">M2529</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Alex dos Santos Barreto</span><span class="ctime">17:49</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Alan Marchon Barreto</span><span class="ctime">18:00</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Wanderson Vidal Siqueira</span><span class="ctime">18:32</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>30 a 34 anos</h3><span class="fx">M3034</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Paulo Henrique da Silva Valoriote</span><span class="ctime">17:37</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Caian Dias Barreto</span><span class="ctime">18:36</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Vitor Estácio Alves</span><span class="ctime">18:38</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>35 a 39 anos</h3><span class="fx">M3539</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Everton Santos da Silva Daudt</span><span class="ctime">18:08</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Tomas Ignacio Renzacci</span><span class="ctime">20:38</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Lucas Modesto Coriolano</span><span class="ctime">20:48</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>40 a 44 anos</h3><span class="fx">M4044</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Wagner Williman Vasconcelos de Araújo</span><span class="ctime">19:22</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Wando Feitosa</span><span class="ctime">19:28</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Daniel Santiago de Alencar</span><span class="ctime">19:34</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>45 a 49 anos</h3><span class="fx">M4549</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Edson Lopes Pereira</span><span class="ctime">20:12</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Bruno Paes do Nascimento</span><span class="ctime">20:18</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Leandro dos Santos Coelho</span><span class="ctime">20:25</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>50 a 54 anos</h3><span class="fx">M5054</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Marcello Braga Maia</span><span class="ctime">21:57</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Bruno Farias de Azevedo Motta</span><span class="ctime">23:28</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Claudio Roberto de Freitas</span><span class="ctime">25:04</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>55 a 59 anos</h3><span class="fx">M5559</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Eduardo Verissimo Teixeira</span><span class="ctime">19:42</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Ademir Viana Ademir Gabriel</span><span class="ctime">22:59</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Sérgio Nogueira</span><span class="ctime">25:12</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>60 a 64 anos</h3><span class="fx">M6064</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Eduardo Pereira Dias</span><span class="ctime">20:45</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Mauro da Silva Correndo Porto</span><span class="ctime">22:47</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Claudio Marcos da Costa Peixoto</span><span class="ctime">23:56</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>65 a 69 anos</h3><span class="fx">M6569</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Valci Ramos dos Correndo Santos</span><span class="ctime">21:03</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Jose Houliem Pereira</span><span class="ctime">25:08</span></li>
+        <li><span class="rank r3">3</span><span class="cname">João Campos</span><span class="ctime">31:14</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-head"><h3>70+ anos</h3><span class="fx">M7099</span></div>
+      <ul class="cat-list">
+        <li><span class="rank r1">1</span><span class="cname">Fernando Muniz Correndo Barbosa</span><span class="ctime">24:54</span></li>
+        <li><span class="rank r2">2</span><span class="cname">Juscelino Alves Puchol</span><span class="ctime">28:46</span></li>
+        <li><span class="rank r3">3</span><span class="cname">Luis Carlos de Araujo Pol</span><span class="ctime">40:51</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- RESULTADO COMPLETO -->
+  <div class="full-toggle-wrap">
+    <button class="full-toggle" id="fullToggleBtn" onclick="toggleFull()">Ver resultado completo <span class="arrow">▾</span></button>
+    <a class="official-link" href="https://www.apuracaodetempos.com.br/Resultados/balneariorun/Resultados.html" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+      Resultado Oficial · Cronometragem
+    </a>
+  </div>
+
+  <div class="full-results" id="fullResults">
+    <div class="full-results-inner">
+      <div class="section-title"><h2>Resultado Completo · 5KM</h2><div class="line"></div><span class="tag">Extra Oficial</span></div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('fem')" id="tabBtnFem">Feminino</button>
+        <button class="tab-btn" onclick="showTab('masc')" id="tabBtnMasc">Masculino</button>
+      </div>
+
+      <input class="res-search" id="resSearch" placeholder="Buscar por nome ou número..." oninput="filterTable()">
+
+      <div class="tab-panel active" id="panel-fem">
+        <div class="table-scroll">
+        <table class="full-table" id="table-fem">
+          <thead><tr><th class="c">Pos.</th><th class="c">Nº</th><th>Nome</th><th class="c">Categoria</th><th class="c">Tempo</th></tr></thead>
+          <tbody>
+<tr class="pos-1"><td class="c">1º</td><td class="c">25</td><td class="res-name">Ana Beatriz Dantas Pinheiro</td><td class="c">30 a 34</td><td class="c">20:26</td></tr>
+<tr class="pos-2"><td class="c">2º</td><td class="c">198</td><td class="res-name">Leidiane Araújo dos Santos Estarnek</td><td class="c">40 a 44</td><td class="c">21:33</td></tr>
+<tr class="pos-3"><td class="c">3º</td><td class="c">32</td><td class="res-name">Anailma Gabriel Morgado</td><td class="c">45 a 49</td><td class="c">21:34</td></tr>
+<tr><td class="c">4º</td><td class="c">145</td><td class="res-name">Isa Costa da Silva</td><td class="c">30 a 34</td><td class="c">21:46</td></tr>
+<tr><td class="c">5º</td><td class="c">185</td><td class="res-name">Kariny Guimarães</td><td class="c">30 a 34</td><td class="c">22:23</td></tr>
+<tr><td class="c">6º</td><td class="c">245</td><td class="res-name">Maristela Saviczki</td><td class="c">50 a 54</td><td class="c">23:05</td></tr>
+<tr><td class="c">7º</td><td class="c">217</td><td class="res-name">Luciane Mendes</td><td class="c">25 a 29</td><td class="c">23:14</td></tr>
+<tr><td class="c">8º</td><td class="c">150</td><td class="res-name">Jacqueline Pim</td><td class="c">30 a 34</td><td class="c">23:15</td></tr>
+<tr><td class="c">9º</td><td class="c">53</td><td class="res-name">Camila Alves Gastanes</td><td class="c">30 a 34</td><td class="c">23:21</td></tr>
+<tr><td class="c">10º</td><td class="c">390</td><td class="res-name">Ana Vitoria Alves Gonçalves</td><td class="c">25 a 29</td><td class="c">23:29</td></tr>
+<tr><td class="c">11º</td><td class="c">593</td><td class="res-name">Suelem de Almeida Pinho</td><td class="c">35 a 39</td><td class="c">23:36</td></tr>
+<tr><td class="c">12º</td><td class="c">459</td><td class="res-name">Lidiane Alvarenga Guimarães</td><td class="c">30 a 34</td><td class="c">23:43</td></tr>
+<tr><td class="c">13º</td><td class="c">599</td><td class="res-name">Maressa Piedade</td><td class="c">25 a 29</td><td class="c">23:56</td></tr>
+<tr><td class="c">14º</td><td class="c">225</td><td class="res-name">Magnolia de Abreu Mauricio</td><td class="c">40 a 44</td><td class="c">23:58</td></tr>
+<tr><td class="c">15º</td><td class="c">154</td><td class="res-name">Janaina da Silva Dias</td><td class="c">40 a 44</td><td class="c">24:17</td></tr>
+<tr><td class="c">16º</td><td class="c">272</td><td class="res-name">Patricia Lima</td><td class="c">35 a 39</td><td class="c">24:19</td></tr>
+<tr><td class="c">17º</td><td class="c">43</td><td class="res-name">Aquila Corrêa Moviment</td><td class="c">30 a 34</td><td class="c">24:29</td></tr>
+<tr><td class="c">18º</td><td class="c">62</td><td class="res-name">Cinthia da Silva Correa</td><td class="c">40 a 44</td><td class="c">24:38</td></tr>
+<tr><td class="c">19º</td><td class="c">186</td><td class="res-name">Katia Nunes Moreira dos Santos</td><td class="c">50 a 54</td><td class="c">24:39</td></tr>
+<tr><td class="c">20º</td><td class="c">18</td><td class="res-name">Aline Sant Ana Azeredo Blaudt</td><td class="c">35 a 39</td><td class="c">24:45</td></tr>
+<tr><td class="c">21º</td><td class="c">355</td><td class="res-name">Vanessa Motta</td><td class="c">40 a 44</td><td class="c">24:47</td></tr>
+<tr><td class="c">22º</td><td class="c">600</td><td class="res-name">Luana Lopes Paiva</td><td class="c">25 a 29</td><td class="c">24:50</td></tr>
+<tr><td class="c">23º</td><td class="c">209</td><td class="res-name">Luanda Leal</td><td class="c">35 a 39</td><td class="c">24:57</td></tr>
+<tr><td class="c">24º</td><td class="c">460</td><td class="res-name">Luana Valle</td><td class="c">30 a 34</td><td class="c">25:05</td></tr>
+<tr><td class="c">25º</td><td class="c">340</td><td class="res-name">Taylline Silva Barros de Melo</td><td class="c">30 a 34</td><td class="c">25:10</td></tr>
+<tr><td class="c">26º</td><td class="c">393</td><td class="res-name">Andréa Silva Schuindt</td><td class="c">35 a 39</td><td class="c">25:47</td></tr>
+<tr><td class="c">27º</td><td class="c">496</td><td class="res-name">Thaiane</td><td class="c">25 a 29</td><td class="c">25:54</td></tr>
+<tr><td class="c">28º</td><td class="c">466</td><td class="res-name">Maria do Socorro Costa</td><td class="c">45 a 49</td><td class="c">25:58</td></tr>
+<tr><td class="c">29º</td><td class="c">156</td><td class="res-name">Jaqueline de Almeida Rodrigues Mendes</td><td class="c">45 a 49</td><td class="c">26:08</td></tr>
+<tr><td class="c">30º</td><td class="c">205</td><td class="res-name">Lilian da Silva Santos</td><td class="c">40 a 44</td><td class="c">26:09</td></tr>
+<tr><td class="c">31º</td><td class="c">453</td><td class="res-name">Kellem Ranhol</td><td class="c">40 a 44</td><td class="c">26:13</td></tr>
+<tr><td class="c">32º</td><td class="c">130</td><td class="res-name">Gisele Brito Caetano</td><td class="c">30 a 34</td><td class="c">26:14</td></tr>
+<tr><td class="c">33º</td><td class="c">260</td><td class="res-name">Nara Freire</td><td class="c">45 a 49</td><td class="c">26:22</td></tr>
+<tr><td class="c">34º</td><td class="c">357</td><td class="res-name">Veronica dos Santos Gabri</td><td class="c">45 a 49</td><td class="c">26:28</td></tr>
+<tr><td class="c">35º</td><td class="c">331</td><td class="res-name">Simone Sampaio</td><td class="c">35 a 39</td><td class="c">26:30</td></tr>
+<tr><td class="c">36º</td><td class="c">216</td><td class="res-name">Luciane Dua</td><td class="c">30 a 34</td><td class="c">26:38</td></tr>
+<tr><td class="c">37º</td><td class="c">395</td><td class="res-name">Andreza da Silva Boechat Cerqueira</td><td class="c">35 a 39</td><td class="c">26:52</td></tr>
+<tr><td class="c">38º</td><td class="c">317</td><td class="res-name">Ruama Nascimento da Silva Costa</td><td class="c">25 a 29</td><td class="c">27:00</td></tr>
+<tr><td class="c">39º</td><td class="c">458</td><td class="res-name">Larissa Fernanda Gonçalves de Oliveira</td><td class="c">30 a 34</td><td class="c">27:08</td></tr>
+<tr><td class="c">40º</td><td class="c">455</td><td class="res-name">Ketelen Costa</td><td class="c">25 a 29</td><td class="c">27:13</td></tr>
+<tr><td class="c">41º</td><td class="c">148</td><td class="res-name">Isabelle de Souza Silva</td><td class="c">0 a 19</td><td class="c">27:27</td></tr>
+<tr><td class="c">42º</td><td class="c">596</td><td class="res-name">Naira da Costa Leite</td><td class="c">35 a 39</td><td class="c">27:29</td></tr>
+<tr><td class="c">43º</td><td class="c">165</td><td class="res-name">Jorgilete dos Santos de Jesus</td><td class="c">55 a 59</td><td class="c">27:37</td></tr>
+<tr><td class="c">44º</td><td class="c">392</td><td class="res-name">Andrea de Lima Araujo</td><td class="c">45 a 49</td><td class="c">27:38</td></tr>
+<tr><td class="c">45º</td><td class="c">492</td><td class="res-name">Taienny Costa de Macedo</td><td class="c">0 a 19</td><td class="c">27:46</td></tr>
+<tr><td class="c">46º</td><td class="c">442</td><td class="res-name">Ivane de Assis de Souza Pereira</td><td class="c">50 a 54</td><td class="c">27:49</td></tr>
+<tr><td class="c">47º</td><td class="c">318</td><td class="res-name">Sabrina Carolina Moreira Tavares</td><td class="c">30 a 34</td><td class="c">27:52</td></tr>
+<tr><td class="c">48º</td><td class="c">171</td><td class="res-name">Josefa da Conceição Santos da Silva</td><td class="c">55 a 59</td><td class="c">27:53</td></tr>
+<tr><td class="c">49º</td><td class="c">583</td><td class="res-name">Fernanda Mattos</td><td class="c">45 a 49</td><td class="c">27:53</td></tr>
+<tr><td class="c">50º</td><td class="c">437</td><td class="res-name">Gisele de Almeida</td><td class="c">45 a 49</td><td class="c">27:53</td></tr>
+<tr><td class="c">51º</td><td class="c">271</td><td class="res-name">Pamela Moreira dos Santos</td><td class="c">30 a 34</td><td class="c">27:56</td></tr>
+<tr><td class="c">52º</td><td class="c">273</td><td class="res-name">Patricia Ribeiro Corado Fernandez</td><td class="c">45 a 49</td><td class="c">28:02</td></tr>
+<tr><td class="c">53º</td><td class="c">141</td><td class="res-name">Hillary Barbosa Ribeiro</td><td class="c">25 a 29</td><td class="c">28:03</td></tr>
+<tr><td class="c">54º</td><td class="c">417</td><td class="res-name">Deizyelle Canto da Silva</td><td class="c">35 a 39</td><td class="c">28:09</td></tr>
+<tr><td class="c">55º</td><td class="c">26</td><td class="res-name">Carla Carolina Moura</td><td class="c">40 a 44</td><td class="c">28:17</td></tr>
+<tr><td class="c">56º</td><td class="c">332</td><td class="res-name">Stephany Vieira</td><td class="c">20 a 24</td><td class="c">28:23</td></tr>
+<tr><td class="c">57º</td><td class="c">199</td><td class="res-name">Leila Ferreira Viana</td><td class="c">45 a 49</td><td class="c">28:33</td></tr>
+<tr><td class="c">58º</td><td class="c">339</td><td class="res-name">Tallita Gomes Almeida</td><td class="c">30 a 34</td><td class="c">28:41</td></tr>
+<tr><td class="c">59º</td><td class="c">254</td><td class="res-name">Meri de Oliveira</td><td class="c">45 a 49</td><td class="c">28:46</td></tr>
+<tr><td class="c">60º</td><td class="c">163</td><td class="res-name">Joelma Gomes Braz Moura</td><td class="c">45 a 49</td><td class="c">28:53</td></tr>
+<tr><td class="c">61º</td><td class="c">377</td><td class="res-name">Zeni Soares de Mello</td><td class="c">55 a 59</td><td class="c">28:53</td></tr>
+<tr><td class="c">62º</td><td class="c">301</td><td class="res-name">Regina Maria Portugal</td><td class="c">65 a 69</td><td class="c">28:55</td></tr>
+<tr><td class="c">63º</td><td class="c">356</td><td class="res-name">Verônica Demberg Costa de Souza</td><td class="c">45 a 49</td><td class="c">29:01</td></tr>
+<tr><td class="c">64º</td><td class="c">269</td><td class="res-name">Pabila dos Santos Gomes da Rocha</td><td class="c">30 a 34</td><td class="c">29:05</td></tr>
+<tr><td class="c">65º</td><td class="c">128</td><td class="res-name">Gabriela de Souza Silveira</td><td class="c">40 a 44</td><td class="c">29:05</td></tr>
+<tr><td class="c">66º</td><td class="c">327</td><td class="res-name">Shamara Melo</td><td class="c">30 a 34</td><td class="c">29:07</td></tr>
+<tr><td class="c">67º</td><td class="c">300</td><td class="res-name">Regina Gastanes Silva Mattos</td><td class="c">50 a 54</td><td class="c">29:17</td></tr>
+<tr><td class="c">68º</td><td class="c">297</td><td class="res-name">Raquel Gualberto Rohem</td><td class="c">35 a 39</td><td class="c">29:18</td></tr>
+<tr><td class="c">69º</td><td class="c">220</td><td class="res-name">Lucilene Costa</td><td class="c">40 a 44</td><td class="c">29:20</td></tr>
+<tr><td class="c">70º</td><td class="c">30</td><td class="res-name">Ana Luiza Coutinho Peçanha</td><td class="c">20 a 24</td><td class="c">29:21</td></tr>
+<tr><td class="c">71º</td><td class="c">320</td><td class="res-name">Claudia Porto Marins</td><td class="c">45 a 49</td><td class="c">29:34</td></tr>
+<tr><td class="c">72º</td><td class="c">419</td><td class="res-name">Dihana Neves Noronha</td><td class="c">35 a 39</td><td class="c">29:36</td></tr>
+<tr><td class="c">73º</td><td class="c">479</td><td class="res-name">Raira Lazarini Flores Xavier</td><td class="c">30 a 34</td><td class="c">29:38</td></tr>
+<tr><td class="c">74º</td><td class="c">344</td><td class="res-name">Thaiz Moraes</td><td class="c">30 a 34</td><td class="c">29:45</td></tr>
+<tr><td class="c">75º</td><td class="c">378</td><td class="res-name">Zilma Soares Mello Oliveira</td><td class="c">50 a 54</td><td class="c">29:47</td></tr>
+<tr><td class="c">76º</td><td class="c">206</td><td class="res-name">Lourdes dos Santos Silva</td><td class="c">25 a 29</td><td class="c">30:10</td></tr>
+<tr><td class="c">77º</td><td class="c">256</td><td class="res-name">Michele Gonçalves Moreira Xariff Domingues</td><td class="c">35 a 39</td><td class="c">30:21</td></tr>
+<tr><td class="c">78º</td><td class="c">424</td><td class="res-name">Eshiley Ferreira de Sales</td><td class="c">20 a 24</td><td class="c">30:28</td></tr>
+<tr><td class="c">79º</td><td class="c">416</td><td class="res-name">Daniele Guimaraes de Lima</td><td class="c">40 a 44</td><td class="c">30:31</td></tr>
+<tr><td class="c">80º</td><td class="c">319</td><td class="res-name">Samara de Mello Oliveira</td><td class="c">25 a 29</td><td class="c">30:44</td></tr>
+<tr><td class="c">81º</td><td class="c">597</td><td class="res-name">Monique Cuba Mota</td><td class="c">40 a 44</td><td class="c">30:50</td></tr>
+<tr><td class="c">82º</td><td class="c">194</td><td class="res-name">Ana Carolina Souza</td><td class="c">30 a 34</td><td class="c">30:57</td></tr>
+<tr><td class="c">83º</td><td class="c">228</td><td class="res-name">Mara da Silva Santos</td><td class="c">35 a 39</td><td class="c">30:57</td></tr>
+<tr><td class="c">84º</td><td class="c">444</td><td class="res-name">Jaqueline de Souza Silva Cajá</td><td class="c">35 a 39</td><td class="c">30:58</td></tr>
+<tr><td class="c">85º</td><td class="c">329</td><td class="res-name">Simone Leal Goes</td><td class="c">45 a 49</td><td class="c">31:04</td></tr>
+<tr><td class="c">86º</td><td class="c">505</td><td class="res-name">Victoria Aquino</td><td class="c">25 a 29</td><td class="c">31:05</td></tr>
+<tr><td class="c">87º</td><td class="c">342</td><td class="res-name">Thaís Abreu Barbosa</td><td class="c">30 a 34</td><td class="c">31:16</td></tr>
+<tr><td class="c">88º</td><td class="c">334</td><td class="res-name">Aretta Silva Porto</td><td class="c">40 a 44</td><td class="c">31:22</td></tr>
+<tr><td class="c">89º</td><td class="c">109</td><td class="res-name">Evelyn Bento</td><td class="c">25 a 29</td><td class="c">31:33</td></tr>
+<tr><td class="c">90º</td><td class="c">472</td><td class="res-name">Natalia Bento dos Santos</td><td class="c">25 a 29</td><td class="c">31:45</td></tr>
+<tr><td class="c">91º</td><td class="c">292</td><td class="res-name">Raissa Gabri de Souza</td><td class="c">30 a 34</td><td class="c">31:51</td></tr>
+<tr><td class="c">92º</td><td class="c">470</td><td class="res-name">Mayara Rodrigues Cordeiro Moço</td><td class="c">30 a 34</td><td class="c">31:51</td></tr>
+<tr><td class="c">93º</td><td class="c">423</td><td class="res-name">Erica Mara Leão</td><td class="c">45 a 49</td><td class="c">31:52</td></tr>
+<tr><td class="c">94º</td><td class="c">204</td><td class="res-name">Letícia Rodrigues da Silva</td><td class="c">25 a 29</td><td class="c">31:54</td></tr>
+<tr><td class="c">95º</td><td class="c">414</td><td class="res-name">Cleide Aragão</td><td class="c">60 a 64</td><td class="c">31:59</td></tr>
+<tr><td class="c">96º</td><td class="c">324</td><td class="res-name">Sarah de Mello Oliveira</td><td class="c">20 a 24</td><td class="c">32:01</td></tr>
+<tr><td class="c">97º</td><td class="c">420</td><td class="res-name">Edilaynne Cristine Pinheiro Viana</td><td class="c">25 a 29</td><td class="c">32:07</td></tr>
+<tr><td class="c">98º</td><td class="c">494</td><td class="res-name">Tatiane da Silva Cordeiro Spnola</td><td class="c">45 a 49</td><td class="c">32:08</td></tr>
+<tr><td class="c">99º</td><td class="c">3</td><td class="res-name">Adriana de Brito Santos</td><td class="c">45 a 49</td><td class="c">32:09</td></tr>
+<tr><td class="c">100º</td><td class="c">396</td><td class="res-name">Anne Caroline Carvalho Ferreira</td><td class="c">35 a 39</td><td class="c">32:10</td></tr>
+<tr><td class="c">101º</td><td class="c">325</td><td class="res-name">Selma Paes Braga</td><td class="c">50 a 54</td><td class="c">32:17</td></tr>
+<tr><td class="c">102º</td><td class="c">405</td><td class="res-name">Camila Maia Almeida</td><td class="c">30 a 34</td><td class="c">32:23</td></tr>
+<tr><td class="c">103º</td><td class="c">188</td><td class="res-name">Kawanne Chaves</td><td class="c">20 a 24</td><td class="c">32:23</td></tr>
+<tr><td class="c">104º</td><td class="c">226</td><td class="res-name">Manuela Moreira</td><td class="c">25 a 29</td><td class="c">32:29</td></tr>
+<tr><td class="c">105º</td><td class="c">337</td><td class="res-name">Suze da Silva Ricardo</td><td class="c">40 a 44</td><td class="c">32:30</td></tr>
+<tr><td class="c">106º</td><td class="c">298</td><td class="res-name">Raquel Moura Nascimento</td><td class="c">40 a 44</td><td class="c">32:56</td></tr>
+<tr><td class="c">107º</td><td class="c">61</td><td class="res-name">Celma da Silva Correa</td><td class="c">45 a 49</td><td class="c">32:59</td></tr>
+<tr><td class="c">108º</td><td class="c">47</td><td class="res-name">Bruna Sturião Pereira</td><td class="c">40 a 44</td><td class="c">33:05</td></tr>
+<tr><td class="c">109º</td><td class="c">485</td><td class="res-name">Rosilande dos Santos Rocha</td><td class="c">35 a 39</td><td class="c">33:06</td></tr>
+<tr><td class="c">110º</td><td class="c">406</td><td class="res-name">Camila Vieira dos Santos</td><td class="c">30 a 34</td><td class="c">33:08</td></tr>
+<tr><td class="c">111º</td><td class="c">187</td><td class="res-name">Katia Soares dos Santos</td><td class="c">45 a 49</td><td class="c">33:10</td></tr>
+<tr><td class="c">112º</td><td class="c">580</td><td class="res-name">Gizele Alves</td><td class="c">40 a 44</td><td class="c">33:11</td></tr>
+<tr><td class="c">113º</td><td class="c">489</td><td class="res-name">Sara Toteloti Fagundes</td><td class="c">30 a 34</td><td class="c">33:11</td></tr>
+<tr><td class="c">114º</td><td class="c">112</td><td class="res-name">Fátima Cristina Araújo de Barros</td><td class="c">45 a 49</td><td class="c">33:12</td></tr>
+<tr><td class="c">115º</td><td class="c">28</td><td class="res-name">Ana Flávia Bezerra</td><td class="c">45 a 49</td><td class="c">33:18</td></tr>
+<tr><td class="c">116º</td><td class="c">91</td><td class="res-name">Edmara Caitano Moreira Scheidegger</td><td class="c">40 a 44</td><td class="c">33:24</td></tr>
+<tr><td class="c">117º</td><td class="c">55</td><td class="res-name">Carla Fabiana do Nascimento</td><td class="c">35 a 39</td><td class="c">33:30</td></tr>
+<tr><td class="c">118º</td><td class="c">316</td><td class="res-name">Rosinete Vicente Pereira</td><td class="c">50 a 54</td><td class="c">33:31</td></tr>
+<tr><td class="c">119º</td><td class="c">574</td><td class="res-name">Camila Fonseca de Oliveira</td><td class="c">45 a 49</td><td class="c">33:31</td></tr>
+<tr><td class="c">120º</td><td class="c">15</td><td class="res-name">Aline dos Santos Vargas</td><td class="c">40 a 44</td><td class="c">33:40</td></tr>
+<tr><td class="c">121º</td><td class="c">409</td><td class="res-name">Caroline Campos Lopes Barcelos</td><td class="c">35 a 39</td><td class="c">33:47</td></tr>
+<tr><td class="c">122º</td><td class="c">454</td><td class="res-name">Kelly Pereira Vieira Gomes</td><td class="c">35 a 39</td><td class="c">33:51</td></tr>
+<tr><td class="c">123º</td><td class="c">90</td><td class="res-name">Edjane Gomes da Silva</td><td class="c">35 a 39</td><td class="c">33:52</td></tr>
+<tr><td class="c">124º</td><td class="c">258</td><td class="res-name">Mônica Gomes da Silva</td><td class="c">30 a 34</td><td class="c">33:54</td></tr>
+<tr><td class="c">125º</td><td class="c">80</td><td class="res-name">Dayane Gomes Pinto Duarte</td><td class="c">35 a 39</td><td class="c">33:54</td></tr>
+<tr><td class="c">126º</td><td class="c">31</td><td class="res-name">Ana María Molina</td><td class="c">50 a 54</td><td class="c">34:18</td></tr>
+<tr><td class="c">127º</td><td class="c">508</td><td class="res-name">Viviane Afonso de Sousa</td><td class="c">45 a 49</td><td class="c">34:25</td></tr>
+<tr><td class="c">128º</td><td class="c">153</td><td class="res-name">Jamile Souza Silva</td><td class="c">35 a 39</td><td class="c">34:27</td></tr>
+<tr><td class="c">129º</td><td class="c">452</td><td class="res-name">Kaynaia Christina Oliveira Maurício</td><td class="c">40 a 44</td><td class="c">34:29</td></tr>
+<tr><td class="c">130º</td><td class="c">480</td><td class="res-name">Raquel Marques dos Santos</td><td class="c">40 a 44</td><td class="c">34:33</td></tr>
+<tr><td class="c">131º</td><td class="c">401</td><td class="res-name">Bianca Brasil Santiago</td><td class="c">35 a 39</td><td class="c">34:35</td></tr>
+<tr><td class="c">132º</td><td class="c">333</td><td class="res-name">Suelen dos Santos Gomes</td><td class="c">30 a 34</td><td class="c">34:36</td></tr>
+<tr><td class="c">133º</td><td class="c">82</td><td class="res-name">Débora Dantas da Silva</td><td class="c">25 a 29</td><td class="c">34:39</td></tr>
+<tr><td class="c">134º</td><td class="c">502</td><td class="res-name">Valdirene Rodrigues Mourão Fernandes</td><td class="c">55 a 59</td><td class="c">34:49</td></tr>
+<tr><td class="c">135º</td><td class="c">433</td><td class="res-name">Frantyesca Sophya dos Santos Guerson</td><td class="c">0 a 19</td><td class="c">34:56</td></tr>
+<tr><td class="c">136º</td><td class="c">127</td><td class="res-name">Gabriela de Macedo Gonçalves</td><td class="c">20 a 24</td><td class="c">34:57</td></tr>
+<tr><td class="c">137º</td><td class="c">244</td><td class="res-name">Maria Luzeneide Alves de Brito</td><td class="c">55 a 59</td><td class="c">35:13</td></tr>
+<tr><td class="c">138º</td><td class="c">215</td><td class="res-name">Luciana Vieira Costa</td><td class="c">55 a 59</td><td class="c">35:13</td></tr>
+<tr><td class="c">139º</td><td class="c">388</td><td class="res-name">Ana Clara da Silva Cora</td><td class="c">20 a 24</td><td class="c">35:14</td></tr>
+<tr><td class="c">140º</td><td class="c">343</td><td class="res-name">Thais Andriele Tenório da Silva</td><td class="c">30 a 34</td><td class="c">35:15</td></tr>
+<tr><td class="c">141º</td><td class="c">412</td><td class="res-name">Cheila Real dos Santos Sant Ana</td><td class="c">50 a 54</td><td class="c">35:18</td></tr>
+<tr><td class="c">142º</td><td class="c">500</td><td class="res-name">Uli dos Santos Nascimento de Souza</td><td class="c">30 a 34</td><td class="c">35:20</td></tr>
+<tr><td class="c">143º</td><td class="c">59</td><td class="res-name">Carolina Guimarães de Araújo</td><td class="c">25 a 29</td><td class="c">35:24</td></tr>
+<tr><td class="c">144º</td><td class="c">443</td><td class="res-name">Ivany Lemos Rodrigues</td><td class="c">50 a 54</td><td class="c">35:27</td></tr>
+<tr><td class="c">145º</td><td class="c">581</td><td class="res-name">Leticia Souza Murro</td><td class="c">25 a 29</td><td class="c">35:38</td></tr>
+<tr><td class="c">146º</td><td class="c">20</td><td class="res-name">Almerinda Andrade</td><td class="c">50 a 54</td><td class="c">35:39</td></tr>
+<tr><td class="c">147º</td><td class="c">240</td><td class="res-name">Maria de Lourdes Alves de Araujo</td><td class="c">65 a 69</td><td class="c">35:40</td></tr>
+<tr><td class="c">148º</td><td class="c">71</td><td class="res-name">Daiany Faria dos Santos</td><td class="c">35 a 39</td><td class="c">35:51</td></tr>
+<tr><td class="c">149º</td><td class="c">493</td><td class="res-name">Talita Jordane</td><td class="c">35 a 39</td><td class="c">35:51</td></tr>
+<tr><td class="c">150º</td><td class="c">241</td><td class="res-name">Maria Eduarda Maia Coutinho Macedo</td><td class="c">0 a 19</td><td class="c">35:59</td></tr>
+<tr><td class="c">151º</td><td class="c">114</td><td class="res-name">Fernanda de Souza Santos Araújo</td><td class="c">45 a 49</td><td class="c">36:04</td></tr>
+<tr><td class="c">152º</td><td class="c">60</td><td class="res-name">Celeste Passos Fernandes Lemos</td><td class="c">35 a 39</td><td class="c">36:05</td></tr>
+<tr><td class="c">153º</td><td class="c">146</td><td class="res-name">Isabela B Oliva</td><td class="c">45 a 49</td><td class="c">36:07</td></tr>
+<tr><td class="c">154º</td><td class="c">117</td><td class="res-name">Fernanda Nascimento</td><td class="c">0 a 19</td><td class="c">36:19</td></tr>
+<tr><td class="c">155º</td><td class="c">594</td><td class="res-name">Stephane Rangel Mariano</td><td class="c">35 a 39</td><td class="c">36:20</td></tr>
+<tr><td class="c">156º</td><td class="c">464</td><td class="res-name">Marcelle Rangel Oliveira</td><td class="c">35 a 39</td><td class="c">36:22</td></tr>
+<tr><td class="c">157º</td><td class="c">592</td><td class="res-name">Samira Ramalho Lopes</td><td class="c">20 a 24</td><td class="c">36:22</td></tr>
+<tr><td class="c">158º</td><td class="c">221</td><td class="res-name">Lucyane Batista de Assunção Pedro Nery</td><td class="c">25 a 29</td><td class="c">36:40</td></tr>
+<tr><td class="c">159º</td><td class="c">261</td><td class="res-name">Natasha Oliveira de Souza</td><td class="c">35 a 39</td><td class="c">37:09</td></tr>
+<tr><td class="c">160º</td><td class="c">346</td><td class="res-name">Thayna Alves</td><td class="c">30 a 34</td><td class="c">37:10</td></tr>
+<tr><td class="c">161º</td><td class="c">384</td><td class="res-name">Alessandra da Silva Vieira</td><td class="c">30 a 34</td><td class="c">37:17</td></tr>
+<tr><td class="c">162º</td><td class="c">588</td><td class="res-name">Erika de Souza Werneck</td><td class="c">40 a 44</td><td class="c">37:17</td></tr>
+<tr><td class="c">163º</td><td class="c">108</td><td class="res-name">Evelin de Souza Reis</td><td class="c">30 a 34</td><td class="c">37:21</td></tr>
+<tr><td class="c">164º</td><td class="c">101</td><td class="res-name">Eliana Moura Diniz Patrício</td><td class="c">30 a 34</td><td class="c">37:25</td></tr>
+<tr><td class="c">165º</td><td class="c">379</td><td class="res-name">Ivone Socorro de Souza Nunes</td><td class="c">65 a 69</td><td class="c">37:28</td></tr>
+<tr><td class="c">166º</td><td class="c">314</td><td class="res-name">Rogéria Agostinho Mascena Ribeiro</td><td class="c">40 a 44</td><td class="c">37:29</td></tr>
+<tr><td class="c">167º</td><td class="c">174</td><td class="res-name">Josilaine Oliveira de Souza</td><td class="c">55 a 59</td><td class="c">37:31</td></tr>
+<tr><td class="c">168º</td><td class="c">142</td><td class="res-name">Hudielle Pereira Dias</td><td class="c">35 a 39</td><td class="c">37:40</td></tr>
+<tr><td class="c">169º</td><td class="c">482</td><td class="res-name">Renata de Rezende Hanthequeste</td><td class="c">25 a 29</td><td class="c">38:00</td></tr>
+<tr><td class="c">170º</td><td class="c">39</td><td class="res-name">Anna Cristina Carvalho da Silva</td><td class="c">30 a 34</td><td class="c">38:06</td></tr>
+<tr><td class="c">171º</td><td class="c">330</td><td class="res-name">Simone Mendes Lindolfo</td><td class="c">40 a 44</td><td class="c">38:10</td></tr>
+<tr><td class="c">172º</td><td class="c">471</td><td class="res-name">Milena Toledo Vilella</td><td class="c">40 a 44</td><td class="c">38:23</td></tr>
+<tr><td class="c">173º</td><td class="c">426</td><td class="res-name">Evelyn dos Santos</td><td class="c">20 a 24</td><td class="c">38:28</td></tr>
+<tr><td class="c">174º</td><td class="c">299</td><td class="res-name">Rebeca dos Santos Cerqueira</td><td class="c">25 a 29</td><td class="c">38:28</td></tr>
+<tr><td class="c">175º</td><td class="c">467</td><td class="res-name">Maria Eduarda Pereira Lopes</td><td class="c">20 a 24</td><td class="c">38:34</td></tr>
+<tr><td class="c">176º</td><td class="c">247</td><td class="res-name">Marta Rocha</td><td class="c">65 a 69</td><td class="c">38:41</td></tr>
+<tr><td class="c">177º</td><td class="c">304</td><td class="res-name">Rhana Pereira de Souza Teixeira</td><td class="c">30 a 34</td><td class="c">38:43</td></tr>
+<tr><td class="c">178º</td><td class="c">54</td><td class="res-name">Carla Costa</td><td class="c">45 a 49</td><td class="c">38:44</td></tr>
+<tr><td class="c">179º</td><td class="c">264</td><td class="res-name">Neusa Maria de Aquino Gama da Costa Silva</td><td class="c">60 a 64</td><td class="c">38:44</td></tr>
+<tr><td class="c">180º</td><td class="c">16</td><td class="res-name">Aline Medeiros Cavalcante</td><td class="c">45 a 49</td><td class="c">38:50</td></tr>
+<tr><td class="c">181º</td><td class="c">214</td><td class="res-name">Luciana de Souza Batista</td><td class="c">45 a 49</td><td class="c">38:51</td></tr>
+<tr><td class="c">182º</td><td class="c">69</td><td class="res-name">Cristiane Pereira da Silva</td><td class="c">40 a 44</td><td class="c">38:56</td></tr>
+<tr><td class="c">183º</td><td class="c">376</td><td class="res-name">Yasmin de Souza Rodrigues</td><td class="c">35 a 39</td><td class="c">39:08</td></tr>
+<tr><td class="c">184º</td><td class="c">4</td><td class="res-name">Adriana Pereira Siqueira</td><td class="c">35 a 39</td><td class="c">39:12</td></tr>
+<tr><td class="c">185º</td><td class="c">582</td><td class="res-name">Aline Pereira Siqueira</td><td class="c">45 a 49</td><td class="c">39:12</td></tr>
+<tr><td class="c">186º</td><td class="c">229</td><td class="res-name">Marcela Borges Conde Quirino da Fonsêca</td><td class="c">40 a 44</td><td class="c">39:14</td></tr>
+<tr><td class="c">187º</td><td class="c">575</td><td class="res-name">Vanessa Silveira Almeida</td><td class="c">40 a 44</td><td class="c">39:15</td></tr>
+<tr><td class="c">188º</td><td class="c">383</td><td class="res-name">Ágatha Xavier Conde de Oliveira</td><td class="c">20 a 24</td><td class="c">39:24</td></tr>
+<tr><td class="c">189º</td><td class="c">345</td><td class="res-name">Thamires Caruso de Souza</td><td class="c">30 a 34</td><td class="c">39:41</td></tr>
+<tr><td class="c">190º</td><td class="c">190</td><td class="res-name">Kivia Barbosa de Oliveira</td><td class="c">25 a 29</td><td class="c">39:50</td></tr>
+<tr><td class="c">191º</td><td class="c">175</td><td class="res-name">Joziane Brasil Medeiros</td><td class="c">40 a 44</td><td class="c">40:16</td></tr>
+<tr><td class="c">192º</td><td class="c">503</td><td class="res-name">Valéria Moreira Ribeiro</td><td class="c">40 a 44</td><td class="c">40:41</td></tr>
+<tr><td class="c">193º</td><td class="c">335</td><td class="res-name">Suellen dos Santos Martins</td><td class="c">20 a 24</td><td class="c">40:57</td></tr>
+<tr><td class="c">194º</td><td class="c">27</td><td class="res-name">Ana Beatriz Nunes Carvalho</td><td class="c">0 a 19</td><td class="c">41:19</td></tr>
+<tr><td class="c">195º</td><td class="c">231</td><td class="res-name">Marceli Leal de Carvalho Silveira</td><td class="c">40 a 44</td><td class="c">41:58</td></tr>
+<tr><td class="c">196º</td><td class="c">286</td><td class="res-name">Priscila Nascimento Fernandes</td><td class="c">40 a 44</td><td class="c">41:59</td></tr>
+<tr><td class="c">197º</td><td class="c">336</td><td class="res-name">Suellen Mendonça da Cunha</td><td class="c">35 a 39</td><td class="c">42:12</td></tr>
+<tr><td class="c">198º</td><td class="c">118</td><td class="res-name">Fernanda Fernanda Ronzani</td><td class="c">35 a 39</td><td class="c">42:15</td></tr>
+<tr><td class="c">199º</td><td class="c">144</td><td class="res-name">Ingrid Damasceno Maciel da Silva</td><td class="c">30 a 34</td><td class="c">42:45</td></tr>
+<tr><td class="c">200º</td><td class="c">389</td><td class="res-name">Ana Paula Chaves dos Santos Neo</td><td class="c">45 a 49</td><td class="c">43:51</td></tr>
+<tr><td class="c">201º</td><td class="c">38</td><td class="res-name">Andrea Terezinha da Costa Oliveira</td><td class="c">55 a 59</td><td class="c">44:10</td></tr>
+<tr><td class="c">202º</td><td class="c">24</td><td class="res-name">Amanda Oliveira dos Reis Sousa Ribeiro</td><td class="c">30 a 34</td><td class="c">44:15</td></tr>
+<tr><td class="c">203º</td><td class="c">394</td><td class="res-name">Andressa Néo</td><td class="c">40 a 44</td><td class="c">44:24</td></tr>
+<tr><td class="c">204º</td><td class="c">306</td><td class="res-name">Roberta de Souza Santos</td><td class="c">40 a 44</td><td class="c">44:39</td></tr>
+<tr><td class="c">205º</td><td class="c">126</td><td class="res-name">Gabriela Costa Moraes</td><td class="c">35 a 39</td><td class="c">45:11</td></tr>
+<tr><td class="c">206º</td><td class="c">303</td><td class="res-name">Renata Rodrigues da Costa Cabral</td><td class="c">35 a 39</td><td class="c">45:11</td></tr>
+<tr><td class="c">207º</td><td class="c">6</td><td class="res-name">Alessandra de Souza Medeiros</td><td class="c">30 a 34</td><td class="c">45:13</td></tr>
+<tr><td class="c">208º</td><td class="c">338</td><td class="res-name">Swelly Benevides de Mello</td><td class="c">35 a 39</td><td class="c">45:28</td></tr>
+<tr><td class="c">209º</td><td class="c">475</td><td class="res-name">Patricia Caetano Lima Paes Melo</td><td class="c">35 a 39</td><td class="c">45:32</td></tr>
+<tr><td class="c">210º</td><td class="c">274</td><td class="res-name">Patricia Souza da Silva</td><td class="c">55 a 59</td><td class="c">45:38</td></tr>
+<tr><td class="c">211º</td><td class="c">328</td><td class="res-name">Silvania Constâncio</td><td class="c">50 a 54</td><td class="c">45:40</td></tr>
+<tr><td class="c">212º</td><td class="c">477</td><td class="res-name">Priscila Aguiar</td><td class="c">30 a 34</td><td class="c">45:54</td></tr>
+<tr><td class="c">213º</td><td class="c">476</td><td class="res-name">Pérola Xavier Conde de Oliveira</td><td class="c">0 a 19</td><td class="c">46:43</td></tr>
+<tr><td class="c">214º</td><td class="c">202</td><td class="res-name">Letícia Aparecida Garcia Campos</td><td class="c">40 a 44</td><td class="c">46:59</td></tr>
+<tr><td class="c">215º</td><td class="c">291</td><td class="res-name">Rafaela da Silva Maximo</td><td class="c">35 a 39</td><td class="c">47:13</td></tr>
+<tr><td class="c">216º</td><td class="c">178</td><td class="res-name">Juliana de Oliveira Heringer</td><td class="c">35 a 39</td><td class="c">47:37</td></tr>
+<tr><td class="c">217º</td><td class="c">422</td><td class="res-name">Elizete da Costa Moraes</td><td class="c">50 a 54</td><td class="c">47:42</td></tr>
+<tr><td class="c">218º</td><td class="c">115</td><td class="res-name">Fernanda Fochi Nogueira Insfran</td><td class="c">45 a 49</td><td class="c">48:37</td></tr>
+<tr><td class="c">219º</td><td class="c">243</td><td class="res-name">Maria Luiza Mello</td><td class="c">70+</td><td class="c">48:49</td></tr>
+<tr><td class="c">220º</td><td class="c">99</td><td class="res-name">Elane Moraes da Silva</td><td class="c">45 a 49</td><td class="c">48:50</td></tr>
+<tr><td class="c">221º</td><td class="c">143</td><td class="res-name">Ianderci Sant Anna dos Santos Silva</td><td class="c">40 a 44</td><td class="c">48:59</td></tr>
+<tr><td class="c">222º</td><td class="c">152</td><td class="res-name">Jaline de Almeida Corrêa</td><td class="c">40 a 44</td><td class="c">49:07</td></tr>
+<tr><td class="c">223º</td><td class="c">29</td><td class="res-name">Ana Lígia Pereira dos Santos</td><td class="c">30 a 34</td><td class="c">50:23</td></tr>
+<tr><td class="c">224º</td><td class="c">147</td><td class="res-name">Isabela Fonseca Pinto de Figueiredo</td><td class="c">30 a 34</td><td class="c">50:48</td></tr>
+<tr><td class="c">225º</td><td class="c">474</td><td class="res-name">Nycolly Manuelly dos Santos Correndo Barreto</td><td class="c">0 a 19</td><td class="c">51:54</td></tr>
+<tr><td class="c">226º</td><td class="c">473</td><td class="res-name">Nubia Vieira Correndo</td><td class="c">35 a 39</td><td class="c">51:56</td></tr>
+<tr><td class="c">227º</td><td class="c">63</td><td class="res-name">Claudia Giampaoli</td><td class="c">55 a 59</td><td class="c">52:12</td></tr>
+<tr><td class="c">228º</td><td class="c">81</td><td class="res-name">Dayane Martins Schneider Araújo</td><td class="c">30 a 34</td><td class="c">58:03</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-masc">
+        <div class="table-scroll">
+        <table class="full-table" id="table-masc">
+          <thead><tr><th class="c">Pos.</th><th class="c">Nº</th><th>Nome</th><th class="c">Categoria</th><th class="c">Tempo</th></tr></thead>
+          <tbody>
+<tr class="pos-1"><td class="c">1º</td><td class="c">192</td><td class="res-name">Leandro de Moura Rangel</td><td class="c">25 a 29</td><td class="c">16:20</td></tr>
+<tr class="pos-2"><td class="c">2º</td><td class="c">162</td><td class="res-name">Joao Pedro Lima</td><td class="c">25 a 29</td><td class="c">16:47</td></tr>
+<tr class="pos-3"><td class="c">3º</td><td class="c">132</td><td class="res-name">Gleison de Souza</td><td class="c">0 a 19</td><td class="c">16:56</td></tr>
+<tr><td class="c">4º</td><td class="c">436</td><td class="res-name">Gleidson Luciano</td><td class="c">35 a 39</td><td class="c">17:08</td></tr>
+<tr><td class="c">5º</td><td class="c">133</td><td class="res-name">Guilerme Lage dos Santos</td><td class="c">40 a 44</td><td class="c">17:14</td></tr>
+<tr><td class="c">6º</td><td class="c">104</td><td class="res-name">Erik Costa</td><td class="c">20 a 24</td><td class="c">17:13</td></tr>
+<tr><td class="c">7º</td><td class="c">276</td><td class="res-name">Paulo Henrique da Silva Valoriote</td><td class="c">30 a 34</td><td class="c">17:37</td></tr>
+<tr><td class="c">8º</td><td class="c">9</td><td class="res-name">Alex dos Santos Barreto</td><td class="c">25 a 29</td><td class="c">17:49</td></tr>
+<tr><td class="c">9º</td><td class="c">5</td><td class="res-name">Alan Marchon Barreto</td><td class="c">25 a 29</td><td class="c">18:00</td></tr>
+<tr><td class="c">10º</td><td class="c">110</td><td class="res-name">Everton Santos da Silva Daudt</td><td class="c">35 a 39</td><td class="c">18:08</td></tr>
+<tr><td class="c">11º</td><td class="c">313</td><td class="res-name">Roger Castro Pessoa</td><td class="c">20 a 24</td><td class="c">18:18</td></tr>
+<tr><td class="c">12º</td><td class="c">448</td><td class="res-name">Juberto Junior Conceição da Fonseca</td><td class="c">20 a 24</td><td class="c">18:26</td></tr>
+<tr><td class="c">13º</td><td class="c">369</td><td class="res-name">Wanderson Vidal Siqueira</td><td class="c">25 a 29</td><td class="c">18:32</td></tr>
+<tr><td class="c">14º</td><td class="c">403</td><td class="res-name">Caian Dias Barreto</td><td class="c">30 a 34</td><td class="c">18:36</td></tr>
+<tr><td class="c">15º</td><td class="c">267</td><td class="res-name">Oldair da Costa Azeredo</td><td class="c">25 a 29</td><td class="c">18:38</td></tr>
+<tr><td class="c">16º</td><td class="c">362</td><td class="res-name">Vitor Estácio Alves</td><td class="c">30 a 34</td><td class="c">18:38</td></tr>
+<tr><td class="c">17º</td><td class="c">428</td><td class="res-name">Felipe da Silva Menezes</td><td class="c">25 a 29</td><td class="c">18:38</td></tr>
+<tr><td class="c">18º</td><td class="c">506</td><td class="res-name">Vinicios Martins Correia</td><td class="c">0 a 19</td><td class="c">18:43</td></tr>
+<tr><td class="c">19º</td><td class="c">511</td><td class="res-name">Wilker da Paradise Conceição</td><td class="c">30 a 34</td><td class="c">18:58</td></tr>
+<tr><td class="c">20º</td><td class="c">248</td><td class="res-name">Matheus Bueno</td><td class="c">25 a 29</td><td class="c">19:03</td></tr>
+<tr><td class="c">21º</td><td class="c">259</td><td class="res-name">Nahuel Alejandro Torres</td><td class="c">30 a 34</td><td class="c">19:05</td></tr>
+<tr><td class="c">22º</td><td class="c">365</td><td class="res-name">Wagner Williman Vasconcelos de Araújo</td><td class="c">40 a 44</td><td class="c">19:22</td></tr>
+<tr><td class="c">23º</td><td class="c">64</td><td class="res-name">Cláudio Cardoso Gonçalves Júnior</td><td class="c">20 a 24</td><td class="c">19:27</td></tr>
+<tr><td class="c">24º</td><td class="c">370</td><td class="res-name">Wando Feitosa</td><td class="c">40 a 44</td><td class="c">19:28</td></tr>
+<tr><td class="c">25º</td><td class="c">74</td><td class="res-name">Daniel Santiago de Alencar</td><td class="c">40 a 44</td><td class="c">19:34</td></tr>
+<tr><td class="c">26º</td><td class="c">98</td><td class="res-name">Eduardo Verissimo Teixeira</td><td class="c">55 a 59</td><td class="c">19:42</td></tr>
+<tr><td class="c">27º</td><td class="c">321</td><td class="res-name">Samuel da Silva Moreira Silvamoreira</td><td class="c">40 a 44</td><td class="c">19:51</td></tr>
+<tr><td class="c">28º</td><td class="c">155</td><td class="res-name">Janderson Ligeirinho</td><td class="c">30 a 34</td><td class="c">19:55</td></tr>
+<tr><td class="c">29º</td><td class="c">289</td><td class="res-name">Rafael Gomes</td><td class="c">20 a 24</td><td class="c">19:57</td></tr>
+<tr><td class="c">30º</td><td class="c">418</td><td class="res-name">Diego Pereira</td><td class="c">0 a 19</td><td class="c">19:58</td></tr>
+<tr><td class="c">31º</td><td class="c">119</td><td class="res-name">Fernando dos Santos Barbosa</td><td class="c">25 a 29</td><td class="c">19:58</td></tr>
+<tr><td class="c">32º</td><td class="c">278</td><td class="res-name">Pedro Henrique Ponciano Leite dos Santos</td><td class="c">0 a 19</td><td class="c">19:59</td></tr>
+<tr><td class="c">33º</td><td class="c">93</td><td class="res-name">Edson Lopes Pereira</td><td class="c">45 a 49</td><td class="c">20:12</td></tr>
+<tr><td class="c">34º</td><td class="c">404</td><td class="res-name">Bruno Paes do Nascimento</td><td class="c">45 a 49</td><td class="c">20:18</td></tr>
+<tr><td class="c">35º</td><td class="c">1</td><td class="res-name">Adail Saraiva</td><td class="c">40 a 44</td><td class="c">20:18</td></tr>
+<tr><td class="c">36º</td><td class="c">193</td><td class="res-name">Leandro dos Santos Coelho</td><td class="c">45 a 49</td><td class="c">20:25</td></tr>
+<tr><td class="c">37º</td><td class="c">183</td><td class="res-name">Kaike Barreto</td><td class="c">0 a 19</td><td class="c">20:29</td></tr>
+<tr><td class="c">38º</td><td class="c">499</td><td class="res-name">Tomas Ignacio Renzacci</td><td class="c">35 a 39</td><td class="c">20:38</td></tr>
+<tr><td class="c">39º</td><td class="c">84</td><td class="res-name">Douglas Couto da Mota</td><td class="c">40 a 44</td><td class="c">20:38</td></tr>
+<tr><td class="c">40º</td><td class="c">250</td><td class="res-name">Matheus Soares da Silva</td><td class="c">30 a 34</td><td class="c">20:41</td></tr>
+<tr><td class="c">41º</td><td class="c">95</td><td class="res-name">Eduardo Pereira Dias</td><td class="c">60 a 64</td><td class="c">20:45</td></tr>
+<tr><td class="c">42º</td><td class="c">46</td><td class="res-name">Brendhon da Silva Santos</td><td class="c">20 a 24</td><td class="c">20:47</td></tr>
+<tr><td class="c">43º</td><td class="c">585</td><td class="res-name">Lucas Modesto Coriolano</td><td class="c">35 a 39</td><td class="c">20:48</td></tr>
+<tr><td class="c">44º</td><td class="c">87</td><td class="res-name">Edgard Augusto</td><td class="c">45 a 49</td><td class="c">20:51</td></tr>
+<tr><td class="c">45º</td><td class="c">239</td><td class="res-name">Marcos Felipe da Silva Viana</td><td class="c">25 a 29</td><td class="c">20:55</td></tr>
+<tr><td class="c">46º</td><td class="c">281</td><td class="res-name">Pedro Jorge</td><td class="c">20 a 24</td><td class="c">20:59</td></tr>
+<tr><td class="c">47º</td><td class="c">177</td><td class="res-name">Juarez Pereira de Sá</td><td class="c">45 a 49</td><td class="c">20:59</td></tr>
+<tr><td class="c">48º</td><td class="c">587</td><td class="res-name">Helio Gomes</td><td class="c">40 a 44</td><td class="c">21:00</td></tr>
+<tr><td class="c">49º</td><td class="c">189</td><td class="res-name">Kevin Lucas dos Santos Xavier da Silva</td><td class="c">25 a 29</td><td class="c">21:00</td></tr>
+<tr><td class="c">50º</td><td class="c">164</td><td class="res-name">Jonas Barcelos de Andrade</td><td class="c">30 a 34</td><td class="c">21:02</td></tr>
+<tr><td class="c">51º</td><td class="c">352</td><td class="res-name">Valci Ramos dos Correndo Santos</td><td class="c">65 a 69</td><td class="c">21:03</td></tr>
+<tr><td class="c">52º</td><td class="c">134</td><td class="res-name">Guilherme Duarte Pinho</td><td class="c">0 a 19</td><td class="c">21:06</td></tr>
+<tr><td class="c">53º</td><td class="c">449</td><td class="res-name">Kaua dos Santos</td><td class="c">0 a 19</td><td class="c">21:09</td></tr>
+<tr><td class="c">54º</td><td class="c">451</td><td class="res-name">Kayk Gomes Santos Souza</td><td class="c">20 a 24</td><td class="c">21:11</td></tr>
+<tr><td class="c">55º</td><td class="c">158</td><td class="res-name">Jefferson Cabral</td><td class="c">40 a 44</td><td class="c">21:12</td></tr>
+<tr><td class="c">56º</td><td class="c">212</td><td class="res-name">Lucas Pereira Moreira</td><td class="c">35 a 39</td><td class="c">21:14</td></tr>
+<tr><td class="c">57º</td><td class="c">262</td><td class="res-name">Neemias dos Santos Pereira</td><td class="c">30 a 34</td><td class="c">21:21</td></tr>
+<tr><td class="c">58º</td><td class="c">140</td><td class="res-name">Hildebrando Ciriaco Pralon</td><td class="c">35 a 39</td><td class="c">21:22</td></tr>
+<tr><td class="c">59º</td><td class="c">283</td><td class="res-name">Pedro Rodrigues</td><td class="c">20 a 24</td><td class="c">21:28</td></tr>
+<tr><td class="c">60º</td><td class="c">312</td><td class="res-name">Rodrigo de Souza Morais</td><td class="c">35 a 39</td><td class="c">21:37</td></tr>
+<tr><td class="c">61º</td><td class="c">277</td><td class="res-name">Paulosergio.svp</td><td class="c">35 a 39</td><td class="c">21:41</td></tr>
+<tr><td class="c">62º</td><td class="c">323</td><td class="res-name">Sandro Freire Correndo</td><td class="c">45 a 49</td><td class="c">21:46</td></tr>
+<tr><td class="c">63º</td><td class="c">296</td><td class="res-name">Raphael de Oliveira Vidal</td><td class="c">30 a 34</td><td class="c">21:47</td></tr>
+<tr><td class="c">64º</td><td class="c">584</td><td class="res-name">Alex Silva de Oliveira</td><td class="c">35 a 39</td><td class="c">21:47</td></tr>
+<tr><td class="c">65º</td><td class="c">354</td><td class="res-name">Vanderson Silva de Almeida</td><td class="c">30 a 34</td><td class="c">21:51</td></tr>
+<tr><td class="c">66º</td><td class="c">52</td><td class="res-name">Calebe Elexias Pereira</td><td class="c">0 a 19</td><td class="c">21:52</td></tr>
+<tr><td class="c">67º</td><td class="c">487</td><td class="res-name">Samuel Muzy</td><td class="c">30 a 34</td><td class="c">21:53</td></tr>
+<tr><td class="c">68º</td><td class="c">94</td><td class="res-name">Eduardo dos Santos Souza</td><td class="c">30 a 34</td><td class="c">21:54</td></tr>
+<tr><td class="c">69º</td><td class="c">233</td><td class="res-name">Marcello Braga Maia</td><td class="c">50 a 54</td><td class="c">21:57</td></tr>
+<tr><td class="c">70º</td><td class="c">97</td><td class="res-name">Eduardo Ribeiro da Silva</td><td class="c">30 a 34</td><td class="c">21:58</td></tr>
+<tr><td class="c">71º</td><td class="c">72</td><td class="res-name">Dalton Medeiros</td><td class="c">25 a 29</td><td class="c">22:00</td></tr>
+<tr><td class="c">72º</td><td class="c">275</td><td class="res-name">Patrick Santos Lessa</td><td class="c">30 a 34</td><td class="c">22:04</td></tr>
+<tr><td class="c">73º</td><td class="c">195</td><td class="res-name">Leandro Furtado da Rosa</td><td class="c">45 a 49</td><td class="c">22:05</td></tr>
+<tr><td class="c">74º</td><td class="c">450</td><td class="res-name">Kauan Jesus da Silva</td><td class="c">0 a 19</td><td class="c">22:15</td></tr>
+<tr><td class="c">75º</td><td class="c">8</td><td class="res-name">Alex Carlos Pereira</td><td class="c">45 a 49</td><td class="c">22:20</td></tr>
+<tr><td class="c">76º</td><td class="c">58</td><td class="res-name">Carlos Kayke Tamburro</td><td class="c">30 a 34</td><td class="c">22:21</td></tr>
+<tr><td class="c">77º</td><td class="c">191</td><td class="res-name">Leandro Barbosa</td><td class="c">40 a 44</td><td class="c">22:23</td></tr>
+<tr><td class="c">78º</td><td class="c">361</td><td class="res-name">Vinícius Macedo da Silva Rodrigues</td><td class="c">25 a 29</td><td class="c">22:25</td></tr>
+<tr><td class="c">79º</td><td class="c">122</td><td class="res-name">Filipe Alves Melo</td><td class="c">35 a 39</td><td class="c">22:26</td></tr>
+<tr><td class="c">80º</td><td class="c">113</td><td class="res-name">Felipe da Silva Rosa Medina</td><td class="c">30 a 34</td><td class="c">22:29</td></tr>
+<tr><td class="c">81º</td><td class="c">526</td><td class="res-name">Carlos Victor de Souza Lima</td><td class="c">30 a 34</td><td class="c">22:32</td></tr>
+<tr><td class="c">82º</td><td class="c">294</td><td class="res-name">Ramon de Mattos</td><td class="c">30 a 34</td><td class="c">22:33</td></tr>
+<tr><td class="c">83º</td><td class="c">251</td><td class="res-name">Mauro da Silva Correndo Porto</td><td class="c">60 a 64</td><td class="c">22:47</td></tr>
+<tr><td class="c">84º</td><td class="c">290</td><td class="res-name">Rafael Henrique da Silva Vieira</td><td class="c">0 a 19</td><td class="c">22:50</td></tr>
+<tr><td class="c">85º</td><td class="c">351</td><td class="res-name">Valci de Gastanes Silva</td><td class="c">45 a 49</td><td class="c">22:52</td></tr>
+<tr><td class="c">86º</td><td class="c">2</td><td class="res-name">Ademir Viana Ademir Gabriel</td><td class="c">55 a 59</td><td class="c">22:59</td></tr>
+<tr><td class="c">87º</td><td class="c">284</td><td class="res-name">Peter Charles Correndo Samerson</td><td class="c">40 a 44</td><td class="c">23:02</td></tr>
+<tr><td class="c">88º</td><td class="c">77</td><td class="res-name">Danilo Novaes dos Santos</td><td class="c">25 a 29</td><td class="c">23:04</td></tr>
+<tr><td class="c">89º</td><td class="c">268</td><td class="res-name">Oziel Fonseca da Silva</td><td class="c">35 a 39</td><td class="c">23:10</td></tr>
+<tr><td class="c">90º</td><td class="c">367</td><td class="res-name">Wallace Goncalves</td><td class="c">35 a 39</td><td class="c">23:19</td></tr>
+<tr><td class="c">91º</td><td class="c">360</td><td class="res-name">Vinicius Felipe Pinto</td><td class="c">40 a 44</td><td class="c">23:19</td></tr>
+<tr><td class="c">92º</td><td class="c">484</td><td class="res-name">Rodrigo Franco da Costa</td><td class="c">40 a 44</td><td class="c">23:25</td></tr>
+<tr><td class="c">93º</td><td class="c">49</td><td class="res-name">Bruno Farias de Azevedo Motta</td><td class="c">50 a 54</td><td class="c">23:28</td></tr>
+<tr><td class="c">94º</td><td class="c">595</td><td class="res-name">Flávio Cristiano Silva</td><td class="c">40 a 44</td><td class="c">23:28</td></tr>
+<tr><td class="c">95º</td><td class="c">430</td><td class="res-name">Filipe Pontes de Moraes</td><td class="c">35 a 39</td><td class="c">23:34</td></tr>
+<tr><td class="c">96º</td><td class="c">137</td><td class="res-name">Gustavo Duarte Pinho</td><td class="c">0 a 19</td><td class="c">23:38</td></tr>
+<tr><td class="c">97º</td><td class="c">359</td><td class="res-name">Vinícius de Souza Borges</td><td class="c">35 a 39</td><td class="c">23:52</td></tr>
+<tr><td class="c">98º</td><td class="c">65</td><td class="res-name">Claudio Marcos da Costa Peixoto</td><td class="c">60 a 64</td><td class="c">23:56</td></tr>
+<tr><td class="c">99º</td><td class="c">315</td><td class="res-name">Rogerio de Barcelos Ramos</td><td class="c">30 a 34</td><td class="c">23:57</td></tr>
+<tr><td class="c">100º</td><td class="c">415</td><td class="res-name">Daniel Cezarete</td><td class="c">30 a 34</td><td class="c">24:06</td></tr>
+<tr><td class="c">101º</td><td class="c">307</td><td class="res-name">Roberto Gonçalves Motta</td><td class="c">20 a 24</td><td class="c">24:13</td></tr>
+<tr><td class="c">102º</td><td class="c">48</td><td class="res-name">Bruno Cordeiro</td><td class="c">40 a 44</td><td class="c">24:14</td></tr>
+<tr><td class="c">103º</td><td class="c">181</td><td class="res-name">Julio Cruz</td><td class="c">25 a 29</td><td class="c">24:18</td></tr>
+<tr><td class="c">104º</td><td class="c">287</td><td class="res-name">Rafael Carvalho de Andrade</td><td class="c">40 a 44</td><td class="c">24:19</td></tr>
+<tr><td class="c">105º</td><td class="c">305</td><td class="res-name">Ricardo Barbosa</td><td class="c">60 a 64</td><td class="c">24:22</td></tr>
+<tr><td class="c">106º</td><td class="c">577</td><td class="res-name">Leonardo de Oliveira Ramos</td><td class="c">25 a 29</td><td class="c">24:23</td></tr>
+<tr><td class="c">107º</td><td class="c">282</td><td class="res-name">Pedro Medeiros dos Santos</td><td class="c">0 a 19</td><td class="c">24:23</td></tr>
+<tr><td class="c">108º</td><td class="c">42</td><td class="res-name">Antônio Pedro de Sousa</td><td class="c">30 a 34</td><td class="c">24:24</td></tr>
+<tr><td class="c">109º</td><td class="c">348</td><td class="res-name">Thiago Moura Correndo</td><td class="c">40 a 44</td><td class="c">24:29</td></tr>
+<tr><td class="c">110º</td><td class="c">252</td><td class="res-name">Mauro da Silva Correndo Siqueira Rego</td><td class="c">60 a 64</td><td class="c">24:31</td></tr>
+<tr><td class="c">111º</td><td class="c">138</td><td class="res-name">Gustavo Pontes</td><td class="c">20 a 24</td><td class="c">24:35</td></tr>
+<tr><td class="c">112º</td><td class="c">386</td><td class="res-name">Allan Jorge Albuquerque Velloso</td><td class="c">35 a 39</td><td class="c">24:37</td></tr>
+<tr><td class="c">113º</td><td class="c">160</td><td class="res-name">Jhonathan da Silva Pereira</td><td class="c">35 a 39</td><td class="c">24:38</td></tr>
+<tr><td class="c">114º</td><td class="c">366</td><td class="res-name">Walber Blaudt Almeida</td><td class="c">40 a 44</td><td class="c">24:39</td></tr>
+<tr><td class="c">115º</td><td class="c">67</td><td class="res-name">Cleber Rodrigues</td><td class="c">30 a 34</td><td class="c">24:44</td></tr>
+<tr><td class="c">116º</td><td class="c">486</td><td class="res-name">Samuel Gonçalves Moraes Jorge</td><td class="c">0 a 19</td><td class="c">24:53</td></tr>
+<tr><td class="c">117º</td><td class="c">120</td><td class="res-name">Fernando Muniz Correndo Barbosa</td><td class="c">70+</td><td class="c">24:54</td></tr>
+<tr><td class="c">118º</td><td class="c">200</td><td class="res-name">Leo Ramos</td><td class="c">25 a 29</td><td class="c">24:56</td></tr>
+<tr><td class="c">119º</td><td class="c">461</td><td class="res-name">Lucas Francisco Rabelo</td><td class="c">20 a 24</td><td class="c">25:00</td></tr>
+<tr><td class="c">120º</td><td class="c">66</td><td class="res-name">Claudio Roberto de Freitas</td><td class="c">50 a 54</td><td class="c">25:04</td></tr>
+<tr><td class="c">121º</td><td class="c">168</td><td class="res-name">Jose Houliem Pereira</td><td class="c">65 a 69</td><td class="c">25:08</td></tr>
+<tr><td class="c">122º</td><td class="c">222</td><td class="res-name">Luís Felipe Feitosa Ribeiro</td><td class="c">25 a 29</td><td class="c">25:10</td></tr>
+<tr><td class="c">123º</td><td class="c">223</td><td class="res-name">Luis Miguel Ferreira Azevedo</td><td class="c">0 a 19</td><td class="c">25:11</td></tr>
+<tr><td class="c">124º</td><td class="c">490</td><td class="res-name">Sérgio Nogueira</td><td class="c">55 a 59</td><td class="c">25:12</td></tr>
+<tr><td class="c">125º</td><td class="c">572</td><td class="res-name">Hebert de Oliveira Costa</td><td class="c">0 a 19</td><td class="c">25:13</td></tr>
+<tr><td class="c">126º</td><td class="c">11</td><td class="res-name">Alex Silva de Souza</td><td class="c">40 a 44</td><td class="c">25:19</td></tr>
+<tr><td class="c">127º</td><td class="c">230</td><td class="res-name">Marcelei Batista de Souza</td><td class="c">45 a 49</td><td class="c">25:25</td></tr>
+<tr><td class="c">128º</td><td class="c">14</td><td class="res-name">Alexandre Gomes Hanthequeste</td><td class="c">40 a 44</td><td class="c">25:26</td></tr>
+<tr><td class="c">129º</td><td class="c">411</td><td class="res-name">Thiago Santos Costa</td><td class="c">35 a 39</td><td class="c">25:29</td></tr>
+<tr><td class="c">130º</td><td class="c">159</td><td class="res-name">Jhonatan de Souza</td><td class="c">35 a 39</td><td class="c">25:35</td></tr>
+<tr><td class="c">131º</td><td class="c">41</td><td class="res-name">Antonio Bertino de Vasconcelos Cabral Júnior</td><td class="c">40 a 44</td><td class="c">25:36</td></tr>
+<tr><td class="c">132º</td><td class="c">488</td><td class="res-name">Samuel Valentim Marins</td><td class="c">30 a 34</td><td class="c">25:44</td></tr>
+<tr><td class="c">133º</td><td class="c">211</td><td class="res-name">Lucas Guedes Gaertner</td><td class="c">30 a 34</td><td class="c">25:49</td></tr>
+<tr><td class="c">134º</td><td class="c">326</td><td class="res-name">Sergio Ribeiro Batista Junior</td><td class="c">35 a 39</td><td class="c">25:52</td></tr>
+<tr><td class="c">135º</td><td class="c">432</td><td class="res-name">Flavio Froes Sant Ana</td><td class="c">50 a 54</td><td class="c">25:55</td></tr>
+<tr><td class="c">136º</td><td class="c">246</td><td class="res-name">Marlito Lima Santos Junior</td><td class="c">50 a 54</td><td class="c">25:55</td></tr>
+<tr><td class="c">137º</td><td class="c">135</td><td class="res-name">Guilherme Luís André Paiva</td><td class="c">35 a 39</td><td class="c">26:01</td></tr>
+<tr><td class="c">138º</td><td class="c">402</td><td class="res-name">Bruno Povoas de Carvalho</td><td class="c">25 a 29</td><td class="c">26:02</td></tr>
+<tr><td class="c">139º</td><td class="c">570</td><td class="res-name">Moises Batista</td><td class="c">45 a 49</td><td class="c">26:13</td></tr>
+<tr><td class="c">140º</td><td class="c">100</td><td class="res-name">Élder de Oliveira de Souza</td><td class="c">30 a 34</td><td class="c">26:15</td></tr>
+<tr><td class="c">141º</td><td class="c">111</td><td class="res-name">Fagner Brito de Araújo</td><td class="c">45 a 49</td><td class="c">26:19</td></tr>
+<tr><td class="c">142º</td><td class="c">56</td><td class="res-name">Carlos Alberto Bezerra da Silva</td><td class="c">55 a 59</td><td class="c">26:20</td></tr>
+<tr><td class="c">143º</td><td class="c">469</td><td class="res-name">Matheus Augusto Fernandes</td><td class="c">0 a 19</td><td class="c">26:23</td></tr>
+<tr><td class="c">144º</td><td class="c">295</td><td class="res-name">Ramon Rodrigues Grativol</td><td class="c">35 a 39</td><td class="c">26:25</td></tr>
+<tr><td class="c">145º</td><td class="c">380</td><td class="res-name">Paulo Guilherme</td><td class="c">25 a 29</td><td class="c">26:26</td></tr>
+<tr><td class="c">146º</td><td class="c">45</td><td class="res-name">Bernardo Teixeira</td><td class="c">40 a 44</td><td class="c">26:41</td></tr>
+<tr><td class="c">147º</td><td class="c">497</td><td class="res-name">Thiago da Paixão</td><td class="c">40 a 44</td><td class="c">26:44</td></tr>
+<tr><td class="c">148º</td><td class="c">161</td><td class="res-name">Joao Alberto João Almeida da Cruz</td><td class="c">45 a 49</td><td class="c">26:46</td></tr>
+<tr><td class="c">149º</td><td class="c">504</td><td class="res-name">Victor Hugo Melo de Souza</td><td class="c">20 a 24</td><td class="c">26:51</td></tr>
+<tr><td class="c">150º</td><td class="c">157</td><td class="res-name">Jeferson Rodrigues</td><td class="c">20 a 24</td><td class="c">26:54</td></tr>
+<tr><td class="c">151º</td><td class="c">398</td><td class="res-name">Antony Chaves Cirilo</td><td class="c">25 a 29</td><td class="c">26:55</td></tr>
+<tr><td class="c">152º</td><td class="c">266</td><td class="res-name">Nycollas de Oliveira Salustriano</td><td class="c">20 a 24</td><td class="c">26:55</td></tr>
+<tr><td class="c">153º</td><td class="c">410</td><td class="res-name">Celson Moraes Jorge</td><td class="c">35 a 39</td><td class="c">26:57</td></tr>
+<tr><td class="c">154º</td><td class="c">136</td><td class="res-name">Guilherme Macedo da Silva Rodrigues</td><td class="c">25 a 29</td><td class="c">27:03</td></tr>
+<tr><td class="c">155º</td><td class="c">589</td><td class="res-name">Jairo Ramos</td><td class="c">50 a 54</td><td class="c">27:05</td></tr>
+<tr><td class="c">156º</td><td class="c">391</td><td class="res-name">André Luiz Muakad Antunes Vieira</td><td class="c">25 a 29</td><td class="c">27:08</td></tr>
+<tr><td class="c">157º</td><td class="c">447</td><td class="res-name">João Vitor Fialho de Azevedo</td><td class="c">30 a 34</td><td class="c">27:12</td></tr>
+<tr><td class="c">158º</td><td class="c">586</td><td class="res-name">Eduardo Pereira</td><td class="c">50 a 54</td><td class="c">27:45</td></tr>
+<tr><td class="c">159º</td><td class="c">236</td><td class="res-name">Márcio Eduardo Pedra</td><td class="c">55 a 59</td><td class="c">27:49</td></tr>
+<tr><td class="c">160º</td><td class="c">218</td><td class="res-name">Luciano Ferreira Jardim Junior</td><td class="c">25 a 29</td><td class="c">27:51</td></tr>
+<tr><td class="c">161º</td><td class="c">441</td><td class="res-name">Isaías Carvalho da Silva Martins</td><td class="c">50 a 54</td><td class="c">27:53</td></tr>
+<tr><td class="c">162º</td><td class="c">13</td><td class="res-name">Alexandre Felix de Oliveira</td><td class="c">25 a 29</td><td class="c">27:58</td></tr>
+<tr><td class="c">163º</td><td class="c">44</td><td class="res-name">Arlon Alves Pereira</td><td class="c">30 a 34</td><td class="c">28:01</td></tr>
+<tr><td class="c">164º</td><td class="c">70</td><td class="res-name">Cristiano Henrique Duarte</td><td class="c">35 a 39</td><td class="c">28:02</td></tr>
+<tr><td class="c">165º</td><td class="c">507</td><td class="res-name">Vitor Hugo de Souza Horato Medeiros</td><td class="c">25 a 29</td><td class="c">28:02</td></tr>
+<tr><td class="c">166º</td><td class="c">385</td><td class="res-name">Alex Rocha Boaventura</td><td class="c">40 a 44</td><td class="c">28:02</td></tr>
+<tr><td class="c">167º</td><td class="c">363</td><td class="res-name">Wagner Garcez</td><td class="c">50 a 54</td><td class="c">28:09</td></tr>
+<tr><td class="c">168º</td><td class="c">591</td><td class="res-name">Andrew Israel Lopes de Almeida</td><td class="c">25 a 29</td><td class="c">28:17</td></tr>
+<tr><td class="c">169º</td><td class="c">265</td><td class="res-name">Nilson Marcos Gesteira da Cunha</td><td class="c">40 a 44</td><td class="c">28:35</td></tr>
+<tr><td class="c">170º</td><td class="c">478</td><td class="res-name">Quevyn Santos Linhares Vieira</td><td class="c">30 a 34</td><td class="c">28:36</td></tr>
+<tr><td class="c">171º</td><td class="c">201</td><td class="res-name">Leonardo de Oliveira Gianini</td><td class="c">50 a 54</td><td class="c">28:40</td></tr>
+<tr><td class="c">172º</td><td class="c">35</td><td class="res-name">Anderson Correndo Santos</td><td class="c">40 a 44</td><td class="c">28:44</td></tr>
+<tr><td class="c">173º</td><td class="c">182</td><td class="res-name">Juscelino Alves Puchol</td><td class="c">70+</td><td class="c">28:46</td></tr>
+<tr><td class="c">174º</td><td class="c">179</td><td class="res-name">Juliano Rodrigues Araújo do Nascimento</td><td class="c">35 a 39</td><td class="c">28:52</td></tr>
+<tr><td class="c">175º</td><td class="c">107</td><td class="res-name">Evando Santos de Miranda Júnior</td><td class="c">30 a 34</td><td class="c">28:59</td></tr>
+<tr><td class="c">176º</td><td class="c">103</td><td class="res-name">Erick Berriel</td><td class="c">30 a 34</td><td class="c">29:08</td></tr>
+<tr><td class="c">177º</td><td class="c">302</td><td class="res-name">Renan Rubino Cordeiro</td><td class="c">35 a 39</td><td class="c">29:09</td></tr>
+<tr><td class="c">178º</td><td class="c">19</td><td class="res-name">Allan Sinder de Almeida</td><td class="c">30 a 34</td><td class="c">29:12</td></tr>
+<tr><td class="c">179º</td><td class="c">123</td><td class="res-name">Flavio de Moura Favaris</td><td class="c">40 a 44</td><td class="c">29:18</td></tr>
+<tr><td class="c">180º</td><td class="c">12</td><td class="res-name">Alexandre dos Santos da Silva Canuto</td><td class="c">30 a 34</td><td class="c">29:20</td></tr>
+<tr><td class="c">181º</td><td class="c">170</td><td class="res-name">Jose Roberto de Oliveira Meireles</td><td class="c">30 a 34</td><td class="c">29:20</td></tr>
+<tr><td class="c">182º</td><td class="c">510</td><td class="res-name">Weslley Marciano Alves</td><td class="c">25 a 29</td><td class="c">29:22</td></tr>
+<tr><td class="c">183º</td><td class="c">129</td><td class="res-name">Gilcinei dos Santos Silva</td><td class="c">50 a 54</td><td class="c">29:24</td></tr>
+<tr><td class="c">184º</td><td class="c">349</td><td class="res-name">Thiago Moura Ferreira</td><td class="c">20 a 24</td><td class="c">29:29</td></tr>
+<tr><td class="c">185º</td><td class="c">567</td><td class="res-name">Wederson Lessa da Silva</td><td class="c">45 a 49</td><td class="c">29:32</td></tr>
+<tr><td class="c">186º</td><td class="c">85</td><td class="res-name">Eberson Braz Braz_loyalinvestiment Costa</td><td class="c">30 a 34</td><td class="c">29:40</td></tr>
+<tr><td class="c">187º</td><td class="c">341</td><td class="res-name">Thadeu Gomes Couto</td><td class="c">40 a 44</td><td class="c">29:42</td></tr>
+<tr><td class="c">188º</td><td class="c">427</td><td class="res-name">Fabio Damiao Sant Ana Campos</td><td class="c">60 a 64</td><td class="c">29:54</td></tr>
+<tr><td class="c">189º</td><td class="c">576</td><td class="res-name">Leandro Fernandes Nascimento</td><td class="c">45 a 49</td><td class="c">30:02</td></tr>
+<tr><td class="c">190º</td><td class="c">399</td><td class="res-name">Arthur Pereira de Medeiros</td><td class="c">0 a 19</td><td class="c">30:13</td></tr>
+<tr><td class="c">191º</td><td class="c">40</td><td class="res-name">Anselmo Santos</td><td class="c">40 a 44</td><td class="c">30:19</td></tr>
+<tr><td class="c">192º</td><td class="c">285</td><td class="res-name">Peterson Moraes Cardoso</td><td class="c">40 a 44</td><td class="c">30:27</td></tr>
+<tr><td class="c">193º</td><td class="c">92</td><td class="res-name">Edmilson da Silva</td><td class="c">60 a 64</td><td class="c">30:29</td></tr>
+<tr><td class="c">194º</td><td class="c">350</td><td class="res-name">Tiago Frederico Gimene</td><td class="c">40 a 44</td><td class="c">30:34</td></tr>
+<tr><td class="c">195º</td><td class="c">237</td><td class="res-name">Josias Roberto</td><td class="c">30 a 34</td><td class="c">30:56</td></tr>
+<tr><td class="c">196º</td><td class="c">238</td><td class="res-name">Marco Antônio de Andrade</td><td class="c">50 a 54</td><td class="c">31:01</td></tr>
+<tr><td class="c">197º</td><td class="c">445</td><td class="res-name">João Campos</td><td class="c">65 a 69</td><td class="c">31:14</td></tr>
+<tr><td class="c">198º</td><td class="c">573</td><td class="res-name">Claudio Feliciano</td><td class="c">55 a 59</td><td class="c">31:23</td></tr>
+<tr><td class="c">199º</td><td class="c">166</td><td class="res-name">Jose Antônio Mattos de Oliveira</td><td class="c">55 a 59</td><td class="c">31:33</td></tr>
+<tr><td class="c">200º</td><td class="c">180</td><td class="res-name">Júlio Cezar de Souza</td><td class="c">40 a 44</td><td class="c">31:34</td></tr>
+<tr><td class="c">201º</td><td class="c">375</td><td class="res-name">Wladimir de Araujo Lima</td><td class="c">65 a 69</td><td class="c">31:36</td></tr>
+<tr><td class="c">202º</td><td class="c">439</td><td class="res-name">Hugo Renan Martins de Souza</td><td class="c">40 a 44</td><td class="c">31:40</td></tr>
+<tr><td class="c">203º</td><td class="c">78</td><td class="res-name">Davi de Souza Araújo</td><td class="c">0 a 19</td><td class="c">31:40</td></tr>
+<tr><td class="c">204º</td><td class="c">197</td><td class="res-name">Leandro Paiva</td><td class="c">40 a 44</td><td class="c">32:11</td></tr>
+<tr><td class="c">205º</td><td class="c">309</td><td class="res-name">Robson Azevedo</td><td class="c">60 a 64</td><td class="c">32:12</td></tr>
+<tr><td class="c">206º</td><td class="c">358</td><td class="res-name">Victor Maia</td><td class="c">35 a 39</td><td class="c">32:20</td></tr>
+<tr><td class="c">207º</td><td class="c">79</td><td class="res-name">Davi Mendonça Andrade</td><td class="c">40 a 44</td><td class="c">32:24</td></tr>
+<tr><td class="c">208º</td><td class="c">172</td><td class="res-name">Josemar Martins dos Santos</td><td class="c">55 a 59</td><td class="c">32:24</td></tr>
+<tr><td class="c">209º</td><td class="c">88</td><td class="res-name">Edilberto Cardoso de Almeida</td><td class="c">65 a 69</td><td class="c">32:40</td></tr>
+<tr><td class="c">210º</td><td class="c">440</td><td class="res-name">Igor Nunes Veloso</td><td class="c">25 a 29</td><td class="c">32:41</td></tr>
+<tr><td class="c">211º</td><td class="c">495</td><td class="res-name">Thadeu Marques Fernandes</td><td class="c">45 a 49</td><td class="c">32:50</td></tr>
+<tr><td class="c">212º</td><td class="c">34</td><td class="res-name">Anderson Ribeiro dos Santos</td><td class="c">50 a 54</td><td class="c">32:56</td></tr>
+<tr><td class="c">213º</td><td class="c">347</td><td class="res-name">Thiago Ramos da Costa</td><td class="c">35 a 39</td><td class="c">33:00</td></tr>
+<tr><td class="c">214º</td><td class="c">196</td><td class="res-name">Leandro José Lopes</td><td class="c">45 a 49</td><td class="c">33:00</td></tr>
+<tr><td class="c">215º</td><td class="c">387</td><td class="res-name">Alvaro Martins Vial</td><td class="c">30 a 34</td><td class="c">33:12</td></tr>
+<tr><td class="c">216º</td><td class="c">75</td><td class="res-name">Daniel Sousa do Nascimento</td><td class="c">35 a 39</td><td class="c">33:41</td></tr>
+<tr><td class="c">217º</td><td class="c">21</td><td class="res-name">Altamiro dos Santos Maciel</td><td class="c">55 a 59</td><td class="c">34:04</td></tr>
+<tr><td class="c">218º</td><td class="c">184</td><td class="res-name">Kaio de Abreu Borges de Sousa</td><td class="c">25 a 29</td><td class="c">34:23</td></tr>
+<tr><td class="c">219º</td><td class="c">407</td><td class="res-name">Carlos Henrique da Silva Cora</td><td class="c">0 a 19</td><td class="c">34:31</td></tr>
+<tr><td class="c">220º</td><td class="c">434</td><td class="res-name">Gabriel Barreto da Cunha</td><td class="c">30 a 34</td><td class="c">34:36</td></tr>
+<tr><td class="c">221º</td><td class="c">57</td><td class="res-name">Carlos Edy Pinto Cunha Junior</td><td class="c">35 a 39</td><td class="c">34:36</td></tr>
+<tr><td class="c">222º</td><td class="c">288</td><td class="res-name">Rafael da Silva Alvarenga</td><td class="c">35 a 39</td><td class="c">35:05</td></tr>
+<tr><td class="c">223º</td><td class="c">491</td><td class="res-name">Silmario Valente Jordão</td><td class="c">40 a 44</td><td class="c">35:06</td></tr>
+<tr><td class="c">224º</td><td class="c">465</td><td class="res-name">Marcio de Castro Ferreira</td><td class="c">45 a 49</td><td class="c">35:33</td></tr>
+<tr><td class="c">225º</td><td class="c">368</td><td class="res-name">Walterfran M Alves</td><td class="c">65 a 69</td><td class="c">35:50</td></tr>
+<tr><td class="c">226º</td><td class="c">310</td><td class="res-name">Rodriggo Maia Coutinho Macedo</td><td class="c">0 a 19</td><td class="c">35:58</td></tr>
+<tr><td class="c">227º</td><td class="c">210</td><td class="res-name">Lucas César Landim Gomes</td><td class="c">30 a 34</td><td class="c">36:06</td></tr>
+<tr><td class="c">228º</td><td class="c">213</td><td class="res-name">Lucas Xariff Domingues</td><td class="c">45 a 49</td><td class="c">36:25</td></tr>
+<tr><td class="c">229º</td><td class="c">125</td><td class="res-name">Francisco Miguel da Silva Neto</td><td class="c">45 a 49</td><td class="c">36:41</td></tr>
+<tr><td class="c">230º</td><td class="c">253</td><td class="res-name">Maycon Ferreira</td><td class="c">35 a 39</td><td class="c">36:51</td></tr>
+<tr><td class="c">231º</td><td class="c">279</td><td class="res-name">Pedro Henrique Valverde</td><td class="c">35 a 39</td><td class="c">37:20</td></tr>
+<tr><td class="c">232º</td><td class="c">33</td><td class="res-name">Anderson Maximo Pereira</td><td class="c">45 a 49</td><td class="c">37:23</td></tr>
+<tr><td class="c">233º</td><td class="c">446</td><td class="res-name">João Vitor de Jesus</td><td class="c">0 a 19</td><td class="c">37:52</td></tr>
+<tr><td class="c">234º</td><td class="c">207</td><td class="res-name">Luan Gastanes dos Santos</td><td class="c">0 a 19</td><td class="c">38:12</td></tr>
+<tr><td class="c">235º</td><td class="c">578</td><td class="res-name">Cleber Rolim Pessoa</td><td class="c">45 a 49</td><td class="c">38:14</td></tr>
+<tr><td class="c">236º</td><td class="c">235</td><td class="res-name">Marcelo Teodoro Maia</td><td class="c">55 a 59</td><td class="c">38:15</td></tr>
+<tr><td class="c">237º</td><td class="c">73</td><td class="res-name">Daniel Oliveira Lima</td><td class="c">0 a 19</td><td class="c">38:33</td></tr>
+<tr><td class="c">238º</td><td class="c">353</td><td class="res-name">Valdivio Arifa Tigre Neto</td><td class="c">30 a 34</td><td class="c">38:37</td></tr>
+<tr><td class="c">239º</td><td class="c">311</td><td class="res-name">Rodrigo de Oliveira Fernandes</td><td class="c">40 a 44</td><td class="c">39:12</td></tr>
+<tr><td class="c">240º</td><td class="c">169</td><td class="res-name">Jose Ribamar Gonçalves Gama</td><td class="c">45 a 49</td><td class="c">39:26</td></tr>
+<tr><td class="c">241º</td><td class="c">89</td><td class="res-name">Edilson Corfrendo Domingos Sotinho</td><td class="c">65 a 69</td><td class="c">39:45</td></tr>
+<tr><td class="c">242º</td><td class="c">83</td><td class="res-name">Diogo Oliveira Lemos</td><td class="c">35 a 39</td><td class="c">40:30</td></tr>
+<tr><td class="c">243º</td><td class="c">322</td><td class="res-name">Samuel Marins Samuel Israel</td><td class="c">45 a 49</td><td class="c">40:38</td></tr>
+<tr><td class="c">244º</td><td class="c">425</td><td class="res-name">Evandro dos Santos</td><td class="c">40 a 44</td><td class="c">40:41</td></tr>
+<tr><td class="c">245º</td><td class="c">462</td><td class="res-name">Luis Carlos de Araujo Pol</td><td class="c">70+</td><td class="c">40:51</td></tr>
+<tr><td class="c">246º</td><td class="c">483</td><td class="res-name">Robson Passos Fernandes</td><td class="c">35 a 39</td><td class="c">41:18</td></tr>
+<tr><td class="c">247º</td><td class="c">481</td><td class="res-name">Rasmus Helleberg Mathiesen</td><td class="c">0 a 19</td><td class="c">41:34</td></tr>
+<tr><td class="c">248º</td><td class="c">121</td><td class="res-name">Fernando Silva de Oliveira</td><td class="c">40 a 44</td><td class="c">44:09</td></tr>
+<tr><td class="c">249º</td><td class="c">373</td><td class="res-name">Weslei de Souza Santos</td><td class="c">30 a 34</td><td class="c">44:58</td></tr>
+<tr><td class="c">250º</td><td class="c">371</td><td class="res-name">Wendel Bernardo Sabino</td><td class="c">35 a 39</td><td class="c">45:13</td></tr>
+<tr><td class="c">251º</td><td class="c">397</td><td class="res-name">Antônio Marcos</td><td class="c">40 a 44</td><td class="c">45:54</td></tr>
+<tr><td class="c">252º</td><td class="c">219</td><td class="res-name">Luciano Gomes Xavier do Carmo</td><td class="c">40 a 44</td><td class="c">46:34</td></tr>
+<tr><td class="c">253º</td><td class="c">501</td><td class="res-name">Valdecir Epifanio Cora</td><td class="c">60 a 64</td><td class="c">48:24</td></tr>
+<tr><td class="c">254º</td><td class="c">22</td><td class="res-name">Aluisio Leal Goes</td><td class="c">35 a 39</td><td class="c">48:26</td></tr>
+<tr><td class="c">255º</td><td class="c">374</td><td class="res-name">Willams Tadeu Limeira dos Santos</td><td class="c">45 a 49</td><td class="c">48:35</td></tr>
+<tr><td class="c">256º</td><td class="c">86</td><td class="res-name">Edgar Luis Fernando Insfran</td><td class="c">70+</td><td class="c">48:38</td></tr>
+<tr><td class="c">257º</td><td class="c">51</td><td class="res-name">Caio Cezar de Souza Araújo</td><td class="c">35 a 39</td><td class="c">57:58</td></tr>
+<tr><td class="c">258º</td><td class="c">36</td><td class="res-name">André dos Santos Salviano</td><td class="c">45 a 49</td><td class="c">59:18</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">Resultado extra oficial · apuração <span class="b">apuracaodetempos.com.br</span> · 022<span class="b">RUNNERS</span></div>
+
+</div>
+
+<script>
+function toggleFull(){
+  const el = document.getElementById('fullResults');
+  const btn = document.getElementById('fullToggleBtn');
+  const open = el.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  btn.innerHTML = (open ? 'Ocultar resultado completo' : 'Ver resultado completo') + ' <span class="arrow">▾</span>';
+}
+function showTab(name){
+  ['fem','masc'].forEach(function(n){
+    document.getElementById('panel-'+n).classList.toggle('active', n===name);
+    document.getElementById('tabBtn'+n.charAt(0).toUpperCase()+n.slice(1)).classList.toggle('active', n===name);
+  });
+  document.getElementById('resSearch').value='';
+  filterTable();
+}
+function filterTable(){
+  const q = document.getElementById('resSearch').value.trim().toLowerCase();
+  const active = document.querySelector('.tab-panel.active');
+  const rows = active.querySelectorAll('tbody tr');
+  rows.forEach(function(r){
+    const txt = r.textContent.toLowerCase();
+    r.style.display = txt.indexOf(q) !== -1 ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
