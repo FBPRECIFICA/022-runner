@@ -158,14 +158,6 @@ export function EventDetailPage() {
               🏆 Pódio · Ver Resultados
             </Link>
           )}
-          {event.slug === 'balneario-run' && (
-            <Link
-              to={`/evento/${event.slug}/largada`}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto sm:inline-flex mb-4 px-6 py-3 rounded-xl font-bold text-[#111] shadow-md bg-gradient-to-r from-[#C9A84C] to-[#E8CE7A] hover:from-[#B8962E] hover:to-[#C9A84C] transition-colors"
-            >
-              📋 Lista de Largada · Ver minha categoria
-            </Link>
-          )}
           <div className="flex flex-wrap gap-2 mb-3">
             {event.status === 'published' && (
               registrationOpen ? (
