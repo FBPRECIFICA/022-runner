@@ -5,9 +5,19 @@ import { LogOut, LayoutDashboard, Menu, X, Search } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
 export function Header() {
-  const { user, isAuthenticated, isAdmin, isOrganizer, isAthlete, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isOrganizer, isAthlete, logout, becomeOrganizer } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [becoming, setBecoming] = useState(false);
+
+  const handleBecomeOrganizer = async () => {
+    setBecoming(true);
+    const result = await becomeOrganizer();
+    setBecoming(false);
+    setMobileOpen(false);
+    if (result.success) navigate('/organizador');
+    else alert(result.message);
+  };
 
   const [searchQ, setSearchQ] = useState('');
   const handleSearch = (e: React.FormEvent) => {
@@ -98,12 +108,21 @@ export function Header() {
                 <>
                   <NavLink to="/organizador"><span className="flex items-center gap-1"><LayoutDashboard size={13} /> Meu Painel</span></NavLink>
                   <NavLink to="/organizador">Criar Evento</NavLink>
+                  <NavLink to="/atleta">Minhas Inscrições</NavLink>
                 </>
               )}
               {isAthlete && (
                 <>
                   <NavLink to="/atleta">Minhas Inscrições</NavLink>
                   <NavLink to="/ranking">Ranking</NavLink>
+                  <button
+                    onClick={handleBecomeOrganizer}
+                    disabled={becoming}
+                    className="px-3 py-1 rounded border text-sm transition-colors duration-200 hover:bg-amber-50 disabled:opacity-60"
+                    style={{ borderColor: '#C9A84C', color: '#B8962E', fontWeight: 500 }}
+                  >
+                    {becoming ? 'Ativando...' : 'Quero ser organizador'}
+                  </button>
                 </>
               )}
               <NotificationBell />
@@ -147,7 +166,17 @@ export function Header() {
             <>
               {isAdmin && <MobileLink to="/admin" onClick={() => setMobileOpen(false)}><span className="flex items-center gap-2"><LayoutDashboard size={14} /> Admin</span></MobileLink>}
               {(isAdmin || isOrganizer) && <MobileLink to="/organizador" onClick={() => setMobileOpen(false)}><span className="flex items-center gap-2"><LayoutDashboard size={14} /> Painel Organizador</span></MobileLink>}
-              {isAthlete && <MobileLink to="/atleta" onClick={() => setMobileOpen(false)}>Minhas Inscrições</MobileLink>}
+              <MobileLink to="/atleta" onClick={() => setMobileOpen(false)}>Minhas Inscrições</MobileLink>
+              {isAthlete && (
+                <button
+                  onClick={handleBecomeOrganizer}
+                  disabled={becoming}
+                  className="block text-left px-4 py-3 transition-colors duration-200 hover:bg-gray-50 disabled:opacity-60"
+                  style={{ color: '#B8962E', fontWeight: 600 }}
+                >
+                  {becoming ? 'Ativando...' : 'Quero ser organizador'}
+                </button>
+              )}
               <MobileLink to="/perfil" onClick={() => setMobileOpen(false)}>Meu Perfil</MobileLink>
               <div className="px-4 py-3 flex items-center justify-between">
                 <span style={{ color: '#555555', fontSize: '13px' }}>{user?.name}</span>

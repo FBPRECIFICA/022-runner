@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+﻿import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '../types';
 
@@ -10,7 +10,8 @@ interface AuthContextType {
   isAthlete: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; errorCode?: string; message?: string }>;
   loginWithGoogle: (redirectTo?: string) => Promise<void>;
-  register: (name: string, email: string, password: string, role?: string) => Promise<{ success: boolean; message?: string }>;
+  register: (name: string, email: string, password: string, role?: string) => Promise<{ success: boolean; alreadyRegistered?: boolean; message?: string }>;
+  becomeOrganizer: () => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
 }
 
@@ -19,8 +20,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const loadSeq = useRef(0);
 
   const loadUserProfile = async (userId: string) => {
+    // Só a chamada mais recente aplica o resultado: login() dispara um load via
+    // onAuthStateChange e becomeOrganizer() logo depois dispara outro — sem isso o load
+    // antigo (role athlete) pode terminar por último e sobrescrever o organizer.
+    const seq = ++loadSeq.current;
     try {
       // Tenta algumas vezes antes de desistir: logo após um cadastro novo, o registro em
       // public.users (feito por register(), abaixo) pode ainda não ter comitado quando
@@ -43,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.log('Profile data:', data, 'Error:', error);
 
+      if (seq !== loadSeq.current) return;
       if (data) {
         setUser({
           id: data.id,
@@ -108,8 +115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const register = async (name: string, email: string, password: string, role = 'athlete'): Promise<{ success: boolean; message?: string }> => {
+  const register = async (name: string, email: string, password: string, role = 'athlete'): Promise<{ success: boolean; alreadyRegistered?: boolean; message?: string }> => {
     const { data, error } = await supabase.auth.signUp({ email, password });
+    // "User already registered" vem como erro OU (com confirmação de e-mail ligada) como user sem identities
+    const alreadyRegistered = !!error?.message?.toLowerCase().includes('already registered') ||
+      (!error && data.user?.identities?.length === 0);
+    if (alreadyRegistered) {
+      return { success: false, alreadyRegistered: true, message: 'Este e-mail já tem cadastro. Entre com sua conta.' };
+    }
     if (error || !data.user) return { success: false, message: error?.message };
     const { error: profileError } = await supabase.from('users').upsert(
       { id: data.user.id, name, email, role },
@@ -119,6 +132,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Profile upsert failed:', profileError.message);
       return { success: false, message: 'Erro ao criar seu perfil. Tente novamente.' };
     }
+    return { success: true };
+  };
+
+  // Qualquer atleta (ou conta Google sem perfil) vira organizador — RPC become_organizer()
+  // (migration 20261019230000). Admin/organizer não são alterados.
+  const becomeOrganizer = async (): Promise<{ success: boolean; message?: string }> => {
+    const { error } = await supabase.rpc('become_organizer');
+    if (error) {
+      console.error('become_organizer failed:', error.message);
+      return {
+        success: false,
+        message: error.message.includes('email_ja_vinculado')
+          ? 'Este e-mail já está ligado a outra conta. Entre com e-mail e senha ou fale com o suporte.'
+          : 'Não foi possível ativar o perfil de organizador. Tente novamente.',
+      };
+    }
+    const { data: authUser } = await supabase.auth.getUser();
+    if (authUser?.user) await loadUserProfile(authUser.user.id);
     return { success: true };
   };
 
@@ -136,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     loginWithGoogle,
     register,
+    becomeOrganizer,
     logout,
   };
 

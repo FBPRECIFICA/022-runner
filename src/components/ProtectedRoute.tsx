@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 // Regras estritas:
-// /atleta      → apenas athlete
+// /atleta      → athlete, organizer ou admin (organizador continua vendo suas inscrições)
 // /organizador → organizer ou admin
 // /admin       → apenas admin
 // Acesso negado → redireciona para /login

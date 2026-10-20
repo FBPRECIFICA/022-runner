@@ -5,8 +5,19 @@ import { supabase } from '../lib/supabase';
 import { Trophy, Calendar, MapPin, Clock, XCircle, ArrowRight, Star, Heart, CreditCard } from 'lucide-react';
 
 export function AthleteDashboard() {
-  const { user } = useAuth();
+  const { user, isAthlete, becomeOrganizer } = useAuth();
   const navigate = useNavigate();
+  const [becoming, setBecoming] = useState(false);
+  const [becomeError, setBecomeError] = useState('');
+
+  const handleBecomeOrganizer = async () => {
+    setBecoming(true);
+    setBecomeError('');
+    const result = await becomeOrganizer();
+    setBecoming(false);
+    if (result.success) navigate('/organizador');
+    else setBecomeError(result.message || 'Erro ao ativar perfil de organizador.');
+  };
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [recommended, setRecommended] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<any[]>([]);
@@ -67,7 +78,7 @@ export function AthleteDashboard() {
     <div className="min-h-screen bg-gray-50">
       {/* Header perfil */}
       <div className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-4 py-6 flex items-center gap-5">
+        <div className="max-w-4xl mx-auto px-4 py-6 flex flex-wrap items-center gap-5">
           <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #C9A84C, #B8962E)' }}>
             {initials}
@@ -77,6 +88,23 @@ export function AthleteDashboard() {
             <p className="text-gray-500 text-sm">{user?.email}</p>
             <span className="inline-block mt-1 text-xs font-semibold bg-amber-100 text-[#B8962E] px-2 py-0.5 rounded-full">Atleta</span>
           </div>
+          {isAthlete ? (
+            <div className="ml-auto text-right">
+              <button
+                onClick={handleBecomeOrganizer}
+                disabled={becoming}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60"
+                style={{ backgroundColor: '#C9A84C', color: '#000' }}
+              >
+                {becoming ? 'Ativando...' : 'Quero ser organizador'}
+              </button>
+              {becomeError && <p className="text-xs text-red-600 mt-1 max-w-[220px]">{becomeError}</p>}
+            </div>
+          ) : (
+            <Link to="/organizador" className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold border" style={{ borderColor: '#C9A84C', color: '#B8962E' }}>
+              Painel do organizador
+            </Link>
+          )}
         </div>
       </div>
 
