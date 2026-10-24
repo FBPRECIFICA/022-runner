@@ -36,8 +36,9 @@ export function AdminDashboard() {
   const [events, setEvents] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [registrations, setRegistrations] = useState<any[]>([]);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
-  const [cityData, setCityData] = useState<any[]>([]);
+  // 'active' = só eventos com archived_at null (padrão); 'all' = geral até hoje. Arquivar é só
+  // organização interna das contas do admin — o público continua vendo o evento normalmente.
+  const [scope, setScope] = useState<'active' | 'all'>('active');
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
   const [leoConversations, setLeoConversations] = useState<any[]>([]);
@@ -151,21 +152,16 @@ export function AdminDashboard() {
     const revenue = paidRegs.reduce((a, r) => a + Number(r.base_amount ?? r.amount ?? 0), 0);
     const platformRevenue = paidRegs.reduce((a, r) => a + Number(r.platform_fee ?? 0), 0);
     setStats({ events: evts?.length || 0, users: usrs?.length || 0, registrations: regs?.length || 0, revenue, platformRevenue });
-
-    // Monthly chart
-    const months: Record<string, number> = {};
-    (regs || []).forEach(r => {
-      const m = new Date(r.created_at).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-      months[m] = (months[m] || 0) + 1;
-    });
-    setMonthlyData(Object.entries(months).slice(-6).map(([name, value]) => ({ name, value })));
-
-    // City chart
-    const cities: Record<string, number> = {};
-    (evts || []).forEach(e => { cities[e.city] = (cities[e.city] || 0) + 1; });
-    setCityData(Object.entries(cities).map(([name, value]) => ({ name, value })));
-
     setLoading(false);
+  };
+
+  const toggleArchive = async (event: any) => {
+    const archiving = !event.archived_at;
+    if (archiving && !window.confirm('Este evento sairá dos totais principais. O público continua vendo normalmente.')) return;
+    const { data, error } = await supabase.rpc('set_event_archived', { p_event_id: event.id, p_archived: archiving });
+    if (error) { toast.error('Erro: ' + error.message); return; }
+    setEvents(prev => prev.map(e => e.id === event.id ? { ...e, archived_at: data } : e));
+    toast.success(archiving ? 'Evento arquivado nas contas.' : 'Evento de volta às contas principais.');
   };
 
   const addWithdrawal = async () => {
@@ -282,6 +278,33 @@ export function AdminDashboard() {
     { key: 'leo', label: 'LEO — Conversas' },
   ];
 
+  const scopedEvents = scope === 'all' ? events : events.filter(e => !e.archived_at);
+  const scopedEventIds = new Set(scopedEvents.map(e => e.id));
+  const scopedRegs = scope === 'all' ? registrations : registrations.filter(r => scopedEventIds.has(r.event_id));
+  const archivedEvents = events.filter(e => e.archived_at);
+
+  const months: Record<string, number> = {};
+  scopedRegs.forEach(r => {
+    const m = new Date(r.created_at).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+    months[m] = (months[m] || 0) + 1;
+  });
+  const monthlyData = Object.entries(months).slice(-6).map(([name, value]) => ({ name, value }));
+  const cities: Record<string, number> = {};
+  scopedEvents.forEach(e => { cities[e.city] = (cities[e.city] || 0) + 1; });
+  const cityData = Object.entries(cities).map(([name, value]) => ({ name, value }));
+
+  const scopeSelector = (
+    <div className="inline-flex rounded-lg p-1 gap-1" style={{ backgroundColor: '#1e293b' }}>
+      {([['active', 'Eventos ativos'], ['all', 'Geral até hoje']] as const).map(([k, label]) => (
+        <button key={k} onClick={() => setScope(k)}
+          className="px-3 py-1.5 rounded-md text-sm font-medium"
+          style={{ backgroundColor: scope === k ? '#C9A84C' : 'transparent', color: scope === k ? '#fff' : '#94a3b8' }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <>
     <div className="min-h-screen flex print:hidden" style={{ backgroundColor: '#0f172a' }}>
@@ -325,10 +348,13 @@ export function AdminDashboard() {
               {/* OVERVIEW */}
               {tab === 'overview' && (
                 <div className="space-y-6">
-                  <h1 className="text-2xl font-bold text-white">Visão Geral</h1>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h1 className="text-2xl font-bold text-white">Visão Geral</h1>
+                    {scopeSelector}
+                  </div>
                   {(() => {
-                    const paidRegsAll = registrations.filter(r => r.status === 'paid' || r.status === 'confirmed');
-                    const totalFigures = sumAuditFigures(registrations);
+                    const paidRegsAll = scopedRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
+                    const totalFigures = sumAuditFigures(scopedRegs);
                     // Ajuste histórico: diferença entre o que a fórmula ATUAL de comissão (10% do
                     // valor original) cobraria e o que foi realmente cobrado/gravado em platform_fee
                     // — só existe pra inscrições com cupom feitas antes da correção de 11/08/2026
@@ -346,9 +372,9 @@ export function AdminDashboard() {
                       <>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {[
-                            { icon: <Calendar size={20} />, label: 'Eventos', value: stats.events, color: '#C9A84C' },
+                            { icon: <Calendar size={20} />, label: 'Eventos', value: scopedEvents.length, color: '#C9A84C' },
                             { icon: <Users size={20} />, label: 'Usuários', value: stats.users, color: '#C9A84C' },
-                            { icon: <Award size={20} />, label: 'Inscrições', value: stats.registrations, color: '#16a34a' },
+                            { icon: <Award size={20} />, label: 'Inscrições', value: scopedRegs.length, color: '#16a34a' },
                           ].map((s, i) => (
                             <div key={i} className="rounded-xl p-4" style={{ backgroundColor: '#1e293b' }}>
                               <div className="flex items-center gap-2 mb-2" style={{ color: s.color }}>{s.icon}</div>
@@ -358,7 +384,7 @@ export function AdminDashboard() {
                           ))}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-white mb-2">Os 4 números (todos os eventos, ao vivo)</p>
+                          <p className="text-sm font-semibold text-white mb-2">Os 4 números ({scope === 'all' ? 'geral até hoje, ativos + arquivados' : 'só eventos ativos'}, ao vivo)</p>
                           <AuditFourNumbers dark bruto={totalFigures.bruto} comissao={totalFigures.comissao} taxaAsaas={totalFigures.taxaAsaas} liquido={totalFigures.liquido} />
                         </div>
                         <p className="text-xs -mt-2" style={{ color: '#64748b' }}>
@@ -414,7 +440,7 @@ export function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {events.map(e => {
+                        {scopedEvents.map(e => {
                           const evRegs = registrations.filter(r => r.event_id === e.id);
                           const f = sumAuditFigures(evRegs);
                           const organizerName = users.find(u => u.id === e.organizer_id)?.name || '—';
@@ -445,6 +471,62 @@ export function AdminDashboard() {
                     </table>
                     </div>
                   </div>
+
+                  {/* Arquivados: recolhido por padrão. Valores finais + total geral até hoje. */}
+                  <details className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1e293b' }}>
+                    <summary className="px-5 py-4 cursor-pointer font-semibold text-white">
+                      Eventos arquivados ({archivedEvents.length})
+                    </summary>
+                    {(() => {
+                      const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
+                      const geral = sumAuditFigures(registrations);
+                      return (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead style={{ backgroundColor: '#0f172a' }}>
+                              <tr className="text-left" style={{ color: '#94a3b8' }}>
+                                {['Evento', 'Inscritos', 'Bruto', 'Comissão', 'Taxa Asaas', 'Líquido', 'Arquivado em', ''].map(h => (
+                                  <th key={h} className="px-4 py-2 font-medium whitespace-nowrap">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {archivedEvents.map(e => {
+                                const evRegs = registrations.filter(r => r.event_id === e.id);
+                                const f = sumAuditFigures(evRegs);
+                                const inscritos = evRegs.filter(r => r.status === 'paid' || r.status === 'confirmed').length;
+                                return (
+                                  <tr key={e.id} style={{ borderTop: '1px solid #334155' }}>
+                                    <td className="px-4 py-2 whitespace-nowrap">
+                                      <button onClick={() => setSelectedEventPreview(e)} className="text-white hover:underline text-left">{e.title}</button>
+                                    </td>
+                                    <td className="px-4 py-2" style={{ color: '#94a3b8' }}>{inscritos}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap" style={{ color: '#C9A84C' }}>{fmt(f.bruto)}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap text-red-400">-{fmt(f.comissao)}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap" style={{ color: '#fbbf24' }}>-{fmt(f.taxaAsaas)}</td>
+                                    <td className="px-4 py-2 font-semibold whitespace-nowrap text-green-400">{fmt(f.liquido)}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap" style={{ color: '#94a3b8' }}>{new Date(e.archived_at).toLocaleDateString('pt-BR')}</td>
+                                    <td className="px-4 py-2">
+                                      <button onClick={() => toggleArchive(e)} className="text-xs px-2 py-1.5 rounded-lg font-medium whitespace-nowrap" style={{ backgroundColor: '#334155', color: '#fff' }}>Desarquivar</button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              <tr style={{ borderTop: '2px solid #C9A84C' }}>
+                                <td className="px-4 py-2 font-semibold text-white whitespace-nowrap">Total geral até hoje (ativos + arquivados)</td>
+                                <td className="px-4 py-2 font-semibold" style={{ color: '#94a3b8' }}>{registrations.filter(r => r.status === 'paid' || r.status === 'confirmed').length}</td>
+                                <td className="px-4 py-2 font-semibold whitespace-nowrap" style={{ color: '#C9A84C' }}>{fmt(geral.bruto)}</td>
+                                <td className="px-4 py-2 font-semibold whitespace-nowrap text-red-400">-{fmt(geral.comissao)}</td>
+                                <td className="px-4 py-2 font-semibold whitespace-nowrap" style={{ color: '#fbbf24' }}>-{fmt(geral.taxaAsaas)}</td>
+                                <td className="px-4 py-2 font-semibold whitespace-nowrap text-green-400">{fmt(geral.liquido)}</td>
+                                <td colSpan={2} />
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
+                  </details>
                 </div>
               )}
 
@@ -467,12 +549,16 @@ export function AdminDashboard() {
                             <td className="px-4 py-3 text-white font-medium">{e.title}</td>
                             <td className="px-4 py-3" style={{ color: '#94a3b8' }}>{e.city}</td>
                             <td className="px-4 py-3" style={{ color: '#94a3b8' }}>{new Date(e.date).toLocaleDateString('pt-BR')}</td>
-                            <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full bg-green-900 text-green-300">{e.status}</span></td>
+                            <td className="px-4 py-3">
+                              <span className="text-xs px-2 py-1 rounded-full bg-green-900 text-green-300">{e.status}</span>
+                              {e.archived_at && <span className="ml-1 text-xs px-2 py-1 rounded-full bg-slate-700 text-slate-300">arquivado</span>}
+                            </td>
                             <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full bg-[#1A1A1A] text-amber-300">{e.plan}</span></td>
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
                                 <a href={`/evento/${e.slug}`} target="_blank" rel="noreferrer" className="text-xs px-2 py-1 rounded bg-blue-800 text-white hover:bg-blue-700 flex items-center gap-1" title="Ver como Atleta"><Eye size={12} /> Atleta</a>
                                 <button onClick={() => setSelectedEventPreview(e)} className="text-xs px-2 py-1 rounded bg-indigo-800 text-white hover:bg-indigo-700 flex items-center gap-1" title="Ver como Organizador"><BarChart3 size={12} /> Org.</button>
+                                <button onClick={() => toggleArchive(e)} className="text-xs px-2 py-1 rounded bg-slate-600 text-white hover:bg-slate-500 whitespace-nowrap">{e.archived_at ? 'Desarquivar' : 'Arquivar nas contas'}</button>
                                 <button onClick={() => updateEventPlan(e.id, 'featured')} className="text-xs px-2 py-1 rounded bg-yellow-700 text-white hover:bg-yellow-600" title="Destacar"><Star size={12} /></button>
                                 <button onClick={() => updateEventPlan(e.id, 'premium')} className="text-xs px-2 py-1 rounded bg-purple-700 text-white hover:bg-purple-600" title="Premium"><Award size={12} /></button>
                                 <button onClick={() => setConfirmDelete({ id: e.id, title: e.title })} className="text-xs px-2 py-1 rounded bg-red-800 text-white hover:bg-red-700" title="Excluir"><Trash2 size={12} /></button>
@@ -491,7 +577,10 @@ export function AdminDashboard() {
                 const organizerRows = users.filter(u => u.role === 'organizer' || events.some(e => e.organizer_id === u.id));
                 return (
                   <div className="space-y-4">
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Briefcase size={22} style={{ color: '#C9A84C' }} /> Organizadores</h1>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Briefcase size={22} style={{ color: '#C9A84C' }} /> Organizadores</h1>
+                      {scopeSelector}
+                    </div>
                     <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1e293b' }}>
                       <table className="w-full text-sm">
                         <thead style={{ backgroundColor: '#0f172a' }}>
@@ -505,9 +594,9 @@ export function AdminDashboard() {
                           {organizerRows.length === 0 ? (
                             <tr><td colSpan={6} className="px-4 py-8 text-center" style={{ color: '#94a3b8' }}>Nenhum organizador cadastrado ainda.</td></tr>
                           ) : organizerRows.map(u => {
-                            const orgEvents = events.filter(e => e.organizer_id === u.id);
+                            const orgEvents = scopedEvents.filter(e => e.organizer_id === u.id);
                             const orgEventIds = orgEvents.map(e => e.id);
-                            const orgRegs = registrations.filter(r => orgEventIds.includes(r.event_id));
+                            const orgRegs = scopedRegs.filter(r => orgEventIds.includes(r.event_id));
                             const orgPaidRegs = orgRegs.filter(r => r.status === 'paid' || r.status === 'confirmed');
                             const orgRevenue = orgPaidRegs.reduce((s, r) => s + Number(r.base_amount ?? r.amount ?? 0), 0);
                             return (
@@ -576,7 +665,10 @@ export function AdminDashboard() {
               {/* REGISTRATIONS */}
               {tab === 'registrations' && (
                 <div className="space-y-4">
-                  <h1 className="text-2xl font-bold text-white">Inscrições</h1>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h1 className="text-2xl font-bold text-white">Inscrições</h1>
+                    {scopeSelector}
+                  </div>
                   <div className="rounded-xl overflow-x-auto" style={{ backgroundColor: '#1e293b' }}>
                     <table className="w-full text-sm">
                       <thead style={{ backgroundColor: '#0f172a' }}>
@@ -585,7 +677,7 @@ export function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {registrations.slice(0, 100).map(r => {
+                        {scopedRegs.slice(0, 100).map(r => {
                           const evtTitle = events.find(e => e.id === r.event_id)?.title || '—';
                           return (
                           <tr key={r.id} style={{ borderTop: '1px solid #334155' }}>
@@ -686,9 +778,9 @@ export function AdminDashboard() {
       {/* Modal Visão do Organizador */}
       {selectedOrganizerId && (() => {
         const org = users.find(u => u.id === selectedOrganizerId);
-        const orgEvents = events.filter(e => e.organizer_id === selectedOrganizerId);
+        const orgEvents = scopedEvents.filter(e => e.organizer_id === selectedOrganizerId);
         const orgEventIds = orgEvents.map(e => e.id);
-        const orgRegs = registrations.filter(r => orgEventIds.includes(r.event_id));
+        const orgRegs = scopedRegs.filter(r => orgEventIds.includes(r.event_id));
         const orgFigures = sumAuditFigures(orgRegs);
         const recentRegs = [...orgRegs]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
