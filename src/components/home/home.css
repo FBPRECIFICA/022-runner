@@ -1,0 +1,101 @@
+/* Landing animada — usado só pelos componentes de src/components/home.
+   Tudo anima só transform/opacity. Easing da casa: cubic-bezier(0.16, 1, 0.3, 1). */
+
+/* ---------- Hero ---------- */
+.hh-stage { --p: 0; --i: 1; }
+
+.hh-photo-in { animation: hh-photo-in 1.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes hh-photo-in {
+  from { opacity: 0; transform: scale(1.12) translate3d(4%, 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+.hh-photo {
+  transform: translate3d(calc(var(--p) * var(--i) * -6%), 0, 0) scale(calc(1 + var(--p) * var(--i) * 0.22));
+  will-change: transform;
+}
+.hh-smear {
+  opacity: calc(var(--p) * 0.45);
+  /* Ancorado à esquerda e sempre mais largo que a tela: as bordas nunca aparecem. */
+  transform-origin: left center;
+  transform: translate3d(calc(var(--p) * var(--i) * -5%), 0, 0) scaleX(calc(1.12 + var(--p) * var(--i) * 0.3));
+  will-change: transform, opacity;
+}
+
+/* Linhas de velocidade: entram pela direita e cruzam para a esquerda conforme
+   a rolagem; cada uma com sua velocidade (--v). */
+.hh-line {
+  position: absolute;
+  left: 0;
+  width: 34%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), transparent);
+  opacity: calc(var(--p) * 5);
+  transform: translate3d(calc(110vw - var(--p) * var(--v) * var(--i) * 170vw), 0, 0);
+  will-change: transform;
+}
+.hh-line:nth-child(3n) { background: linear-gradient(90deg, #C9A84C, transparent); height: 3px; }
+
+.hh-copy {
+  opacity: calc(1 - var(--p) * 1.6);
+  transform: translate3d(0, calc(var(--p) * -48px), 0);
+}
+
+/* Título: palavra por palavra, cortada por máscara e inclinada — largada. */
+.hh-word-mask { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.12em; margin-bottom: -0.12em; }
+.hh-word { display: inline-block; animation: hh-word-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes hh-word-in {
+  from { opacity: 0; transform: translate3d(0, 105%, 0) skewY(8deg); }
+  40% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+.hh-after { animation: hh-after 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes hh-after {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+.hh-btn {
+  display: inline-block;
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s;
+}
+@media (hover: hover) {
+  .hh-btn:hover { transform: translate3d(5px, -3px, 0) skewX(-6deg); }
+}
+.hh-btn:active { transform: translate3d(3px, 0, 0) scale(0.96); transition-duration: 0.06s; }
+.hh-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* ---------- Entrada ao rolar ---------- */
+[data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0s), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0s);
+}
+[data-reveal].is-in { opacity: 1; transform: none; }
+
+/* ---------- Cards ---------- */
+.hc-card { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s; }
+.hc-img { transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+@media (hover: hover) {
+  .hc-card:hover { transform: translate3d(0, -4px, 0); box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.25); }
+  .hc-card:hover .hc-img { transform: scale(1.04); }
+}
+.hc-card:active { transform: scale(0.99); }
+
+/* ---------- Mapa ---------- */
+.hm-pin-wrap { background: none; border: none; }
+.hm-pin { animation: hm-drop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; transform-origin: 50% 100%; }
+@keyframes hm-drop {
+  from { opacity: 0; transform: translate3d(0, -70px, 0); }
+  70% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+.hm-popup .leaflet-popup-content-wrapper { border-radius: 12px; }
+.hm-popup .leaflet-popup-content { margin: 14px 16px; }
+
+/* ---------- Movimento reduzido: estado final direto, sem pin nem parallax ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .hh-photo-in, .hh-word, .hh-after, .hm-pin { animation: none; }
+  .hh-line, .hh-smear { display: none; }
+  .hh-btn:hover, .hc-card:hover, .hc-card:hover .hc-img { transform: none; }
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+}

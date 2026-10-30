@@ -13,6 +13,8 @@ import { supabaseToEvent } from '../utils/eventMapper';
 import type { Event } from '../types';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import { NEW_FRONT_ENABLED } from '../components/home/homeFlags';
+import { HomeLanding } from '../components/home/HomeLanding';
 
 const blueIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -32,7 +34,11 @@ const CITY_COORDS: Record<string, [number, number]> = {
   'Bacaxá':             [-22.9550, -42.5720],
 };
 
-export function HomePage() {
+// Liga/desliga da landing animada: com a chave em false a home é exatamente
+// a HomePageClassic abaixo, sem nenhuma alteração.
+export const HomePage = NEW_FRONT_ENABLED ? HomeLanding : HomePageClassic;
+
+function HomePageClassic() {
   const [allEvents, setAllEvents] = useState<Event[]>(mockEvents);
 
   useEffect(() => {
