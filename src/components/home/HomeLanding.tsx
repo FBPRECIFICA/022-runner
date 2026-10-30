@@ -14,7 +14,7 @@ import { HomeEventMap } from './HomeEventMap';
 import { HomeSecuritySeal } from './HomeSecuritySeal';
 import { CountUp } from './CountUp';
 import { useReveal } from './useInView';
-import { REGISTERED_USERS_COUNT } from './homeFlags';
+import { REGISTERED_USERS_COUNT, MIN_STAT_TO_SHOW, MIN_EVENT_STAT_TO_SHOW } from './homeFlags';
 import './home.css';
 
 // Home nova (NEW_FRONT_ENABLED). Mesmos dados, mesma busca e mesmos textos da
@@ -75,10 +75,14 @@ export function HomeLanding() {
   }).filter(c => c.count > 0);
 
   const stats = loaded ? [
-    { value: allEvents.length, label: allEvents.length === 1 ? 'evento na plataforma' : 'eventos na plataforma' },
-    ...(confirmedTotal !== null ? [{ value: confirmedTotal, label: 'inscrições confirmadas' }] : []),
-    ...(REGISTERED_USERS_COUNT !== null ? [{ value: REGISTERED_USERS_COUNT, label: 'cadastros' }] : []),
-  ] : [];
+    { value: confirmedTotal ?? 0, label: 'inscrições confirmadas' },
+    { value: REGISTERED_USERS_COUNT ?? 0, label: 'cadastros' },
+  ].filter(s => s.value >= MIN_STAT_TO_SHOW) : [];
+
+  // Provas que já aconteceram (mesmos eventos já carregados), mais recentes primeiro.
+  const pastEvents = loaded
+    ? events.filter(e => new Date(e.date).getTime() < Date.now()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    : [];
 
   return (
     <div ref={rootRef} className="min-h-screen">
@@ -87,9 +91,9 @@ export function HomeLanding() {
       {/* Números reais */}
       {stats.length > 0 && (
         <section className="bg-black text-white border-t-[3px] border-[#C9A84C]">
-          <div className={`container mx-auto px-4 py-10 grid gap-8 ${stats.length === 3 ? 'sm:grid-cols-3' : 'grid-cols-2'}`}>
+          <div className={`container mx-auto px-4 py-10 grid gap-8 ${stats.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
             {stats.map((s, i) => (
-              <div key={s.label} data-reveal style={stagger(i)} className="text-center sm:text-left">
+              <div key={s.label} data-reveal style={stagger(i)} className="text-center">
                 <div className="text-4xl md:text-6xl font-extrabold tracking-tight text-[#C9A84C] leading-none">
                   <CountUp value={s.value} />
                 </div>
@@ -112,8 +116,7 @@ export function HomeLanding() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {premiumEvents.slice(0, 3).map((event, i) => (
                 <div key={event.id} data-reveal style={stagger(i)}><HomeEventCard event={event} /></div>
-              ))}
-            </div>
+              ))}            </div>
           </div>
         </section>
       )}
@@ -129,8 +132,7 @@ export function HomeLanding() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcomingEvents.map((event, i) => (
               <div key={event.id} data-reveal style={stagger(i)}><HomeEventCard event={event} /></div>
-            ))}
-          </div>
+            ))}          </div>
         </div>
       </section>
 
@@ -166,6 +168,36 @@ export function HomeLanding() {
                   </div>
                 </div>
               ))}
+              {pastEvents.length > 0 && eventsByCity.length % 4 !== 0 && (() => {
+                const span = 4 - (eventsByCity.length % 4);
+                const shown = pastEvents.slice(0, span === 1 ? 1 : 3);
+                return (
+                  <div
+                    data-reveal
+                    style={stagger(eventsByCity.length)}
+                    className={`${eventsByCity.length % 2 === 0 ? 'md:col-span-2' : ''} ${span === 3 ? 'lg:col-span-3' : span === 2 ? 'lg:col-span-2' : 'lg:col-span-1'} bg-black rounded-xl p-4 md:p-5 text-white`}
+                  >
+                    <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#C9A84C] mb-4">
+                      <span className="w-8 h-[2px] bg-[#C9A84C]" />Provas já realizadas
+                    </p>
+                    <div className={`grid gap-3 ${shown.length === 1 ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                      {shown.map(e => (
+                        <Link key={e.id} to={`/evento/${e.slug}`} className="hc-card group block">
+                          <div className="relative aspect-[4/5] rounded-lg overflow-hidden bg-gray-900">
+                            <img src={e.banner || '/images/hero-desktop.jpg'} alt="" aria-hidden="true" loading="lazy" className="absolute inset-0 w-full h-full object-cover blur-lg scale-110 opacity-50" />
+                            <img src={e.banner || '/images/hero-desktop.jpg'} alt={e.name} loading="lazy" className="hc-img absolute inset-0 w-full h-full object-contain" />
+                          </div>
+                          <p className="mt-2 text-xs md:text-sm font-semibold leading-snug line-clamp-2">{e.name}</p>
+                          <p className="text-[11px] md:text-xs text-gray-400 tabular-nums">
+                            {new Date(e.date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace('.', '')}
+                            {e.currentParticipants >= MIN_EVENT_STAT_TO_SHOW && ` · ${e.currentParticipants.toLocaleString('pt-BR')} inscritos`}
+                          </p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </section>

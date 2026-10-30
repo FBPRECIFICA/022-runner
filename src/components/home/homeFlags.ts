@@ -12,3 +12,9 @@ export const HERO_INTENSITY = 1;
 // `users` (RLS), e expor isso exigiria função nova no banco — fora do escopo
 // desta branch. Enquanto for null o contador de cadastros não aparece.
 export const REGISTERED_USERS_COUNT: number | null = null;
+
+// Número baixo passa imagem de plataforma nova: abaixo disso o contador some.
+// (pedido do Sr. Fábio 30/10: não mostrar "5 eventos").
+export const MIN_STAT_TO_SHOW = 500;
+// Mesmo princípio para "N inscritos" nas provas já realizadas.
+export const MIN_EVENT_STAT_TO_SHOW = 100;

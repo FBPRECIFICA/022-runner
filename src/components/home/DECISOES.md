@@ -17,6 +17,13 @@
   `get_events_confirmed_counts` que a home já chamava. Cadastros: visitante
   deslogado não lê `users` (RLS) → `REGISTERED_USERS_COUNT` fica null e o
   contador não aparece.
+- **Número baixo não aparece** (pedido 30/10): contador some abaixo de
+  `MIN_STAT_TO_SHOW` (500) — por isso "eventos" saiu. "Provas já realizadas"
+  (cartazes reais dos eventos passados, já carregados) só mostra "N inscritos"
+  a partir de `MIN_EVENT_STAT_TO_SHOW` (100).
+- **Fotos de preenchimento nos vazios da grade**: testadas (foto do topo
+  repetida + panorâmica da lagoa) e reprovadas. Não usar. Fotos com pessoas
+  enviadas por organizadores não entram na vitrine sem autorização.
 - **Vagas**: "Restam N vagas" = `max_participants − confirmados` (mesma regra
   que fecha as inscrições). Sem limite cadastrado → nada; sem vaga → nada.
 - **Identidade**: preto #000, dourado #C9A84C, azul do selo, fonte e logo
