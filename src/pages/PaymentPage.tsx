@@ -1,3 +1,4 @@
+import { fetchKitLots, withKitLots, brl, type KitLot } from '../lib/kitLots';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -18,6 +19,7 @@ interface RegistrationTypeOption {
   name: string;
   price: number;
   includes_shirt: boolean;
+  lot?: KitLot;
 }
 
 interface DistanceOption {
@@ -97,15 +99,18 @@ export function PaymentPage() {
           .eq('id', regData.event_id)
           .single();
         setEvent(evData);
-        const { data: dists } = await supabase
-          .from('event_distances')
-          .select('*, registration_types(*)')
-          .eq('event_id', regData.event_id)
-          .order('sort_order');
-        setEventDistances((dists || []).map((d: any) => ({
+        const [{ data: dists }, lots] = await Promise.all([
+          supabase
+            .from('event_distances')
+            .select('*, registration_types(*)')
+            .eq('event_id', regData.event_id)
+            .order('sort_order'),
+          fetchKitLots(regData.event_id),
+        ]);
+        setEventDistances(withKitLots((dists || []).map((d: any) => ({
           ...d,
           registration_types: [...(d.registration_types || [])].sort((a: any, b: any) => a.sort_order - b.sort_order),
-        })));
+        })), lots));
       }
       setLoading(false);
     }
@@ -223,6 +228,13 @@ export function PaymentPage() {
           setPayError(body.message);
           setEmailFix(null);
           setBirthFix('');
+          return;
+        }
+        // Lote virou (ou kit/tamanho esgotou) — mostra o valor novo antes de cobrar.
+        if (body?.code === 'price_changed' || body?.code === 'kit_sold_out' || body?.code === 'shirt_sold_out') {
+          await reloadRegistration();
+          setPayError(body.message);
+          if (body.code !== 'price_changed') setEditingKit(true);
           return;
         }
         throw new Error(body?.message || body?.error || String(error.message ?? error));
@@ -513,8 +525,8 @@ export function PaymentPage() {
                 >
                   <option value="">Selecione o novo kit</option>
                   {allKits.map(k => (
-                    <option key={k.id} value={k.id} disabled={k.id === reg.registration_type_id}>
-                      {k.distanceName} — {k.name} — R$ {Number(k.price).toFixed(2).replace('.', ',')}
+                    <option key={k.id} value={k.id} disabled={k.id === reg.registration_type_id || !!k.lot?.sold_out}>
+                      {k.distanceName} — {k.name} — {k.lot?.sold_out ? 'Esgotado' : brl(k.price)}
                       {k.id === reg.registration_type_id ? ' (atual)' : ''}
                     </option>
                   ))}

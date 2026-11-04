@@ -1,3 +1,4 @@
+import { fetchKitLots, withKitLots, lotLabel, brl } from '../lib/kitLots';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -73,6 +74,7 @@ export function RegistrationPage() {
   const [emailTouched, setEmailTouched] = useState(false);
   const [emailConfirmTouched, setEmailConfirmTouched] = useState(false);
   const [birthTouched, setBirthTouched] = useState(false);
+  const [regIsFree, setRegIsFree] = useState(false);
   const [pendingDup, setPendingDup] = useState<{ id: string; status: string; asaas_payment_id: string | null } | null>(null);
 
   const [form, setForm] = useState(() => {
@@ -101,13 +103,16 @@ export function RegistrationPage() {
         setEvent(data);
         if (data) {
           trackRegistrationStart(data.title);
-          supabase.from('event_distances').select('*, registration_types(*)').eq('event_id', data.id).order('sort_order')
-            .then(({ data: dists }) => {
+          Promise.all([
+            supabase.from('event_distances').select('*, registration_types(*)').eq('event_id', data.id).order('sort_order'),
+            fetchKitLots(data.id),
+          ]).then(([{ data: dists }, lots]) => {
               const sorted = (dists || []).map((d: any) => ({
                 ...d,
                 registration_types: [...(d.registration_types || [])].sort((a: any, b: any) => a.sort_order - b.sort_order),
               }));
-              setEventDistances(sorted);
+              // Preço exibido = lote vigente (calculado no banco, mesma regra da cobrança).
+              setEventDistances(withKitLots(sorted, lots));
             });
           // Vazio (evento sem estoque configurado) mantém shirtAvailability null,
           // preservando o comportamento anterior (todos os tamanhos disponíveis).
@@ -213,6 +218,7 @@ export function RegistrationPage() {
     if (validateEmail(form.email_confirm ?? '').normalized !== em.normalized) return 'Os e-mails não conferem. Digite o mesmo e-mail nos dois campos.';
     if (!form.city.trim()) return 'Informe sua cidade.';
     if (!form.gender) return 'Selecione o sexo.';
+    if (chosenKit?.lot?.sold_out) return 'As vagas desse kit esgotaram. Escolha outro kit.';
     if (shirtRequired && !form.shirt_size) return 'Selecione o tamanho da camiseta.';
     return '';
   };
@@ -406,7 +412,12 @@ export function RegistrationPage() {
       }).select().single();
 
       if (insertError) throw insertError;
-      trackRegistrationComplete(event.title, finalPrice);
+      // O banco recalcula preço/lote/status (trigger trg_a_apply_kit_lot) — daqui pra
+      // frente vale o que foi gravado, não o que esta tela calculou.
+      const savedBase = Number(data.base_amount ?? finalPrice);
+      const savedFree = data.status === 'confirmed';
+      setRegIsFree(savedFree);
+      trackRegistrationComplete(event.title, savedBase);
       localStorage.removeItem(LS_KEY);
       localStorage.removeItem(LS_STEP_KEY);
       setRegistrationId(data.id);
@@ -455,8 +466,8 @@ export function RegistrationPage() {
                 athleteName: form.name,
                 athleteEmail: email,
                 distanceName: chosenDistance?.name || '',
-                amount: finalPrice.toFixed(2).replace('.', ','),
-                paymentStatus: isFree ? 'confirmed' : 'pending',
+                amount: savedBase.toFixed(2).replace('.', ','),
+                paymentStatus: savedFree ? 'confirmed' : 'pending',
                 totalRegistrations: (totalRegs ?? 0) + 1,
               },
             },
@@ -468,7 +479,7 @@ export function RegistrationPage() {
 
       // Evento gratuito: não passa pelo asaas-webhook, então o e-mail de confirmação
       // do atleta (normalmente disparado por lá) precisa ser mandado direto aqui.
-      if (isFree) {
+      if (savedFree) {
         try {
           await supabase.functions.invoke('send-email', {
             body: {
@@ -630,9 +641,17 @@ export function RegistrationPage() {
               <Field label="Kit *">
                 <select className={inp} value={form.kit_index} onChange={e => set('kit_index', Number(e.target.value))}>
                   {kits.map((k: any, i: number) => (
-                    <option key={i} value={i}>{k.name} — R$ {Number(k.price).toFixed(2).replace('.', ',')}</option>
+                    <option key={i} value={i} disabled={!!k.lot?.sold_out}>
+                      {k.name} — {k.lot?.sold_out ? 'Esgotado' : brl(k.price)}
+                    </option>
                   ))}
                 </select>
+                {chosenKit?.lot && lotLabel(chosenKit.lot) && (
+                  <p className={`text-xs mt-1 ${chosenKit.lot.sold_out ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                    {lotLabel(chosenKit.lot)}
+                    {!chosenKit.lot.sold_out && chosenKit.lot.next_price != null && ` · depois ${brl(chosenKit.lot.next_price)}`}
+                  </p>
+                )}
               </Field>
             </div>
 
@@ -734,12 +753,12 @@ export function RegistrationPage() {
             </div>
             <h2 className="text-xl font-bold text-gray-900">Inscrição registrada!</h2>
             <p className="text-gray-500 text-sm">
-              {Number(chosenKit?.price ?? 0) === 0
+              {regIsFree
                 ? 'Este é um evento gratuito — sua vaga já está confirmada, sem pagamento.'
                 : 'Agora finalize o pagamento para confirmar sua vaga.'}
             </p>
-            <div className={`grid grid-cols-1 gap-3 ${Number(chosenKit?.price ?? 0) > 0 ? 'sm:grid-cols-2' : ''}`}>
-              {Number(chosenKit?.price ?? 0) > 0 && (
+            <div className={`grid grid-cols-1 gap-3 ${!regIsFree ? 'sm:grid-cols-2' : ''}`}>
+              {!regIsFree && (
                 <button onClick={() => navigate(`/pagamento/${registrationId}`)}
                   className="w-full font-bold py-3 rounded-xl" style={{ backgroundColor: '#C9A84C', color: '#000' }}>
                   💳 Ir para Pagamento

@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { EXPORT_STATUS_OPTIONS, type ExportStatusFilter, matchesStatusFilter, downloadRegistrationsExcel, loadExportColumns, saveExportColumns } from '../lib/registrationExport';
 import { ExportColumnPicker } from '../components/ExportColumnPicker';
+import { KitLotsSummary } from '../components/KitLotsSummary';
 import { validateEmail } from '../lib/emailValidation';
 import { validateBirthdateISO } from '../lib/birthdateValidation';
 import { formatPhone } from '../utils/validators';
@@ -42,6 +43,7 @@ interface DistanceWithLots { name: string; lots: Lot[]; includes_shirt: boolean;
 interface KitSlot { id?: string; lots: Lot[]; }
 interface EventDistanceForm { id?: string; name: string; economico: KitSlot; completo: KitSlot; }
 
+const MAX_LOTS = 10;
 const emptyKitSlot = (): KitSlot => ({ lots: [{ price: '', qty: '' }] });
 const emptyEventDistance = (): EventDistanceForm => ({ name: '', economico: emptyKitSlot(), completo: emptyKitSlot() });
 
@@ -102,7 +104,7 @@ function calcScore(form: EventForm, hasPhotos: boolean): number {
   if (form.event_type) score += 5;
   if (form.kit_items.length > 0) score += 10;
   if (form.additional_info && form.additional_info.length > 30) score += 5;
-  if (form.distances.some(d => d.name && d.lots.some(l => l.price))) score += 5;
+  if (form.eventDistances.some(d => d.name && [d.economico, d.completo].some(k => k.lots.some(l => l.price)))) score += 5;
   if (hasPhotos) score += 5;
   return Math.min(score, 100);
 }
@@ -616,59 +618,6 @@ export function OrganizerDashboard() {
     }
   };
 
-  const addDistance = () => {
-    setForm(prev => ({ ...prev, distances: [...prev.distances, { name: '', lots: [{ price: '', qty: '' }], includes_shirt: true }] }));
-  };
-
-  const removeDistance = (index: number) => {
-    setForm(prev => ({ ...prev, distances: prev.distances.filter((_, i) => i !== index) }));
-  };
-
-  const updateDistanceName = (index: number, value: string) => {
-    setForm(prev => {
-      const distances = [...prev.distances];
-      distances[index] = { ...distances[index], name: value };
-      return { ...prev, distances };
-    });
-  };
-
-  const updateDistanceShirt = (index: number, value: boolean) => {
-    setForm(prev => {
-      const distances = [...prev.distances];
-      distances[index] = { ...distances[index], includes_shirt: value };
-      return { ...prev, distances };
-    });
-  };
-
-  const updateLot = (di: number, li: number, field: 'price' | 'qty', value: string) => {
-    setForm(prev => {
-      const distances = prev.distances.map((d, i) => {
-        if (i !== di) return d;
-        const lots = d.lots.map((l, j) => j === li ? { ...l, [field]: value } : l);
-        return { ...d, lots };
-      });
-      return { ...prev, distances };
-    });
-  };
-
-  const addLot = (di: number) => {
-    setForm(prev => {
-      const distances = prev.distances.map((d, i) =>
-        i === di && d.lots.length < 3 ? { ...d, lots: [...d.lots, { price: '', qty: '' }] } : d
-      );
-      return { ...prev, distances };
-    });
-  };
-
-  const removeLot = (di: number, li: number) => {
-    setForm(prev => {
-      const distances = prev.distances.map((d, i) =>
-        i === di ? { ...d, lots: d.lots.filter((_, j) => j !== li) } : d
-      );
-      return { ...prev, distances };
-    });
-  };
-
   // Distâncias com kit (padrão definitivo): cada distância sempre tem os dois
   // slots (Econômico/Completo) prontos pra preencher preço, nunca soltos.
   const addEventDistance = () => {
@@ -698,7 +647,7 @@ export function OrganizerDashboard() {
     updateKitSlot(di, kit, slot => ({ ...slot, lots: slot.lots.map((l, j) => j === li ? { ...l, [field]: value } : l) }));
 
   const addKitLot = (di: number, kit: 'economico' | 'completo') =>
-    updateKitSlot(di, kit, slot => slot.lots.length < 3 ? { ...slot, lots: [...slot.lots, { price: '', qty: '' }] } : slot);
+    updateKitSlot(di, kit, slot => slot.lots.length < MAX_LOTS ? { ...slot, lots: [...slot.lots, { price: '', qty: '' }] } : slot);
 
   const removeKitLot = (di: number, kit: 'economico' | 'completo', li: number) =>
     updateKitSlot(di, kit, slot => ({ ...slot, lots: slot.lots.filter((_, j) => j !== li) }));
@@ -870,6 +819,26 @@ export function OrganizerDashboard() {
       setError('Toda distância nova precisa dos dois kits (Econômico e Completo) com preço válido.');
       return;
     }
+    // Lotes: cada lote com preço precisa de vagas > 0, exceto o último (sem limite
+    // = vale até o fim). Um lote sem limite no meio faria os seguintes nunca abrirem.
+    for (const d of eventDistancesToSave) {
+      for (const kit of ['economico', 'completo'] as const) {
+        const lots = d[kit].lots.filter(l => l.price);
+        const unlimitedBeforeEnd = lots.slice(0, -1).some(l => !(parseInt(l.qty) > 0));
+        if (unlimitedBeforeEnd) {
+          setError(`${d.name} · ${kit === 'economico' ? 'Kit Econômico' : 'Kit Completo'}: só o último lote pode ficar sem quantidade de vagas.`);
+          return;
+        }
+      }
+    }
+    for (const size of SHIRT_SIZES) {
+      const raw = form.shirtStock[size];
+      const sold = shirtCounts[size]?.confirmed ?? 0;
+      if (raw !== undefined && raw !== '' && parseInt(raw) < sold) {
+        setError(`Camisetas tamanho ${size}: já foram vendidas ${sold}, o estoque não pode ficar menor que isso.`);
+        return;
+      }
+    }
     setLoading(true);
     try {
       const photoUrls: string[] = [];
@@ -885,13 +854,8 @@ export function OrganizerDashboard() {
         }
       }
 
-      const distances = form.distances.filter(d => d.name).map(d => ({
-        name: d.name,
-        price: parseFloat(d.lots[0]?.price || '0'),
-        lots: d.lots.filter(l => l.price).map(l => ({ price: parseFloat(l.price), qty: parseInt(l.qty) || null })),
-        includes_shirt: d.includes_shirt !== false,
-      }));
-      const prices = distances.map(d => d.price);
+      // events.distances/prices não são mais editados aqui: o banco espelha os kits
+      // (registration_types.lots) automaticamente — fonte única de preço/lote.
       const score = calcScore(form, photoUrls.length > 0 || photos.length > 0);
       const payload: any = {
         title: form.title,
@@ -899,8 +863,6 @@ export function OrganizerDashboard() {
         date: `${form.date}T${form.time || '07:00'}:00`,
         city: form.city,
         location: form.location,
-        distances,
-        prices,
         max_participants: parseInt(form.max_participants) || null,
         registration_deadline: form.registration_deadline || null,
         event_type: form.event_type || null,
@@ -932,6 +894,8 @@ export function OrganizerDashboard() {
         const slug = generateSlug(form.title);
         const { data: insertedEvent, error: insertError } = await supabase.from('events').insert({
           ...payload,
+          distances: [],
+          prices: [],
           slug,
           organizer_id: user?.id,
           status: publishStatus,
@@ -1281,6 +1245,10 @@ export function OrganizerDashboard() {
                 {/* Lista de inscritos expandível */}
                 {expandedEventId === event.id && (
                   <div className="border-t bg-gray-50">
+                    <div className="px-4 pt-3 pb-1">
+                      <p className="text-xs font-semibold text-gray-600 mb-1">Kits e lotes</p>
+                      <KitLotsSummary eventId={event.id} refreshKey={eventRegistrations[event.id]} />
+                    </div>
                     {loadingRegs ? (
                       <div className="flex items-center justify-center py-6">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#C9A84C]" />
@@ -2297,58 +2265,6 @@ export function OrganizerDashboard() {
                 <p className="text-xs text-gray-400 mt-1">Preencha mais campos para aumentar o score e ter mais visibilidade</p>
               </div>
 
-              {/* Distâncias com Lotes */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Distâncias e Lotes de Preço</label>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 text-xs text-amber-800">
-                  ⚠️ Isso só controla a faixa de preço exibida nos cards de busca/listagem — NÃO abre inscrição.
-                  Pra atletas conseguirem se inscrever, cadastre a distância também em "Distâncias com Kit" mais abaixo.
-                </div>
-                {editingEventId && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 text-xs text-amber-800">
-                    ℹ️ Você pode alterar o preço a qualquer momento, mesmo com o evento já publicado. As inscrições já realizadas mantêm o valor original — apenas novas inscrições usarão o novo valor.
-                  </div>
-                )}
-                <div className="space-y-4">
-                  {form.distances.map((d, di) => (
-                    <div key={di} className="border rounded-xl p-4 bg-gray-50">
-                      <div className="flex gap-2 mb-3">
-                        <input value={d.name} onChange={e => updateDistanceName(di, e.target.value)}
-                          className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
-                          placeholder="Ex: 5km, 10km, 21km" />
-                        {form.distances.length > 1 && (
-                          <button onClick={() => removeDistance(di)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
-                        )}
-                      </div>
-                      <label className="flex items-center gap-2 text-xs text-gray-600 mb-3 pl-1">
-                        <input type="checkbox" checked={d.includes_shirt} onChange={e => updateDistanceShirt(di, e.target.checked)} />
-                        Inclui camiseta
-                      </label>
-                      <div className="space-y-2 pl-2">
-                        {d.lots.map((lot, li) => (
-                          <div key={li} className="flex gap-2 items-center">
-                            <span className="text-xs font-semibold text-gray-500 w-14">Lote {li + 1}</span>
-                            <input type="number" value={lot.price} onChange={e => updateLot(di, li, 'price', e.target.value)}
-                              className="w-28 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
-                              placeholder="R$ preço" />
-                            <input type="number" value={lot.qty} onChange={e => updateLot(di, li, 'qty', e.target.value)}
-                              className="w-28 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
-                              placeholder="Vagas (opt)" />
-                            {d.lots.length > 1 && (
-                              <button onClick={() => removeLot(di, li)} className="p-1 text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
-                            )}
-                          </div>
-                        ))}
-                        {d.lots.length < 3 && (
-                          <button onClick={() => addLot(di)} className="text-[#C9A84C] text-xs hover:underline mt-1">+ Lote {d.lots.length + 1}</button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  <button onClick={addDistance} className="text-[#C9A84C] text-sm hover:underline">+ Adicionar distância</button>
-                </div>
-              </div>
-
               {/* Distâncias com Kit — padrão definitivo: toda distância cadastrada aqui
                   sempre tem os dois kits (Econômico sem camisa / Completo com camisa) */}
               <div className="md:col-span-2">
@@ -2356,6 +2272,15 @@ export function OrganizerDashboard() {
                 <p className="text-xs text-gray-500 mb-3">
                   Cada distância tem sempre os dois kits — Econômico (sem camisa) e Completo (com camisa) — cada um com seu preço. É o que o atleta escolhe na inscrição: primeiro a distância, depois o kit.
                 </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  <strong>Lotes viram sozinhos:</strong> quando as vagas do lote acabam (inscrições pagas), a próxima inscrição já sai no preço do lote seguinte. Deixe "Vagas" em branco só no último lote se ele não tiver limite. Quando todos os lotes acabam, o kit aparece como esgotado. Inscrições já feitas mantêm o valor delas.
+                </p>
+                {editingEventId && (
+                  <div className="border rounded-lg p-3 bg-white mb-3">
+                    <p className="text-xs font-semibold text-gray-600 mb-2">Situação agora</p>
+                    <KitLotsSummary eventId={editingEventId} />
+                  </div>
+                )}
                 <div className="space-y-4">
                   {form.eventDistances.map((d, di) => (
                     <div key={di} className="border rounded-xl p-4 bg-gray-50">
@@ -2386,7 +2311,7 @@ export function OrganizerDashboard() {
                                   )}
                                 </div>
                               ))}
-                              {d[kit].lots.length < 3 && (
+                              {d[kit].lots.length < MAX_LOTS && (
                                 <button onClick={() => addKitLot(di, kit)} className="text-[#C9A84C] text-xs hover:underline mt-1">+ Lote {d[kit].lots.length + 1}</button>
                               )}
                             </div>
@@ -2418,12 +2343,21 @@ export function OrganizerDashboard() {
                           onChange={e => setForm(prev => ({ ...prev, shirtStock: { ...prev.shirtStock, [size]: e.target.value } }))}
                           className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C] bg-white"
                           placeholder="Sem controle" />
-                        {c && (c.confirmed > 0 || c.pending > 0) && (
-                          <p className="text-[11px] text-gray-500 mt-1">
-                            {c.confirmed} confirmada{c.confirmed !== 1 ? 's' : ''}
-                            {c.pending > 0 && <span className="text-amber-600"> · {c.pending} pendente{c.pending !== 1 ? 's' : ''}</span>}
-                          </p>
-                        )}
+                        {(() => {
+                          const sold = c?.confirmed ?? 0;
+                          const total = parseInt(form.shirtStock[size] ?? '');
+                          const left = Number.isNaN(total) ? null : Math.max(total - sold, 0);
+                          if (!sold && !c?.pending && left == null) return null;
+                          return (
+                            <p className="text-[11px] text-gray-500 mt-1">
+                              {sold} vendida{sold !== 1 ? 's' : ''}
+                              {left != null && (left === 0
+                                ? <span className="text-red-600 font-semibold"> · esgotado</span>
+                                : <span> · {left} restante{left !== 1 ? 's' : ''}</span>)}
+                              {!!c?.pending && <span className="text-amber-600"> · {c.pending} pendente{c.pending !== 1 ? 's' : ''}</span>}
+                            </p>
+                          );
+                        })()}
                       </div>
                     );
                   })}

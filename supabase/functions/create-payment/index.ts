@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { INVALID_BIRTHDATE_MESSAGE, isBirthdateValid } from '../_shared/birthdate.ts'
+import { voidAsaasPayment } from '../_shared/asaas.ts'
 
 const ASAAS_API_KEY = Deno.env.get('ASAAS_API_KEY') ?? ''
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3'
@@ -47,14 +48,57 @@ serve(async (req) => {
     // Inscrição sem data de nascimento válida não gera cobrança (Balneário Run: 8
     // pagas sem data). Checa ANTES do Asaas; a PaymentPage pede a data e reenvia.
     const { data: reg } = registrationId
-      ? await supabase.from('registrations').select('birth_date').eq('id', registrationId).maybeSingle()
+      ? await supabase.from('registrations')
+          .select('birth_date, status, amount, asaas_payment_id, shirt_size, event_id')
+          .eq('id', registrationId).maybeSingle()
       : { data: null }
+    const reply = (status: number, body: Record<string, unknown>) =>
+      new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
+    if (reg && reg.status !== 'pending' && reg.status !== 'awaiting_payment') {
+      return reply(409, { error: 'not_pending', code: 'not_pending', message: 'Essa inscrição não está mais aguardando pagamento.' })
+    }
     if (!reg || !isBirthdateValid(reg.birth_date)) {
       console.warn('[create-payment] Recusado por birth_date inválido:', registrationId, reg?.birth_date)
       return new Response(JSON.stringify({ error: 'invalid_birthdate', code: 'invalid_birthdate', message: INVALID_BIRTHDATE_MESSAGE }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    // Virada de lote: pendente com reserva vencida é repreçada se o lote virou
+    // (só inscrições criadas pela regra nova; antigas nunca mudam). Valor novo
+    // é mostrado ao atleta ANTES de gerar a cobrança.
+    const { data: lot } = await supabase.rpc('refresh_pending_lot_price', { p_registration_id: registrationId }).maybeSingle()
+    if (lot?.sold_out) {
+      return reply(409, { error: 'kit_sold_out', code: 'kit_sold_out', message: 'As vagas deste kit esgotaram. Troque de kit para continuar.' })
+    }
+    if (lot?.changed) {
+      if (reg.asaas_payment_id) {
+        const voided = await voidAsaasPayment(reg.asaas_payment_id)
+        if (!voided.ok) return reply(409, { error: 'void_failed', code: 'void_failed', message: voided.message })
+        await supabase.from('registrations').update({ asaas_payment_id: null, payment_method: null }).eq('id', registrationId)
+      }
+      const fmt = (v: unknown) => Number(v).toFixed(2).replace('.', ',')
+      return reply(409, {
+        error: 'price_changed', code: 'price_changed', newAmount: Number(lot.new_amount), lotNumber: lot.lot_number,
+        message: `O lote anterior esgotou. Sua inscrição agora está no ${lot.lot_number}º lote: novo valor R$ ${fmt(lot.new_amount)} (antes R$ ${fmt(lot.old_amount)}). Confira e gere o pagamento de novo.`,
+      })
+    }
+
+    // Tamanho de camisa esgotado não é comprado nem por pendente antiga.
+    if (reg.shirt_size) {
+      const { data: avail } = await supabase.rpc('get_shirt_availability', { p_event_id: reg.event_id })
+      const row = (avail || []).find((a: { size: string; available: number }) => a.size === reg.shirt_size)
+      if (row && row.available <= 0) {
+        return reply(409, { error: 'shirt_sold_out', code: 'shirt_sold_out', message: `O tamanho ${reg.shirt_size} esgotou. Troque o tamanho para continuar.` })
+      }
+    }
+
+    // Valor cobrado vem sempre do banco, nunca do navegador.
+    const amount = Number(reg.amount)
+    if (!(amount > 0)) {
+      return reply(409, { error: 'invalid_amount', code: 'invalid_amount', message: 'Essa inscrição não tem valor a pagar.' })
     }
 
     console.log('[create-payment] Criando cliente:', JSON.stringify(customerData))
@@ -76,6 +120,7 @@ serve(async (req) => {
       billingType,
       externalReference: registrationId,
       ...paymentData,
+      value: amount,
     }
     console.log('[create-payment] Criando pagamento:', JSON.stringify(paymentBody))
     const paymentRes = await fetch(`${ASAAS_BASE_URL}/payments`, {

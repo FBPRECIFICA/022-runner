@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { fetchKitLots, withKitLots, lotLabel, brl } from '../lib/kitLots';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Calendar, MapPin, Clock, Users, Share2, ChevronLeft, CheckCircle, Star, Timer, ImageIcon } from 'lucide-react';
@@ -61,11 +62,14 @@ export function EventDetailPage() {
       }
       const { data: photos } = await supabase.from('event_photos').select('*').eq('event_id', data.id);
       setEventPhotos(photos || []);
-      const { data: dists } = await supabase.from('event_distances').select('*, registration_types(*)').eq('event_id', data.id).order('sort_order');
-      setEventDistances((dists || []).map((d: any) => ({
+      const [{ data: dists }, lots] = await Promise.all([
+        supabase.from('event_distances').select('*, registration_types(*)').eq('event_id', data.id).order('sort_order'),
+        fetchKitLots(data.id),
+      ]);
+      setEventDistances(withKitLots((dists || []).map((d: any) => ({
         ...d,
         registration_types: [...(d.registration_types || [])].sort((a: any, b: any) => a.sort_order - b.sort_order),
-      })));
+      })), lots));
       setLoading(false);
     }
     fetchEvent();
@@ -322,8 +326,11 @@ export function EventDetailPage() {
                         >
                           <span className="text-xl font-black" style={{ color: '#C9A84C' }}>{k.name}</span>
                           <span className="text-white/60 text-xs uppercase tracking-widest">{k.includes_shirt ? 'Com camiseta' : 'Sem camiseta'}</span>
-                          <span className="text-2xl font-black text-white">R$ {Number(k.price).toFixed(2).replace('.', ',')}</span>
-                          {registrationOpen ? (
+                          <span className="text-2xl font-black text-white">{k.lot?.sold_out ? 'Esgotado' : brl(k.price)}</span>
+                          {k.lot && !k.lot.sold_out && lotLabel(k.lot) && (
+                            <span className="text-xs font-semibold" style={{ color: '#C9A84C' }}>{lotLabel(k.lot)}</span>
+                          )}
+                          {registrationOpen && !k.lot?.sold_out ? (
                             <button
                               onClick={() => navigate(`/inscricao/${event.slug}`, { state: { distanceIndex: di, kitIndex: ki } })}
                               className="w-full py-2 rounded-lg text-xs font-bold mt-1 transition-all hover:opacity-90"
@@ -335,7 +342,7 @@ export function EventDetailPage() {
                             <button disabled
                               className="w-full py-2 rounded-lg text-xs font-bold mt-1 bg-gray-700 text-gray-400 cursor-not-allowed"
                             >
-                              {soldOut ? 'ESGOTADO' : 'INSCRIÇÕES ENCERRADAS'}
+                              {soldOut || k.lot?.sold_out ? 'ESGOTADO' : 'INSCRIÇÕES ENCERRADAS'}
                             </button>
                           )}
                         </div>

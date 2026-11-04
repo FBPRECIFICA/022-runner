@@ -117,7 +117,12 @@ serve(async (req) => {
       }
     }
 
-    const listPrice = Number(kit.price ?? 0)
+    // Preço do lote vigente do kit novo (registration_types.lots), sem contar
+    // esta própria inscrição como ocupando vaga.
+    const { data: lot } = await supabase.rpc('kit_lot_state', { p_type_id: kit.id, p_exclude: registrationId }).maybeSingle()
+    if (!lot) return fail('Não foi possível calcular o preço do kit. Tente novamente.', 500)
+    if (lot.sold_out) return fail('As vagas desse kit esgotaram. Escolha outro kit.')
+    const listPrice = Number(lot.lot_price ?? 0)
     const finalPrice = reg.elderly_discount ? Math.round(listPrice * 0.5 * 100) / 100 : listPrice
     const platformFee = Math.round(finalPrice * 0.10 * 100) / 100
     const discountAmount = reg.elderly_discount ? Math.round((listPrice - finalPrice) * 100) / 100 : 0
@@ -144,6 +149,8 @@ serve(async (req) => {
         discount_amount: discountAmount,
         amount: finalPrice + platformFee,
         coupon_code: null,
+        lot_number: lot.lot_number,
+        lot_held_until: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         asaas_payment_id: null,
         payment_method: null,
       })
