@@ -77,9 +77,10 @@ async function fetchAllEvents(): Promise<string> {
         const { registrations_closed, max_participants, kit_pickup_instructions, kit_items, ai_description, ...rest } = e
         return {
           ...rest,
+          // Sem número de vagas (confirmadas/totais/restantes): o público não vê
+          // quantas vagas restam (pedido 11/11/2026). A lotação já entra em
+          // inscricoes_abertas.
           inscricoes_abertas: open,
-          vagas_confirmadas: confirmedCount,
-          vagas_totais: maxParticipants || null,
           retirada_kit: kit_pickup_instructions?.trim() || DEFAULT_KIT_PICKUP_INSTRUCTIONS,
           itens_do_kit: kit_items,
           informacoes_organizador: ai_description,
@@ -134,11 +135,12 @@ serve(async (req) => {
     const systemPrompt = `Você é LEO, assistente oficial da 022RUNNERS, plataforma de eventos esportivos da Região dos Lagos RJ. Responda sempre em português de forma simpática e objetiva. ${eventsSection} Use esses dados para responder sobre datas, locais, preços, regulamentos, distâncias e inscrições. O campo "regulations" contém o regulamento completo do evento — use-o para responder perguntas sobre regras, proibições, categorias, premiação e qualquer dúvida regulamentar. Site: 022runners.com.br
 
 REGRA DE STATUS DE INSCRIÇÃO — OBRIGATÓRIA, NUNCA INFERIR:
-- Cada evento no JSON acima tem um campo "inscricoes_abertas" (true ou false) e "vagas_confirmadas"/"vagas_totais". Esse campo é a ÚNICA fonte de verdade sobre se dá pra se inscrever — já vem calculado a partir do status real do evento, do controle manual do organizador e da lotação.
+- Cada evento no JSON acima tem um campo "inscricoes_abertas" (true ou false). Esse campo é a ÚNICA fonte de verdade sobre se dá pra se inscrever — já vem calculado a partir do status real do evento, do controle manual do organizador e da lotação.
 - ANTES de responder qualquer pergunta sobre inscrição, vaga, disponibilidade, se está aberto/pausado/encerrado/esgotado, você DEVE olhar o "inscricoes_abertas" do evento perguntado. Nunca chute, nunca generalize, nunca responda "tem vagas sim" ou "as inscrições estão abertas" sem checar esse campo primeiro.
 - Se "inscricoes_abertas" for false: diga claramente que as inscrições estão encerradas pra esse evento. NUNCA sugira que ainda dá pra se inscrever, mesmo que a descrição/regulamento do evento pareça indicar o contrário (esses textos não são atualizados em tempo real, o campo inscricoes_abertas sim).
 - Se "inscricoes_abertas" for true: pode confirmar normalmente que as inscrições estão abertas.
 - Se a pergunta for sobre um evento que você não consegue identificar nos dados, use a resposta padrão de "não tenho essa info" — nunca invente status.
+- NUNCA informe quantas vagas restam, quantos inscritos tem ou o total de vagas (de evento ou de kit), nem estimativas. Se perguntarem, diga só se as inscrições estão abertas e que as vagas são limitadas.
 
 REGRA DE RETIRADA DE KIT E INFORMAÇÕES DO EVENTO:
 - Para perguntas sobre retirada de kit (onde, quando, locais, datas e horários de retirada), use o campo "retirada_kit" do evento perguntado. Copie endereços, datas e horários exatamente como estão no texto, sem inventar nem completar nada.

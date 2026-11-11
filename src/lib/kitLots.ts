@@ -36,14 +36,11 @@ export function withKitLots<D extends { registration_types?: any[] }>(distances:
 
 export const brl = (v: number) => `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
 
-// "2º lote · faltam 3 vagas" / "Esgotado"
+// Rótulo público do kit: "2º lote" / "Esgotado". Nunca mostra quantas vagas
+// restam (pedido 11/11/2026) — esse número só aparece no painel do organizador
+// e no Admin (KitLotsSummary).
 export function lotLabel(lot?: KitLot | null): string {
   if (!lot) return '';
   if (lot.sold_out) return 'Esgotado';
-  const parts: string[] = [];
-  if (lot.lot_count > 1) parts.push(`${lot.lot_number}º lote`);
-  if (lot.lot_remaining != null) {
-    parts.push(lot.lot_remaining === 1 ? 'falta 1 vaga' : `faltam ${lot.lot_remaining} vagas`);
-  }
-  return parts.join(' · ');
+  return lot.lot_count > 1 ? `${lot.lot_number}º lote` : '';
 }

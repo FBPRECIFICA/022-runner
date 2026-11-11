@@ -8,12 +8,3 @@ export function countdownLabel(date: Date | string, now: number = Date.now()): s
   if (d >= 1) return `Faltam ${d} ${d === 1 ? 'dia' : 'dias'} e ${h}h`;
   return `Faltam ${h}h ${String(min % 60).padStart(2, '0')}min`;
 }
-
-// Vagas restantes só quando o evento tem limite cadastrado; senão null (mantém
-// o texto genérico "Vagas limitadas" ou nada, como antes).
-export function spotsLeftLabel(max: number, taken: number): string | null {
-  if (!(max > 0)) return null;
-  const left = max - taken;
-  if (left <= 0) return null;
-  return left === 1 ? 'Resta 1 vaga' : `Restam ${left} vagas`;
-}

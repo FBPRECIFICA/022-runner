@@ -4,7 +4,7 @@ import { Heart, MapPin, Users, Timer, Star, ArrowRight } from 'lucide-react';
 import type { Event } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { countdownLabel, spotsLeftLabel } from './countdown';
+import { countdownLabel } from './countdown';
 
 // Versão do EventCard usada SÓ na home (o original também aparece em
 // /eventos e /busca e não pode mudar). Dados, preço e favoritos idênticos.
@@ -35,9 +35,8 @@ export function HomeEventCard({ event }: { event: Event }) {
   }
 
   const countdown = countdownLabel(event.date, now);
-  const spots = event.maxParticipants > 0
-    ? spotsLeftLabel(event.maxParticipants, event.currentParticipants) ?? 'Vagas limitadas'
-    : null;
+  // Público não vê quantas vagas restam (pedido 11/11/2026): só o aviso genérico.
+  const spots = event.maxParticipants > 0 ? 'Vagas limitadas' : null;
 
   useEffect(() => {
     if (!user) return;

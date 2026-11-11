@@ -24,7 +24,8 @@
 - **Fotos de preenchimento nos vazios da grade**: testadas (foto do topo
   repetida + panorâmica da lagoa) e reprovadas. Não usar. Fotos com pessoas
   enviadas por organizadores não entram na vitrine sem autorização.
-- **Vagas**: "Restam N vagas" = `max_participants − confirmados` (mesma regra
-  que fecha as inscrições). Sem limite cadastrado → nada; sem vaga → nada.
+- **Vagas**: o público NÃO vê o número de vagas restantes (pedido 11/11/2026).
+  Com limite cadastrado → "Vagas limitadas"; sem limite → nada. Números só no
+  painel do organizador e no Admin.
 - **Identidade**: preto #000, dourado #C9A84C, azul do selo, fonte e logo
   atuais. Easing único `cubic-bezier(0.16, 1, 0.3, 1)`.
