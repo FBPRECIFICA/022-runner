@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveCo
 import { Users, Calendar, Award, Star, Shield, XCircle, Trash2, MessageCircle, X, Eye, BarChart3, Download, Briefcase, ClipboardCheck, AlertTriangle, FileText } from 'lucide-react';
 import { computeAthleteStats } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
-import { auditFigures, isFinancialRow, platformFeeFromOriginal, sumAuditFigures } from '../lib/asaasFee';
+import { availableNet, platformFeeFromOriginal, sumAuditFigures, sumRealFees } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
 import { fetchAllRows } from '../lib/fetchAllRows';
 import { EXPORT_STATUS_OPTIONS, type ExportStatusFilter, matchesStatusFilter, downloadRegistrationsExcel, loadExportColumns, saveExportColumns } from '../lib/registrationExport';
@@ -55,6 +55,7 @@ export function AdminDashboard() {
   const [eventCoupons, setEventCoupons] = useState<any[]>([]);
   const [loadingEventCoupons, setLoadingEventCoupons] = useState(false);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [syncingFees, setSyncingFees] = useState(false);
   const [withdrawalForm, setWithdrawalForm] = useState({ event_id: '', amount: '', withdrawn_at: '', note: '' });
   const [savingWithdrawal, setSavingWithdrawal] = useState(false);
   const [generatingAuditPdf, setGeneratingAuditPdf] = useState<string | null>(null);
@@ -140,6 +141,9 @@ export function AdminDashboard() {
     setUsers(usrs || []);
     setRegistrations(regs || []);
     setWithdrawals(wds || []);
+    // Taxas reais do Asaas: sincroniza sozinho ao abrir o Admin se a última sync tiver mais de 1h.
+    const lastSync = (regs || []).reduce((m: number, r: any) => Math.max(m, r.asaas_fees_synced_at ? new Date(r.asaas_fees_synced_at).getTime() : 0), 0);
+    if (Date.now() - lastSync > 3600000) syncAsaasFees(true);
     const paidRegs = (regs || []).filter(r => r.status === 'paid' || r.status === 'confirmed');
     // Mesma lógica do OrganizerDashboard: total bruto = soma de base_amount (fallback amount).
     // Comissão = soma da coluna platform_fee JÁ GRAVADA (dinheiro real cobrado do atleta e
@@ -153,6 +157,24 @@ export function AdminDashboard() {
     const platformRevenue = paidRegs.reduce((a, r) => a + Number(r.platform_fee ?? 0), 0);
     setStats({ events: evts?.length || 0, users: usrs?.length || 0, registrations: regs?.length || 0, revenue, platformRevenue });
     setLoading(false);
+  };
+
+  // Lê o extrato do Asaas (só leitura lá) e grava as taxas reais + vale Fábio nas inscrições
+  // dos eventos ativos — Edge Function sync-asaas-fees.
+  const syncAsaasFees = async (silent = false) => {
+    setSyncingFees(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-asaas-fees', { body: {} });
+      if (error || !data?.ok) throw new Error(data?.message || error?.message || 'falha');
+      const { data: regs } = await fetchAllRows(() => supabase.from('registrations').select('*').order('created_at', { ascending: false }));
+      if (regs) setRegistrations(regs);
+      if (!silent) toast.success(`Taxas do Asaas atualizadas (${data.updated} inscrições).`);
+    } catch (e: any) {
+      if (!silent) toast.error('Erro ao atualizar taxas do Asaas: ' + e.message);
+      else console.error('sync-asaas-fees', e);
+    } finally {
+      setSyncingFees(false);
+    }
   };
 
   const toggleArchive = async (event: any) => {
@@ -471,6 +493,64 @@ export function AdminDashboard() {
                     </table>
                     </div>
                   </div>
+
+                  {/* Taxas reais do Asaas + vale Fábio — só Admin. O organizador vê o valor limpo. */}
+                  {(() => {
+                    const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
+                    const lastSync = registrations.reduce((m, r) => Math.max(m, r.asaas_fees_synced_at ? new Date(r.asaas_fees_synced_at).getTime() : 0), 0);
+                    const rows = scopedEvents.map(e => ({ e, f: sumRealFees(registrations.filter(r => r.event_id === e.id)) }))
+                      .filter(({ f }) => f.liquidadas + f.aguardando > 0 || f.liquidoReal !== 0);
+                    return (
+                      <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1e293b' }}>
+                        <div className="px-5 pt-5 pb-3 flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h3 className="font-semibold text-white">Taxas reais do Asaas e Vale Fábio</h3>
+                            <p className="text-xs mt-1" style={{ color: '#64748b' }}>
+                              Do extrato do Asaas, por cobrança liquidada. Líquido do organizador = líquido real + vale Fábio. Cartão ainda não liquidado fica fora (aguardando).
+                              {lastSync > 0 && ` Última atualização: ${new Date(lastSync).toLocaleString('pt-BR')}.`}
+                            </p>
+                          </div>
+                          <button onClick={() => syncAsaasFees(false)} disabled={syncingFees}
+                            className="text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap disabled:opacity-50"
+                            style={{ backgroundColor: '#C9A84C', color: '#fff' }}>
+                            {syncingFees ? 'Atualizando...' : 'Atualizar taxas do Asaas'}
+                          </button>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead style={{ backgroundColor: '#0f172a' }}>
+                              <tr className="text-left" style={{ color: '#94a3b8' }}>
+                                {['Evento', 'Liquidadas', 'Aguardando', 'Tarifa', 'Mensageria', 'Antecipação', 'WhatsApp', 'Chargeback/outros', 'Líquido real (Asaas − comissão)', 'Vale Fábio', 'Líquido organizador'].map(h => (
+                                  <th key={h} className="px-3 py-2 font-medium whitespace-nowrap">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rows.length === 0 ? (
+                                <tr><td colSpan={11} className="px-4 py-3" style={{ color: '#94a3b8' }}>Nenhuma taxa sincronizada ainda.</td></tr>
+                              ) : rows.map(({ e, f }) => (
+                                <tr key={e.id} style={{ borderTop: '1px solid #334155' }}>
+                                  <td className="px-3 py-2 text-white whitespace-nowrap">{e.title}</td>
+                                  <td className="px-3 py-2" style={{ color: '#94a3b8' }}>{f.liquidadas}</td>
+                                  <td className="px-3 py-2 text-amber-400">{f.aguardando}</td>
+                                  <td className="px-3 py-2 whitespace-nowrap" style={{ color: '#fbbf24' }}>{fmt(f.tarifa)}</td>
+                                  <td className="px-3 py-2 whitespace-nowrap" style={{ color: '#fbbf24' }}>{fmt(f.mensageria)}</td>
+                                  <td className="px-3 py-2 whitespace-nowrap" style={{ color: '#fbbf24' }}>{fmt(f.antecipacao)}</td>
+                                  <td className="px-3 py-2 whitespace-nowrap" style={{ color: '#fbbf24' }}>{fmt(f.notificacao)}</td>
+                                  <td className="px-3 py-2 whitespace-nowrap" style={{ color: '#fbbf24' }}>{fmt(f.outros)}</td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-white">{fmt(f.liquidoReal)}</td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-red-400" title={`Taxas assumidas ${fmt(f.valeTaxas)} + ajustes ${fmt(f.valeAjuste)} — descontado da parte do Fábio; comissão da plataforma não muda`}>
+                                    {fmt(f.valeTaxas + f.valeAjuste)}
+                                  </td>
+                                  <td className="px-3 py-2 font-semibold whitespace-nowrap text-green-400">{fmt(f.liquidoOrganizador)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Arquivados: recolhido por padrão. Valores finais + total geral até hoje. */}
                   <details className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1e293b' }}>
@@ -1005,9 +1085,8 @@ export function AdminDashboard() {
                 {(() => {
                   const orgWithdrawals = withdrawals.filter(w => orgEventIds.includes(w.event_id));
                   const perEvent = orgEvents.map(ev => {
-                    const liquidoConfirmado = orgRegs
-                      .filter(r => r.event_id === ev.id && isFinancialRow(r))
-                      .reduce((s, r) => s + auditFigures(r).liquido, 0);
+                    // Mesmo cálculo do painel do organizador: cartão não liquidado fica fora do saldo.
+                    const liquidoConfirmado = availableNet(orgRegs.filter(r => r.event_id === ev.id));
                     const jaSacado = orgWithdrawals
                       .filter(w => w.event_id === ev.id)
                       .reduce((s, w) => s + Number(w.amount), 0);

@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { RunnerPostsIcon } from '../components/RunnerPostsIcon';
 import { computeAthleteStats, GENDER_LABELS } from '../lib/athleteStats';
 import { summarizeCouponUsage } from '../lib/couponStats';
-import { auditFigures, isFinancialRow, paymentMethodLabel, sumAuditFigures } from '../lib/asaasFee';
+import { auditFigures, availableNet, isAwaitingSettlement, paymentMethodLabel, sumAuditFigures } from '../lib/asaasFee';
 import { AuditFourNumbers } from '../components/AuditFourNumbers';
 import { fetchAllRows } from '../lib/fetchAllRows';
 import { DEFAULT_KIT_PICKUP_INSTRUCTIONS, kitPickupText } from '../lib/kitPickup';
@@ -1187,6 +1187,11 @@ export function OrganizerDashboard() {
                               }`}>
                                 {isPaid ? 'Pago' : isCancelled ? 'Cancelado' : 'Pendente'}
                               </span>
+                              {isAwaitingSettlement(r) && (
+                                <span className="ml-1 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700" title="Cartão pago, ainda não liquidado pelo Asaas — não entra no saldo pra saque">
+                                  aguardando liquidação
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-2 text-gray-400 text-xs">{new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
                           </tr>
@@ -1983,15 +1988,16 @@ export function OrganizerDashboard() {
 
         {/* Saques (somente leitura — quem registra é o Admin) */}
         {tab === 'saques' && (() => {
-          const paidRegs = allRegistrations.filter(isFinancialRow);
+          // Cartão ainda não liquidado pelo Asaas fica fora do saldo (aparece como aguardando).
           const perEvent = events.map(ev => {
-            const liquidoConfirmado = paidRegs
-              .filter(r => r.event_id === ev.id)
-              .reduce((s, r) => s + auditFigures(r).liquido, 0);
+            const evRegs = allRegistrations.filter(r => r.event_id === ev.id);
+            const liquidoConfirmado = availableNet(evRegs);
+            const aguardando = evRegs.filter(isAwaitingSettlement);
+            const aguardandoValor = aguardando.reduce((s, r) => s + auditFigures(r).liquido, 0);
             const jaSacado = withdrawals
               .filter(w => w.event_id === ev.id)
               .reduce((s, w) => s + Number(w.amount), 0);
-            return { event: ev, liquidoConfirmado, jaSacado, saldo: liquidoConfirmado - jaSacado };
+            return { event: ev, liquidoConfirmado, jaSacado, saldo: liquidoConfirmado - jaSacado, aguardandoQtd: aguardando.length, aguardandoValor };
           });
           const totalSaldo = perEvent.reduce((s, e) => s + e.saldo, 0);
           const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
@@ -2019,9 +2025,16 @@ export function OrganizerDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {perEvent.map(({ event, liquidoConfirmado, jaSacado, saldo }) => (
+                      {perEvent.map(({ event, liquidoConfirmado, jaSacado, saldo, aguardandoQtd, aguardandoValor }) => (
                         <tr key={event.id} className="border-b last:border-0">
-                          <td className="py-2 pr-4">{event.title}</td>
+                          <td className="py-2 pr-4">
+                            {event.title}
+                            {aguardandoQtd > 0 && (
+                              <span className="block text-xs text-amber-600">
+                                + {fmt(aguardandoValor)} aguardando liquidação do cartão ({aguardandoQtd} {aguardandoQtd === 1 ? 'inscrição' : 'inscrições'})
+                              </span>
+                            )}
+                          </td>
                           <td className="py-2 pr-4">{fmt(liquidoConfirmado)}</td>
                           <td className="py-2 pr-4">{fmt(jaSacado)}</td>
                           <td className="py-2 pr-4 font-semibold" style={{ color: '#C9A84C' }}>{fmt(saldo)}</td>
