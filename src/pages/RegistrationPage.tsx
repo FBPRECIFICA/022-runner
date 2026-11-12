@@ -1,5 +1,5 @@
 import { fetchKitLots, withKitLots, lotLabel, brl } from '../lib/kitLots';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -63,6 +63,8 @@ export function RegistrationPage() {
   // Padrão definitivo: kit é sub-item da distância (event_distances -> registration_types),
   // nunca mais solto no evento nem embutido no texto da distância.
   const [eventDistances, setEventDistances] = useState<any[]>([]);
+  // true quando a busca das distâncias terminou (mesmo que venha vazia).
+  const [distancesLoaded, setDistancesLoaded] = useState(false);
   // null = organizador nunca configurou estoque pra esse evento (mostra todos os
   // tamanhos, comportamento idêntico ao anterior a essa feature).
   const [shirtAvailability, setShirtAvailability] = useState<Record<string, number> | null>(null);
@@ -113,7 +115,8 @@ export function RegistrationPage() {
               }));
               // Preço exibido = lote vigente (calculado no banco, mesma regra da cobrança).
               setEventDistances(withKitLots(sorted, lots));
-            });
+            })
+            .finally(() => setDistancesLoaded(true));
           // Vazio (evento sem estoque configurado) mantém shirtAvailability null,
           // preservando o comportamento anterior (todos os tamanhos disponíveis).
           supabase.rpc('get_shirt_availability', { p_event_id: data.id })
@@ -164,12 +167,19 @@ export function RegistrationPage() {
   // OAuth passam todos por aqui — é o AuthContext.user virar truthy que dispara o avanço,
   // nunca uma chamada direta do AccountGate (login()/register() resolver não garante que
   // o contexto já populou `user`, isso acontece de forma assíncrona via onAuthStateChange).
+  // Espera o evento e as distâncias terminarem de carregar: na volta do Google a página
+  // recarrega e o login pode ficar pronto antes do evento — gravar com event=null dava
+  // "null is not an object (evaluating 'r.id')" (Rústica, 12/11/2026). O ref garante
+  // uma única gravação automática por carregamento; entre recarregamentos, o índice
+  // único (event_id, cpf) do banco impede a segunda inscrição.
+  const autoFinalizedRef = useRef(false);
   useEffect(() => {
-    if (step === 'conta' && user && !submitting) {
+    if (step === 'conta' && user && event && distancesLoaded && !submitting && !autoFinalizedRef.current) {
+      autoFinalizedRef.current = true;
       finalizeRegistration();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, user]);
+  }, [step, user, event, distancesLoaded]);
 
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
