@@ -805,8 +805,8 @@ export function OrganizerDashboard() {
       setError('Preencha todos os campos obrigatórios.');
       return;
     }
-    // Padrão definitivo: toda distância NOVA precisa das duas opções de kit
-    // (Econômico sem camisa, Completo com camisa), cada uma com preço válido —
+    // Padrão: toda distância NOVA precisa do Kit Completo (com camisa) com preço
+    // válido; o Kit Econômico (sem camisa) é opcional —
     // nunca uma distância "pela metade" chegando na tela do atleta. Só vale pra
     // distâncias ainda não salvas (sem id): uma distância que já existe no banco
     // com um kit pendente (decisão de negócio adiada, ex. "3km caminhada" da
@@ -815,8 +815,10 @@ export function OrganizerDashboard() {
     // impedido de editar QUALQUER coisa do evento até essa decisão ser tomada.
     const eventDistancesToSave = form.eventDistances.filter(d => d.name.trim());
     const kitPrice = (slot: KitSlot) => parseFloat(slot.lots[0]?.price || '0');
-    if (eventDistancesToSave.some(d => !d.id && (!(kitPrice(d.economico) > 0) || !(kitPrice(d.completo) > 0)))) {
-      setError('Toda distância nova precisa dos dois kits (Econômico e Completo) com preço válido.');
+    // Kit Econômico é opcional (evento só com Kit Completo, ex. "Corre Pra Ver
+    // Se Estou No Esquina"): em branco ele simplesmente não é criado (ver insert abaixo).
+    if (eventDistancesToSave.some(d => !d.id && !(kitPrice(d.completo) > 0))) {
+      setError('Toda distância nova precisa do Kit Completo com preço válido (o Kit Econômico é opcional).');
       return;
     }
     // Lotes: cada lote com preço precisa de vagas > 0, exceto o último (sem limite
@@ -2283,7 +2285,7 @@ export function OrganizerDashboard() {
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Distâncias com Kit</label>
                 <p className="text-xs text-gray-500 mb-3">
-                  Cada distância tem sempre os dois kits — Econômico (sem camisa) e Completo (com camisa) — cada um com seu preço. É o que o atleta escolhe na inscrição: primeiro a distância, depois o kit.
+                  Cada distância tem o Kit Completo (com camisa) e, se quiser, o Kit Econômico (sem camisa) — cada um com seu preço. Deixe o Econômico em branco se o evento não tiver esse kit. É o que o atleta escolhe na inscrição: primeiro a distância, depois o kit.
                 </p>
                 <p className="text-xs text-gray-500 mb-3">
                   <strong>Lotes viram sozinhos:</strong> quando as vagas do lote acabam (inscrições pagas), a próxima inscrição já sai no preço do lote seguinte. Deixe "Vagas" em branco só no último lote se ele não tiver limite. Quando todos os lotes acabam, o kit aparece como esgotado. Inscrições já feitas mantêm o valor delas.
