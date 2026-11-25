@@ -22,7 +22,10 @@ import { validateBirthdateISO } from '../lib/birthdateValidation';
 import { formatPhone } from '../utils/validators';
 
 const EVENT_TYPES = ['Corrida de Rua', 'Trail Run', 'Ciclismo', 'Triathlon', 'Caminhada', 'Outro'];
-const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Bag', 'Squeeze (Garrafinha de água)', 'Outros'];
+const KIT_OPTIONS = ['Camiseta', 'Medalha', 'Número de peito', 'Bag', 'Squeeze (Garrafinha de água)'];
+// Itens do kit fora da lista fixa (ex. "Copos personalizados") são digitados livremente,
+// separados por vírgula, e gravados junto em events.kit_items.
+const splitKitExtra = (text: string) => text.split(',').map(t => t.trim()).filter(Boolean);
 // Mesma lista fixa usada em RegistrationPage.tsx. Estoque é um pool único por
 // evento (não por distância/kit) — decisão do Senhor Fábio, 04/09/2026.
 const SHIRT_SIZES = ['P', 'M', 'G', 'GG'];
@@ -58,6 +61,7 @@ interface EventForm {
   registration_deadline: string;
   event_type: string;
   kit_items: string[];
+  kit_extra: string;
   additional_info: string;
   kit_pickup_instructions: string;
   ai_description: string;
@@ -82,6 +86,7 @@ const emptyForm: EventForm = {
   registration_deadline: '',
   event_type: '',
   kit_items: [],
+  kit_extra: '',
   additional_info: '',
   kit_pickup_instructions: DEFAULT_KIT_PICKUP_INSTRUCTIONS,
   ai_description: '',
@@ -102,7 +107,7 @@ function calcScore(form: EventForm, hasPhotos: boolean): number {
   if (form.max_participants) score += 5;
   if (form.registration_deadline) score += 5;
   if (form.event_type) score += 5;
-  if (form.kit_items.length > 0) score += 10;
+  if (form.kit_items.length > 0 || splitKitExtra(form.kit_extra).length > 0) score += 10;
   if (form.additional_info && form.additional_info.length > 30) score += 5;
   if (form.eventDistances.some(d => d.name && [d.economico, d.completo].some(k => k.lots.some(l => l.price)))) score += 5;
   if (hasPhotos) score += 5;
@@ -775,7 +780,8 @@ export function OrganizerDashboard() {
           ? new Date(event.registration_deadline).toISOString().split('T')[0]
           : '',
         event_type: event.event_type || '',
-        kit_items: event.kit_items || [],
+        kit_items: (event.kit_items || []).filter((k: string) => KIT_OPTIONS.includes(k)),
+        kit_extra: (event.kit_items || []).filter((k: string) => !KIT_OPTIONS.includes(k)).join(', '),
         additional_info: event.additional_info || '',
         kit_pickup_instructions: kitPickupText(event.kit_pickup_instructions),
         ai_description: event.ai_description || '',
@@ -868,7 +874,10 @@ export function OrganizerDashboard() {
         max_participants: parseInt(form.max_participants) || null,
         registration_deadline: form.registration_deadline || null,
         event_type: form.event_type || null,
-        kit_items: form.kit_items.length > 0 ? form.kit_items : null,
+        kit_items: (() => {
+          const all = [...form.kit_items, ...splitKitExtra(form.kit_extra).filter(k => !form.kit_items.includes(k))];
+          return all.length > 0 ? all : null;
+        })(),
         additional_info: form.additional_info || null,
         // Igual ao padrão (ou vazio) vira null, pra seguir a regra da plataforma se ela mudar
         kit_pickup_instructions: kitPickupText(form.kit_pickup_instructions) === DEFAULT_KIT_PICKUP_INSTRUCTIONS ? null : form.kit_pickup_instructions.trim(),
@@ -2172,6 +2181,11 @@ export function OrganizerDashboard() {
                     </label>
                   ))}
                 </div>
+                <label className="block text-sm font-medium text-gray-700 mt-3 mb-1">Outros itens do kit</label>
+                <input type="text" value={form.kit_extra} onChange={e => setForm(p => ({ ...p, kit_extra: e.target.value }))}
+                  placeholder="Ex.: Copos personalizados, Viseira (separe por vírgula)"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" />
+                <p className="text-xs text-gray-500 mt-1">Escreva o que mais vem no kit. Cada item separado por vírgula aparece na página do evento.</p>
               </div>
 
               <div className="md:col-span-2">
